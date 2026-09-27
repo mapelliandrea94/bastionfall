@@ -199,11 +199,13 @@ const RUN_DEFAULTS = Object.freeze({
   preparationSeconds: 15
 });
 
-function createInitialRunState(mode, seedInput = `${mode}:prototype`) {
+function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatch = null) {
   if (!Object.values(MODES).includes(mode)) return null;
 
   return {
     mode,
+    matchId: serverMatch?.id ?? null,
+    serverStartedAt: serverMatch?.startedAt ?? null,
     seed: normalizeRunSeed(seedInput),
     phase: RUN_PHASES.PREPARATION,
     wave: 0,
@@ -219,6 +221,28 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`) {
     endSnapshot: null,
     personalBestResult: null
   };
+}
+
+async function startServerMatch(session, mode) {
+  if (!session?.access_token) {
+    return { ok: false, error: 'authentication_required' };
+  }
+
+  const response = await fetch('/api/match/start', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({ mode })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload?.match) {
+    return { ok: false, error: payload?.error || 'match_start_failed' };
+  }
+
+  return { ok: true, match: payload.match };
 }
 
 function getPathPosition(waypoints, progress) {
@@ -1201,9 +1225,12 @@ function App() {
       <ModePreRun
         mode={selectedMode}
         onBack={() => setScreen(SCREENS.PLAY)}
-        onStart={(mode) => {
-          const nextRun = createInitialRunState(mode);
-          if (!nextRun || mode !== MODES.SINGLE_GATE) return;
+        onStart={async (mode) => {
+          if (mode !== MODES.SINGLE_GATE) return;
+          const started = await startServerMatch(session, mode);
+          if (!started.ok) return;
+          const nextRun = createInitialRunState(mode, started.match.seed, started.match);
+          if (!nextRun) return;
           setRunState(nextRun);
           setScreen(SCREENS.SINGLE_GATE_RUN);
         }}
@@ -1276,10 +1303,13 @@ function App() {
       <ResultsScreen
         snapshot={runState?.endSnapshot}
         personalBestResult={runState?.personalBestResult ?? null}
-        onRetry={() => {
+        onRetry={async () => {
           const mode = runState?.mode ?? selectedMode;
-          const nextRun = createInitialRunState(mode);
-          if (!nextRun || mode !== MODES.SINGLE_GATE) return;
+          if (mode !== MODES.SINGLE_GATE) return;
+          const started = await startServerMatch(session, mode);
+          if (!started.ok) return;
+          const nextRun = createInitialRunState(mode, started.match.seed, started.match);
+          if (!nextRun) return;
           setRunState(nextRun);
           setScreen(SCREENS.SINGLE_GATE_RUN);
         }}
