@@ -744,7 +744,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     <path className="tower-slot__grass" d="M-29 14Q-12 6 0 12T29 9V22H-29Z" />
                     <path className="tower-slot__accent" d="M-25-19H25M-25 18H25" />
 
-                    {!placed && hovered && affordable && (
+                    {!placed && affordable && (
                       <g className={`tower-visual tower-visual--ghost tower-visual--${selectedDefense.id}`}>
                         <circle className="tower-visual__base" r="23" />
                         <rect className="tower-visual__body" x="-12" y="-25" width="24" height="32" rx="5" />
