@@ -1932,3 +1932,33 @@ button { font: inherit; }
   font-size: 8px;
   line-height: 1.4;
 }
+
+
+/* BATCH 41 — upgrade curves / efficiency */
+.defense-inspector__upgrade {
+  padding-top: 9px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  align-items: baseline;
+}
+
+.defense-inspector__upgrade span {
+  color: #8f8a7d;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .11em;
+}
+
+.defense-inspector__upgrade strong {
+  color: #a9d8b7;
+  font-size: 12px;
+}
+
+.defense-inspector__upgrade small {
+  grid-column: 1 / -1;
+  color: #7e8389;
+  font-size: 8px;
+  line-height: 1.4;
+}
