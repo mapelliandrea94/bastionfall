@@ -99,9 +99,37 @@ export function validateSingleGatePlacement(point, placedStructures = [], footpr
 
 export function getPlacementValidationFixtures() {
   return Object.freeze([
-    Object.freeze({ id: 'valid-north-west', point: Object.freeze({ x: 260, y: 155 }), expectValid: true }),
-    Object.freeze({ id: 'outside-zone', point: Object.freeze({ x: 80, y: 450 }), expectValid: false }),
-    Object.freeze({ id: 'near-path', point: Object.freeze({ x: 520, y: 330 }), expectValid: false }),
-    Object.freeze({ id: 'near-bastion', point: Object.freeze({ x: 1390, y: 450 }), expectValid: false })
+    Object.freeze({
+      id: 'valid-north-west',
+      point: Object.freeze({ x: 260, y: 155 }),
+      placedStructures: Object.freeze([]),
+      expectValid: true
+    }),
+    Object.freeze({
+      id: 'outside-zone',
+      point: Object.freeze({ x: 80, y: 450 }),
+      placedStructures: Object.freeze([]),
+      expectValid: false
+    }),
+    Object.freeze({
+      id: 'near-path',
+      point: Object.freeze({ x: 520, y: 330 }),
+      placedStructures: Object.freeze([]),
+      expectValid: false
+    }),
+    Object.freeze({
+      id: 'near-bastion',
+      point: Object.freeze({ x: 1390, y: 450 }),
+      placedStructures: Object.freeze([]),
+      expectValid: false
+    }),
+    Object.freeze({
+      id: 'overlaps-structure',
+      point: Object.freeze({ x: 260, y: 155 }),
+      placedStructures: Object.freeze([
+        Object.freeze({ id: 'existing-tower', x: 280, y: 155, footprintRadius: 34 })
+      ]),
+      expectValid: false
+    })
   ]);
 }
