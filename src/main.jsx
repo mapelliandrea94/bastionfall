@@ -246,6 +246,40 @@ async function startServerMatch(session, mode) {
   return { ok: true, match: payload.match };
 }
 
+async function completeServerRun(session, run) {
+  if (!session?.access_token || !run?.matchToken || !run?.endSnapshot) {
+    return { ok: false, error: 'completion_not_ready' };
+  }
+
+  const snapshot = run.endSnapshot;
+  const response = await fetch('/api/run/complete', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({
+      matchToken: run.matchToken,
+      mode: snapshot.mode,
+      wave: snapshot.wave,
+      elapsedMs: snapshot.elapsedMs,
+      score: snapshot.score,
+      gold: snapshot.gold,
+      coreHp: snapshot.coreHp,
+      coreMaxHp: snapshot.coreMaxHp,
+      kills: snapshot.kills,
+      resultReason: snapshot.reason
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return { ok: false, error: payload?.error || 'run_completion_failed' };
+  }
+
+  return { ok: true, payload };
+}
+
 function getPathPosition(waypoints, progress) {
   if (!waypoints.length) return { x: 0, y: 0 };
   if (waypoints.length === 1) return waypoints[0];
@@ -1170,6 +1204,7 @@ function App() {
   const [selectedMode, setSelectedMode] = useState(null);
   const [runState, setRunState] = useState(null);
   const [personalBestByMode, setPersonalBestByMode] = useState({});
+  const [completedMatchId, setCompletedMatchId] = useState(null);
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
 
@@ -1209,6 +1244,26 @@ function App() {
       setScreen(SCREENS.RESULTS);
     }
   }, [screen, runState?.phase, runState?.endSnapshot, personalBestByMode]);
+
+  useEffect(() => {
+    if (
+      screen !== SCREENS.RESULTS ||
+      !runState?.endSnapshot ||
+      !runState?.matchToken ||
+      completedMatchId === runState?.matchId
+    ) return;
+
+    let cancelled = false;
+
+    completeServerRun(session, runState).then((result) => {
+      if (cancelled || !result.ok) return;
+      setCompletedMatchId(runState.matchId);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [screen, runState?.endSnapshot, runState?.matchToken, runState?.matchId, session, completedMatchId]);
 
   if (screen === SCREENS.PLAY) {
     return (
