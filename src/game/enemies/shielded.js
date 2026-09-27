@@ -3,6 +3,8 @@ import { createEnemyBaseState } from './enemyBase.js';
 export const SHIELDED_ENEMY = Object.freeze({
   id: 'shielded',
   name: 'Aegis',
+  faction: 'insect',
+  unitType: 'armored',
   archetype: 'shielded',
   maxHp: 140,
   moveSpeed: 0.94,
