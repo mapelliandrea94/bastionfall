@@ -754,6 +754,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
               <div><span>TRAVEL</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
               <div><span>SPAWN</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
               <div><span>CORE DMG</span><strong>{waveScaling.bastionDamage}</strong></div>
+              <div><span>CLEAR GOLD</span><strong>+{getWaveClearReward(waveScaling.waveNumber)}</strong></div>
             </div>
           </div>
 
