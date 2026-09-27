@@ -3877,3 +3877,22 @@ button:focus-visible,
   stroke: rgba(32, 22, 15, .95);
   stroke-width: 3px;
 }
+/* Reference-inspired battlefield shared by Single Gate and TFT Roll. */
+.battlefield-map__road { pointer-events: none; }
+.battlefield-map__road polyline { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.battlefield-map__road-edge { stroke: #6a7152; stroke-width: 111; filter: drop-shadow(0 8px 5px #21433188); }
+.battlefield-map__road-sand { stroke: #dbbb80; stroke-width: 101; }
+.battlefield-map__road-wear { stroke: #f3d5a0; stroke-width: 79; opacity: .84; }
+.battlefield-map__cliff { fill: url(#bf-cliff); stroke: #e5dda9; stroke-width: 7; }
+.battlefield-map__river { stroke-width: 75; filter: drop-shadow(0 0 8px #9ef3ff); }
+.battlefield-map__pine { fill: #194d3d; stroke: #133d37; }
+.battlefield-map__pine-light { fill: #579b59; }
+.battlefield-map__tower-slot .tower-slot__shadow { fill: #273e3488; transform: translateY(10px); }
+.battlefield-map__tower-slot .tower-slot__stone { fill: #e9d8a7; stroke: #f8e7b7; stroke-width: 5; filter: drop-shadow(0 5px 3px #233e3277); }
+.battlefield-map__tower-slot .tower-slot__grass { fill: #a8b789; }
+.battlefield-map__tower-slot .tower-slot__accent { stroke: #3078ad; stroke-width: 4; }
+.battlefield-map__tower-slot--occupied .tower-slot__stone { fill: #d6c594; stroke: #f2d991; }
+.battlefield-map__tower-slot--unaffordable .tower-slot__stone { fill: #9eab92; stroke: #b6bca3; }
+.battlefield-map__tower-slot--hovered .tower-slot__stone,
+.battlefield-map__tower-slot:focus-visible .tower-slot__stone { fill: #fff0c4; stroke: #fff2a8; filter: drop-shadow(0 0 13px #fce185); }
+.battlefield-map__bastion-core { filter: drop-shadow(0 0 14px #48e7ff); }

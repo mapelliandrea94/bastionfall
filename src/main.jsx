@@ -1695,13 +1695,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <linearGradient id="bf-river" x2="0" y2="1"><stop stopColor="#d2faff"/><stop offset=".5" stopColor="#42b9da"/><stop offset="1" stopColor="#177dbe"/></linearGradient>
               <linearGradient id="bf-cliff" x2="0" y2="1"><stop stopColor="#e7d7af"/><stop offset=".22" stopColor="#a2a793"/><stop offset="1" stopColor="#4c7377"/></linearGradient>
               <linearGradient id="bf-path" x2="0" y2="1"><stop stopColor="#e5d5aa"/><stop offset="1" stopColor="#b6a37d"/></linearGradient>
+              <radialGradient id="bf-meadow"><stop stopColor="#a9ce66"/><stop offset=".7" stopColor="#70a451"/><stop offset="1" stopColor="#416d49"/></radialGradient>
+              <pattern id="bf-grass-texture" width="112" height="94" patternUnits="userSpaceOnUse"><path d="M12 25l4-5m2 5 3-6M77 67l3-5m3 5 4-7M51 12l3-4M100 36l4-6" stroke="#d9e5a1" strokeWidth="2" opacity=".43"/><circle cx="38" cy="61" r="2" fill="#f2eac8"/><circle cx="94" cy="14" r="2" fill="#e8d9a0"/></pattern>
             </defs>
             <g className="battlefield-map__scenery" aria-hidden="true">
+              <rect width="1600" height="900" fill="url(#bf-meadow)" />
+              <rect width="1600" height="900" fill="url(#bf-grass-texture)" />
               <path className="battlefield-map__cliff" d="M0 0H1600V92Q1410 135 1280 84T940 104Q780 154 630 100T280 115Q110 80 0 132Z M0 805Q170 764 310 815T680 795Q820 747 1000 813T1350 792Q1500 760 1600 812V900H0Z" />
               <path className="battlefield-map__river" d="M390 0Q510 76 470 142T500 275M1070 900Q1020 820 1060 740T1030 660" />
               <path className="battlefield-map__waterfall" d="M407 3Q440 82 435 142M1080 898Q1043 832 1078 770" />
               {[ [95,150],[730,85],[1280,130],[145,740],[695,805],[1390,750] ].map(([x,y]) => <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}><path className="battlefield-map__pine-shadow" d="M-33 19H34L0-72Z"/><path className="battlefield-map__pine" d="M0-82L-20-35H-12L-30 5H-21L-38 25H38L21 5H30L12-35H20Z"/><path className="battlefield-map__pine-light" d="M0-82L-20-35H-12L-30 5H-21L-38 25H0Z"/></g>)}
               {[ [270,125],[905,116],[400,755],[1230,796] ].map(([x,y]) => <path key={`${x}-${y}`} className="battlefield-map__crystal" d={`M${x} ${y-35}l18 27-18 25-18-25Z`}/>)}
+            </g>
+            <g className="battlefield-map__road" aria-hidden="true">
+              <polyline className="battlefield-map__road-edge" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
+              <polyline className="battlefield-map__road-sand" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
+              <polyline className="battlefield-map__road-wear" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
             </g>
             <g className="battlefield-map__build-slots">
               {SINGLE_GATE_MAP.buildSlots.slots.map((slot) => {
@@ -1775,11 +1784,6 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 );
               })}
             </g>
-            <polyline
-              className="battlefield-map__path"
-              points={activePath.map((point) => `${point.x},${point.y}`).join(' ')}
-              strokeWidth={SINGLE_GATE_MAP.path.width}
-            />
             <g className="battlefield-map__wall-slots" aria-label="Purchasable wall sockets">
               {SINGLE_GATE_MAP.wallSlots.sockets.map((wall) => {
                 const built = activeWallIds.includes(wall.id);
