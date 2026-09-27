@@ -568,6 +568,15 @@ button { font: inherit; }
   font-size: 12px;
 }
 
+.auth-notice {
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(94,177,120,.35);
+  background: rgba(38,108,60,.16);
+  color: #bfe8c8;
+  font-size: 12px;
+}
+
 .auth-submit {
   width: 100%;
   min-height: 48px;
