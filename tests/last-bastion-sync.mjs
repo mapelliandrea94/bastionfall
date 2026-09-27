@@ -22,6 +22,10 @@ assert(fixture.heartbeatAccepted, 'Last Bastion heartbeat must be accepted');
 assert(fixture.heartbeatUpdatesProgress, 'Heartbeat must update participant wave/core HP');
 assert(fixture.heartbeatMarksConnected, 'Fresh heartbeat must mark participant connected');
 assert(fixture.timeoutMarksDisconnectedWithoutElimination, 'Heartbeat timeout must mark disconnected without eliminating the participant');
+assert(fixture.invalidHeartbeatRejected, 'Invalid heartbeat payloads must be rejected');
+assert(fixture.rateLimitWorks, 'Heartbeat spam must be rate-limited');
+assert(fixture.waveRegressionRejected, 'Participant wave must not move backwards');
+assert(fixture.desyncDetected, 'Wave spread beyond tolerance must flag desync');
 assert(fixture.eliminationMarksDead, 'Eliminated participant must be marked dead');
 assert(fixture.lastAliveWins, 'Last alive participant must resolve as winner');
 
