@@ -25,6 +25,7 @@ import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } 
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
+import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, getTriGateWaveScaling } from './game/balance/triGatePacing.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
@@ -153,6 +154,7 @@ const TOWER_SLOT_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures(
 
 const TRI_GATE_MAP_FIXTURE = Object.freeze(getTriGateMapFixtures());
 const TRI_GATE_SPAWN_FIXTURE = Object.freeze(getTriGateSpawnFixtures());
+const TRI_GATE_ECONOMY_FIXTURE = Object.freeze(getTriGateEconomyFixtures());
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
   ARCHER_TOWER,
@@ -200,8 +202,11 @@ function canTransitionWavePhase(from, to) {
   return WAVE_PHASE_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
-function getWaveScaling(completedWaves) {
-  return getBandWaveScaling(Math.max(1, completedWaves + 1));
+function getWaveScaling(completedWaves, mode = MODES.SINGLE_GATE) {
+  const waveNumber = Math.max(1, completedWaves + 1);
+  return mode === MODES.TRI_GATE
+    ? getTriGateWaveScaling(waveNumber)
+    : getBandWaveScaling(waveNumber);
 }
 
 const RUN_DEFAULTS = Object.freeze({
@@ -220,8 +225,9 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
     serverStartedAt: serverMatch?.startedAt ?? null,
     seed: normalizeRunSeed(seedInput),
     phase: RUN_PHASES.PREPARATION,
+    preparationSeconds: mode === MODES.TRI_GATE ? TRI_GATE_PACING.preparationSeconds : RUN_DEFAULTS.preparationSeconds,
     wave: 0,
-    gold: RUN_DEFAULTS.startingGold,
+    gold: mode === MODES.TRI_GATE ? TRI_GATE_PACING.startingGold : RUN_DEFAULTS.startingGold,
     coreHp: RUN_DEFAULTS.coreHp,
     coreMaxHp: RUN_DEFAULTS.coreHp,
     bastionHitId: 0,
@@ -571,7 +577,7 @@ function ModePreRun({ mode, onBack, onStart }) {
 function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold }) {
   const [spawnQueue, setSpawnQueue] = useState([]);
   const [activeEnemies, setActiveEnemies] = useState([]);
-  const [preparationRemaining, setPreparationRemaining] = useState(RUN_DEFAULTS.preparationSeconds);
+  const [preparationRemaining, setPreparationRemaining] = useState(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
   const [selectedDefenseId, setSelectedDefenseId] = useState('archer');
   const [placedDefenses, setPlacedDefenses] = useState([]);
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
@@ -579,7 +585,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
-  const waveScaling = getWaveScaling(run?.wave ?? 0);
+  const waveScaling = getWaveScaling(run?.wave ?? 0, run?.mode);
   const threatWave = composeWaveByThreatBudget(waveScaling.waveNumber);
   const runScore = calculateRunScore(run ?? {});
   const defenseDefinitions = Object.freeze({
@@ -626,7 +632,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
 
-    setPreparationRemaining(RUN_DEFAULTS.preparationSeconds);
+    setPreparationRemaining(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
 
     const intervalId = window.setInterval(() => {
       setPreparationRemaining((current) => {
@@ -1091,6 +1097,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
             data-tri-gate-map-version={TRI_GATE_MAP.version}
             data-tri-gate-spawn-version={TRI_GATE_SPAWN.version}
+            data-tri-gate-pacing-version={TRI_GATE_PACING.version}
+            data-tri-gate-economy-pass={TRI_GATE_ECONOMY_FIXTURE.startingGoldExpected === TRI_GATE_ECONOMY_FIXTURE.startingGoldActual && TRI_GATE_ECONOMY_FIXTURE.startingGoldAboveSingleGate === true && TRI_GATE_ECONOMY_FIXTURE.preparationExpected === TRI_GATE_ECONOMY_FIXTURE.preparationActual && TRI_GATE_ECONOMY_FIXTURE.wave1RewardExpected === TRI_GATE_ECONOMY_FIXTURE.wave1RewardActual && TRI_GATE_ECONOMY_FIXTURE.wave6RewardExpected === TRI_GATE_ECONOMY_FIXTURE.wave6RewardActual && TRI_GATE_ECONOMY_FIXTURE.wave1ThreatMultiplierExpected === TRI_GATE_ECONOMY_FIXTURE.wave1ThreatMultiplierActual && TRI_GATE_ECONOMY_FIXTURE.wave1SpawnSlowerThanSingle === true && TRI_GATE_ECONOMY_FIXTURE.wave6TravelSlowerThanSingle === true && TRI_GATE_ECONOMY_FIXTURE.bastionDamageUnchanged === true}
             data-tri-gate-spawn-pass={TRI_GATE_SPAWN_FIXTURE.laneCountExpected === TRI_GATE_SPAWN_FIXTURE.laneCountActual && TRI_GATE_SPAWN_FIXTURE.allEnemiesAssigned === true && TRI_GATE_SPAWN_FIXTURE.noDuplicateAssignments === true && TRI_GATE_SPAWN_FIXTURE.originalOrderRecoverable === true && TRI_GATE_SPAWN_FIXTURE.countSpreadAtMostOne === true && TRI_GATE_SPAWN_FIXTURE.wave1RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave1RotationActual && TRI_GATE_SPAWN_FIXTURE.wave2RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave2RotationActual && TRI_GATE_SPAWN_FIXTURE.wave3RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave3RotationActual && TRI_GATE_SPAWN_FIXTURE.rotatesOpeningLane === true}
             data-tri-gate-map-pass={TRI_GATE_MAP_FIXTURE.modeExpected === TRI_GATE_MAP_FIXTURE.modeActual && TRI_GATE_MAP_FIXTURE.entranceCountExpected === TRI_GATE_MAP_FIXTURE.entranceCountActual && TRI_GATE_MAP_FIXTURE.laneCountExpected === TRI_GATE_MAP_FIXTURE.laneCountActual && TRI_GATE_MAP_FIXTURE.uniqueEntrances === true && TRI_GATE_MAP_FIXTURE.uniqueLanes === true && TRI_GATE_MAP_FIXTURE.lanesResolve === true && TRI_GATE_MAP_FIXTURE.pathsStartAtEntrance === true && TRI_GATE_MAP_FIXTURE.pathsEndAtBastion === true && TRI_GATE_MAP_FIXTURE.pathsHaveShape === true && TRI_GATE_MAP_FIXTURE.uniqueInteriorWaypoints === true && TRI_GATE_MAP_FIXTURE.bastionCentered === true && TRI_GATE_MAP_FIXTURE.individualSlotPolicy === true}
             data-tower-slot-purchase-pass={TOWER_SLOT_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
@@ -1750,7 +1758,11 @@ function App() {
             if (!current || !canTransitionWavePhase(current.phase, nextPhase)) return current;
             const advancingWave = Boolean(options.advanceWave);
             const completedWaveNumber = Math.max(1, current.wave + 1);
-            const waveClearGold = advancingWave ? getWaveClearReward(completedWaveNumber) : 0;
+            const waveClearGold = advancingWave
+              ? current.mode === MODES.TRI_GATE
+                ? getTriGateWaveClearReward(completedWaveNumber)
+                : getWaveClearReward(completedWaveNumber)
+              : 0;
 
             return {
               ...current,
