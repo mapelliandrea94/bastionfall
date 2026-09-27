@@ -61,18 +61,11 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
   res.json({ profile: saved.data, earnedShards: shards });
 });
 
-app.post('/api/fortress/upgrade', requireUser, async (req, res) => {
-  const { data: current } = await req.db.from('profiles').select('*').eq('user_id', req.user.id).single();
-  if (!current) return res.status(404).json({ error: 'profile_missing' });
-  const cost = Math.max(40, (current.fortress_level || 1) * 40);
-  if ((current.shards || 0) < cost) return res.status(400).json({ error: 'not_enough_shards', cost });
-  const saved = await req.db.from('profiles').update({
-    fortress_level: (current.fortress_level || 1) + 1,
-    shards: current.shards - cost,
-    updated_at: new Date().toISOString()
-  }).eq('user_id', req.user.id).select('*').single();
-  if (saved.error) return res.status(500).json({ error: 'upgrade_failed' });
-  res.json({ profile: saved.data });
+app.post('/api/fortress/upgrade', requireUser, (_req, res) => {
+  res.status(410).json({
+    error: 'permanent_combat_upgrades_disabled',
+    message: 'Bastion combat power resets every run. Permanent fortress upgrades are disabled.'
+  });
 });
 
 app.use(express.static(path.join(here, 'dist')));
