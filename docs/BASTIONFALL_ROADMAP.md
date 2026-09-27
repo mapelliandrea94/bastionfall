@@ -107,18 +107,28 @@ BATCH 102/120 — First Frost Evolution Choice
 BATCH 103/120 — Evolution Power Budget & Branch Balance
 BATCH 104/120 — Last Bastion Matchmaking API Foundation
 BATCH 105/120 — Last Bastion Lobby UI & Ready/Leave Lifecycle
-BATCH 106/120 — Shared Seed & Synchronized Wave Start
-BATCH 107/120 — Participant Heartbeat/Alive State
-BATCH 108/120 — Elimination & Winner Resolution
-BATCH 109/120 — Spectate on Death
-BATCH 110/120 — Multiplayer Status Overlay
-BATCH 111/120 — Last Bastion Fairness, Desync & Anti-Grief QA
-BATCH 112/120 — Last Bastion Record Bridging & Statistics Persistence
-BATCH 113/120 — Last Bastion Results Screen
-BATCH 114/120 — Audio/Event Feedback Hooks
-BATCH 115/120 — Accessibility/Responsive Polish
-BATCH 116/120 — Performance, Long-Run Memory & Balance Telemetry QA
-BATCH 117/120 — Server Validation/Abuse Hardening
-BATCH 118/120 — End-to-End & Balance Regression Suite
-BATCH 119/120 — Production/Deployment Workflow
+BATCH 106/120 — Definitive 24-Enemy Roster & Data Model
+BATCH 107/120 — Deterministic Wave Director Integration
+BATCH 108/120 — Shared Seed & Synchronized Wave Start
+BATCH 109/120 — Participant Heartbeat & Alive State
+BATCH 110/120 — Elimination & Winner Resolution
+BATCH 111/120 — Spectate on Death & Multiplayer Status Overlay
+BATCH 112/120 — Last Bastion Fairness, Desync & Anti-Grief QA
+BATCH 113/120 — Record Bridging, Statistics & Last Bastion Results
+BATCH 114/120 — Audio & Gameplay Event Feedback Hooks
+BATCH 115/120 — Accessibility & Responsive Polish
+BATCH 116/120 — Performance, Long-Run Memory, 24-Tower Coverage & Balance Telemetry QA
+BATCH 117/120 — Server Validation & Abuse Hardening
+BATCH 118/120 — End-to-End, 24-Tower Counterplay & Balance Regression Suite
+BATCH 119/120 — Production / Deployment Workflow
 BATCH 120/120 — Production Smoke Test & Launch Checklist
+
+## Locked post-105 integration rules
+
+BATCH 1–105 are complete and must not be redone by this revision.
+
+The current repository state is the source of truth for the live tower system. The current 24-tower roster, its faction identities, type specializations, placement, upgrades, evolutions, TFT/shop behavior and balance work must be preserved. No post-105 batch may silently revert to an older reduced tower roster.
+
+BATCH 106 and 107 are defined in detail by `docs/ENEMY_WAVE_DIRECTOR_SPEC.md`. BATCH 108 must consume the deterministic Wave Director produced by BATCH 107 for Last Bastion synchronization rather than creating a parallel wave generator.
+
+BATCH 116 must include per-tower usage/DPS/counter-coverage telemetry for all 24 current towers. BATCH 118 must explicitly regression-test all 24 current towers against the definitive 24-enemy faction/type matrix, including the intended double-counter interaction.
