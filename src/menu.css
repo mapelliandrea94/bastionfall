@@ -2817,8 +2817,27 @@ body { background:#1c3f61; }
 
 .tower-card--compact {
   min-height: 68px;
-  padding: .48rem .52rem;
-  gap: .18rem;
+  padding: .42rem .48rem;
+  gap: .42rem;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+}
+
+.tower-card__art {
+  width: 48px;
+  height: 48px;
+  background-repeat: no-repeat;
+  border-radius: 8px;
+  filter: drop-shadow(0 3px 3px rgba(0,0,0,.28));
+  flex: 0 0 auto;
+}
+
+.tower-card__copy {
+  min-width: 0;
+  display: grid;
+  gap: .12rem;
+  align-content: center;
 }
 
 .tower-card--compact strong {

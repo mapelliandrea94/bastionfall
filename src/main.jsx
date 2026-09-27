@@ -2474,9 +2474,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       data-faction={tower.faction}
                       data-counter-type={tower.counterType}
                     >
-                      <strong>{tower.name}</strong>
-                      <span>{tower.cost}g</span>
-                      <small>{tower.faction.toUpperCase()} · {tower.role.replaceAll('-', ' ').toUpperCase()}</small>
+                      <div
+                        className="tower-card__art"
+                        style={getTowerArtStyleForTower(tower.id)}
+                        aria-hidden="true"
+                      />
+                      <div className="tower-card__copy">
+                        <strong>{tower.name}</strong>
+                        <span>{tower.cost}g</span>
+                        <small>{tower.faction.toUpperCase()} · {tower.role.replaceAll('-', ' ').toUpperCase()}</small>
+                      </div>
                     </button>
                   ))}
                 </div>
