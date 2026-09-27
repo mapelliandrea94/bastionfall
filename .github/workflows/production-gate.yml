@@ -1,0 +1,49 @@
+name: Production Gate
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-gate-main
+  cancel-in-progress: true
+
+jobs:
+  production-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Production build
+        run: npm run build
+      - name: End-to-End 24x24 Regression QA
+        run: node tests/end-to-end-regression.mjs
+      - name: Wave Director QA
+        run: node tests/wave-director.mjs
+      - name: Last Bastion Sync QA
+        run: node tests/last-bastion-sync.mjs
+      - name: Last Bastion Spectate QA
+        run: node tests/last-bastion-spectate.mjs
+      - name: Gameplay Feedback QA
+        run: node tests/game-feedback.mjs
+      - name: Boot production server and verify health
+        env:
+          PORT: 3000
+          NODE_ENV: production
+          MATCH_TOKEN_SECRET: ci-production-gate-secret
+        run: |
+          nohup npm start > /tmp/bastionfall-production.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000/api/health | grep -q '"ok":true'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/bastionfall-production.log
+          exit 1
