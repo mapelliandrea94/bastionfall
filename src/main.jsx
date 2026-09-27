@@ -6,6 +6,7 @@ import { SINGLE_GATE_MAP } from './game/maps/singleGate.js';
 import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
+import { MAGE_TOWER } from './game/towers/mage.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -480,6 +481,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             <strong>{FROST_TOWER.name}</strong>
             <span>{FROST_TOWER.cost}g</span>
             <small>{FROST_TOWER.damage} DMG · {FROST_TOWER.slowPercent}% SLOW · {(FROST_TOWER.slowDurationMs / 1000).toFixed(1)}s</small>
+          </button>
+          <button className="tower-card tower-card--mage" disabled>
+            <strong>{MAGE_TOWER.name}</strong>
+            <span>{MAGE_TOWER.cost}g</span>
+            <small>{MAGE_TOWER.damage} DMG · {MAGE_TOWER.range} RANGE · {MAGE_TOWER.damageType.toUpperCase()}</small>
           </button>
 
           <div className="run-sidebar__status">
