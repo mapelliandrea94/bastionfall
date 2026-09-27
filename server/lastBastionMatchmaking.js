@@ -279,6 +279,12 @@ export function setLastBastionReady(userId, ready = true) {
   return Object.freeze({ ok: true, matched: false, ticket: snapshot(next) });
 }
 
+export function getLastBastionActiveMatchUserIds(userId) {
+  const id = String(userId || '').trim();
+  const match = activeMatchByUserId.get(id);
+  return match ? [...match.participantIds] : [];
+}
+
 export function getLastBastionQueueStatus(userId) {
   const id = String(userId || '').trim();
   const activeMatch = activeMatchByUserId.get(id);
