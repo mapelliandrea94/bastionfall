@@ -6,6 +6,7 @@ export const LAST_BASTION_MATCHMAKING = Object.freeze({
   minPlayers: 2,
   maxPlayers: 8,
   synchronizedStartDelayMs: 5000,
+  fillWindowMs: 8000,
   heartbeatIntervalMs: 5000,
   heartbeatTimeoutMs: 15000,
   abandonTimeoutMs: 60000,
@@ -111,6 +112,7 @@ function snapshot(entry) {
     userId: entry.userId,
     joinedAt: entry.joinedAt,
     ready: Boolean(entry.ready),
+    readyAt: entry.readyAt || null,
     status: activeMatch ? 'matched' : entry.ready ? 'ready' : 'queued',
     position: activeMatch ? null : position >= 0 ? position + 1 : null,
     queuedPlayers: queue.length,
@@ -130,14 +132,52 @@ function createParticipantState(createdAtMs) {
   };
 }
 
-function tryCreateReadyMatch() {
-  const readyEntries = queue
-    .filter((entry) => entry.ready && !activeMatchByUserId.has(entry.userId))
+function getReadyEntries() {
+  return queue
+    .filter((entry) => entry.ready && activeMatchByUserId.get(entry.userId)?.status !== 'active')
     .slice(0, LAST_BASTION_MATCHMAKING.maxPlayers);
+}
 
+function getFillWindowState(nowMs = Date.now()) {
+  const readyEntries = getReadyEntries();
+  if (readyEntries.length < LAST_BASTION_MATCHMAKING.minPlayers) {
+    return Object.freeze({
+      readyPlayers: readyEntries.length,
+      fillWindowStartedAt: null,
+      fillWindowEndsAt: null,
+      fillWindowRemainingMs: null
+    });
+  }
+
+  const readyTimes = readyEntries
+    .map((entry) => Date.parse(entry.readyAt || entry.joinedAt))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+
+  const startedAtMs = readyTimes[LAST_BASTION_MATCHMAKING.minPlayers - 1] ?? nowMs;
+  const endsAtMs = startedAtMs + LAST_BASTION_MATCHMAKING.fillWindowMs;
+
+  return Object.freeze({
+    readyPlayers: readyEntries.length,
+    fillWindowStartedAt: nowIso(startedAtMs),
+    fillWindowEndsAt: nowIso(endsAtMs),
+    fillWindowRemainingMs: Math.max(0, endsAtMs - nowMs)
+  });
+}
+
+function tryCreateReadyMatch(nowMs = Date.now()) {
+  const readyEntries = getReadyEntries();
   if (readyEntries.length < LAST_BASTION_MATCHMAKING.minPlayers) return null;
 
-  const createdAtMs = Date.now();
+  const fill = getFillWindowState(nowMs);
+  if (
+    readyEntries.length < LAST_BASTION_MATCHMAKING.maxPlayers &&
+    Number(fill.fillWindowRemainingMs) > 0
+  ) {
+    return null;
+  }
+
+  const createdAtMs = nowMs;
   const matchId = randomUUID();
   const startedAtMs = createdAtMs + LAST_BASTION_MATCHMAKING.synchronizedStartDelayMs;
   const participantIds = Object.freeze(readyEntries.map((entry) => entry.userId));
@@ -255,7 +295,10 @@ export function hydrateLastBastionQueue(entries = []) {
       ticketId: String(entry?.ticketId || entry?.ticket_id || '').trim(),
       userId: String(entry?.userId || entry?.user_id || '').trim(),
       joinedAt: String(entry?.joinedAt || entry?.joined_at || ''),
-      ready: Boolean(entry?.ready)
+      ready: Boolean(entry?.ready),
+      readyAt: entry?.ready
+        ? String(entry?.readyAt || entry?.ready_at || entry?.updatedAt || entry?.updated_at || entry?.joinedAt || entry?.joined_at || '')
+        : null
     }))
     .filter((entry) => entry.ticketId && entry.userId && entry.joinedAt)
     .sort((a, b) => Date.parse(a.joinedAt) - Date.parse(b.joinedAt));
@@ -297,7 +340,8 @@ export function joinLastBastionQueue(userId) {
     ticketId: randomUUID(),
     userId: id,
     joinedAt: nowIso(),
-    ready: false
+    ready: false,
+    readyAt: null
   });
   queue.push(entry);
   byUserId.set(id, entry);
@@ -324,7 +368,7 @@ export function leaveLastBastionQueue(userId) {
   return Object.freeze({ ok: true, removed: true, queuedPlayers: queue.length });
 }
 
-export function setLastBastionReady(userId, ready = true) {
+export function setLastBastionReady(userId, ready = true, nowMs = Date.now()) {
   const id = String(userId || '').trim();
 
   const activeMatch = activeMatchByUserId.get(id);
@@ -340,12 +384,19 @@ export function setLastBastionReady(userId, ready = true) {
   const existing = byUserId.get(id);
   if (!existing) return Object.freeze({ ok: false, error: 'not_queued' });
 
-  const next = Object.freeze({ ...existing, ready: Boolean(ready) });
+  const nextReady = Boolean(ready);
+  const next = Object.freeze({
+    ...existing,
+    ready: nextReady,
+    readyAt: nextReady
+      ? (existing.ready && existing.readyAt ? existing.readyAt : nowIso(nowMs))
+      : null
+  });
   const index = queue.findIndex((item) => item.userId === id);
   if (index >= 0) queue[index] = next;
   byUserId.set(id, next);
 
-  const match = next.ready ? tryCreateReadyMatch() : null;
+  const match = next.ready ? tryCreateReadyMatch(nowMs) : null;
   if (match && match.participantIds.includes(id)) {
     return Object.freeze({
       ok: true,
@@ -379,19 +430,44 @@ export function getLastBastionActiveMatchUserIds(userId) {
   return match?.status === 'active' ? [...match.participantIds] : [];
 }
 
-export function getLastBastionQueueStatus(userId) {
+export function getLastBastionQueueStatus(userId, nowMs = Date.now()) {
   const id = String(userId || '').trim();
   const recoveredMatch = activeMatchByUserId.get(id);
   const activeMatch = recoveredMatch?.status === 'active' ? recoveredMatch : null;
   const existing = byUserId.get(id);
+  const fill = getFillWindowState(nowMs);
 
   return Object.freeze({
     ok: true,
     queued: Boolean(existing) && !activeMatch,
     matched: Boolean(activeMatch),
     ticket: activeMatch ? null : snapshot(existing),
-    match: publicMatch(activeMatch, id),
-    queuedPlayers: queue.length
+    match: publicMatch(activeMatch, id, nowMs),
+    queuedPlayers: queue.length,
+    readyPlayers: fill.readyPlayers,
+    fillWindowStartedAt: fill.fillWindowStartedAt,
+    fillWindowEndsAt: fill.fillWindowEndsAt,
+    fillWindowRemainingMs: fill.fillWindowRemainingMs
+  });
+}
+
+export function advanceLastBastionMatchmaking(nowMs = Date.now()) {
+  const match = tryCreateReadyMatch(nowMs);
+  if (!match) {
+    const fill = getFillWindowState(nowMs);
+    return Object.freeze({
+      matched: false,
+      readyPlayers: fill.readyPlayers,
+      fillWindowStartedAt: fill.fillWindowStartedAt,
+      fillWindowEndsAt: fill.fillWindowEndsAt,
+      fillWindowRemainingMs: fill.fillWindowRemainingMs
+    });
+  }
+
+  return Object.freeze({
+    matched: true,
+    matchId: match.id,
+    participantIds: Object.freeze([...match.participantIds])
   });
 }
 
