@@ -72,7 +72,8 @@ function participantSnapshot(match, userId, nowMs = Date.now()) {
       connected,
       lastSeenAt: lastSeenAtMs > 0 ? nowIso(lastSeenAtMs) : null,
       wave: Math.max(0, Math.floor(Number(state?.wave ?? 0) || 0)),
-      coreHp: Math.max(0, Math.floor(Number(state?.coreHp ?? 0) || 0))
+      coreHp: Math.max(0, Math.floor(Number(state?.coreHp ?? 0) || 0)),
+      placement: Number.isInteger(state?.placement) ? state.placement : null
     });
   });
 }
@@ -89,6 +90,10 @@ function publicMatch(match, userId, nowMs = Date.now()) {
     participantCount: match.participantIds.length,
     status: match.status ?? 'active',
     winnerSlot: match.winnerUserId ? match.participantIds.indexOf(match.winnerUserId) + 1 : null,
+    selfPlacement: Number.isInteger(match.participants.get(userId)?.placement)
+      ? match.participants.get(userId).placement
+      : null,
+    selfWon: match.winnerUserId === userId,
     heartbeatIntervalMs: LAST_BASTION_MATCHMAKING.heartbeatIntervalMs,
     heartbeatTimeoutMs: LAST_BASTION_MATCHMAKING.heartbeatTimeoutMs,
     fairness: getFairnessSnapshot(match, nowMs),
@@ -119,7 +124,8 @@ function createParticipantState(createdAtMs) {
     wave: 0,
     coreHp: 20,
     lastHeartbeatAcceptedAtMs: 0,
-    rejectedHeartbeatCount: 0
+    rejectedHeartbeatCount: 0,
+    placement: null
   };
 }
 
@@ -338,8 +344,11 @@ export function eliminateLastBastionParticipant(userId, matchId, payload = {}, n
   state.eliminatedAtMs = state.eliminatedAtMs ?? nowMs;
 
   const aliveIds = match.participantIds.filter((participantId) => match.participants.get(participantId)?.alive !== false);
+  state.placement = aliveIds.length + 1;
 
   if (aliveIds.length === 1) {
+    const winnerState = match.participants.get(aliveIds[0]);
+    if (winnerState) winnerState.placement = 1;
     match.status = 'finished';
     match.winnerUserId = aliveIds[0];
     match.endedAt = nowIso(nowMs);
@@ -431,6 +440,7 @@ export function getLastBastionMatchmakingFixtures() {
   const winnerStatusB = getLastBastionMatchStatus(b, statusB.match?.id, heartbeatAt + 2001);
   const selfAfterElimination = eliminationA.match?.participants?.find((participant) => participant.self);
   const winnerParticipant = winnerStatusB.match?.participants?.find((participant) => participant.self);
+  const loserParticipant = eliminationA.match?.participants?.find((participant) => participant.self);
 
   clearLastBastionMatchForUser(a);
   clearLastBastionMatchForUser(b);
@@ -456,6 +466,7 @@ export function getLastBastionMatchmakingFixtures() {
     waveRegressionRejected: regressingHeartbeat.ok === false && regressingHeartbeat.error === 'wave_regression',
     desyncDetected: heartbeatB.ok === true && fairnessAfterSpread.match?.fairness?.desynced === true && fairnessAfterSpread.match?.fairness?.waveSpread === 2,
     eliminationMarksDead: eliminationA.ok === true && selfAfterElimination?.alive === false,
-    lastAliveWins: winnerStatusB.match?.status === 'finished' && winnerStatusB.match?.winnerSlot === 2 && winnerParticipant?.alive === true
+    lastAliveWins: winnerStatusB.match?.status === 'finished' && winnerStatusB.match?.winnerSlot === 2 && winnerParticipant?.alive === true,
+    placementsResolve: loserParticipant?.placement === 2 && winnerParticipant?.placement === 1 && winnerStatusB.match?.selfPlacement === 1 && winnerStatusB.match?.selfWon === true
   });
 }
