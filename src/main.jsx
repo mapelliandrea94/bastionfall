@@ -314,7 +314,12 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
     phase: RUN_PHASES.PREPARATION,
     preparationSeconds: mode === MODES.TRI_GATE ? TRI_GATE_PACING.preparationSeconds : RUN_DEFAULTS.preparationSeconds,
     wave: 0,
-    gold: mode === MODES.TRI_GATE ? TRI_GATE_PACING.startingGold : RUN_DEFAULTS.startingGold,
+    gold:
+      mode === MODES.TRI_GATE
+        ? TRI_GATE_PACING.startingGold
+        : mode === MODES.TFT_SHOP
+          ? TFT_SHOP.startingGold
+          : RUN_DEFAULTS.startingGold,
     coreHp: RUN_DEFAULTS.coreHp,
     coreMaxHp: RUN_DEFAULTS.coreHp,
     bastionHitId: 0,
@@ -901,6 +906,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
   const [tftRollIndex, setTftRollIndex] = useState(() => matchingTftSnapshot?.tftRollIndex ?? 0);
   const [tftShopLocked, setTftShopLocked] = useState(() => matchingTftSnapshot?.tftShopLocked ?? false);
+  const [tftPurchasedSlotIds, setTftPurchasedSlotIds] = useState(
+    () => matchingTftSnapshot?.tftPurchasedSlotIds ?? []
+  );
   const [tftBench, setTftBench] = useState(() => matchingTftSnapshot?.tftBench ?? createEmptyBench());
   const [tftFeedback, setTftFeedback] = useState(() => matchingTftSnapshot ? 'RUN RESTORED' : '');
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
@@ -927,7 +935,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const blessingCanReroll = canRerollBlessings(run?.gold ?? 0, blessingRerollCount);
   const blessingChoiceVisible = run?.phase === RUN_PHASES.RESOLVING && isBossWave(waveScaling.waveNumber);
   const activeWorldModifiers = getActiveWorldModifiers(run?.seed ?? 'run', waveScaling.waveNumber);
-  const tftShopOffers = createTftShopOffers(run?.seed ?? 'run', tftRollIndex);
+  const tftShopOffers = createTftShopOffers(run?.seed ?? 'run', tftRollIndex)
+    .filter((offer) => !tftPurchasedSlotIds.includes(offer.slotId));
   const worldModifierEffects = getWorldModifierEffects(activeWorldModifiers);
   const threatWave = generateWavePlan({
     seed: run?.seed ?? 'run',
@@ -991,10 +1000,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       tftBench,
       selectedTftBenchIndex,
       tftRollIndex,
-      tftShopLocked
+      tftShopLocked,
+      tftPurchasedSlotIds
     });
     saveTftRunSnapshot(snapshot);
-  }, [run, placedDefenses, activeWallIds, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked]);
+  }, [run, placedDefenses, activeWallIds, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked, tftPurchasedSlotIds]);
 
   useEffect(() => {
     if (!run || run.phase === RUN_PHASES.ENDED) return undefined;
@@ -1953,6 +1963,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       return;
                     }
                     setTftBench(result.bench);
+                    setTftPurchasedSlotIds((current) => (
+                      current.includes(offer.slotId) ? current : [...current, offer.slotId]
+                    ));
                     onSpendGold(offer.cost);
                     setTftFeedback('');
                   }}
@@ -1970,6 +1983,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               onClick={() => {
                 if (tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost) return;
                 onSpendGold(TFT_SHOP.rerollCost);
+                setTftPurchasedSlotIds([]);
                 setTftRollIndex((value) => value + 1);
               }}
             >
@@ -2174,7 +2188,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <div><span>TRAVEL</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
               <div><span>SPAWN</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
               <div><span>CORE DMG</span><strong>{waveScaling.bastionDamage}</strong></div>
-              <div><span>CLEAR GOLD</span><strong>+{run?.mode === MODES.TRI_GATE ? getTriGateWaveClearReward(waveScaling.waveNumber) : getWaveClearReward(waveScaling.waveNumber)}</strong></div>
+              <div><span>CLEAR GOLD</span><strong>+{
+                run?.mode === MODES.TRI_GATE
+                  ? getTriGateWaveClearReward(waveScaling.waveNumber)
+                  : run?.mode === MODES.TFT_SHOP
+                    ? TFT_SHOP.waveClearGold
+                    : getWaveClearReward(waveScaling.waveNumber)
+              }</strong></div>
             </div>
           </div>
 
@@ -2991,7 +3011,9 @@ function App() {
             const baseWaveClearGold = advancingWave
               ? current.mode === MODES.TRI_GATE
                 ? getTriGateWaveClearReward(completedWaveNumber)
-                : getWaveClearReward(completedWaveNumber)
+                : current.mode === MODES.TFT_SHOP
+                  ? TFT_SHOP.waveClearGold
+                  : getWaveClearReward(completedWaveNumber)
               : 0;
             const nextBlessings = options.blessingId
               ? addBlessingToLoadout(current.blessings ?? [], options.blessingId)
