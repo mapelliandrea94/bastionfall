@@ -1512,3 +1512,39 @@ button { font: inherit; }
   color: #8f7771;
   letter-spacing: .03em;
 }
+
+
+/* BATCH 24 — Single Gate spawn/path movement */
+.battlefield-map__enemy circle {
+  fill: #7f3232;
+  stroke: #e09a7e;
+  stroke-width: 5;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.35));
+}
+
+.battlefield-map__enemy path {
+  fill: #2c2424;
+  stroke: #d3b09d;
+  stroke-width: 3;
+}
+
+.run-spawn-test {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 12px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  border: 1px solid rgba(195, 155, 83, .36);
+  background: rgba(113, 78, 24, .13);
+  color: #e7cd96;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.run-spawn-test small {
+  font-size: 9px;
+  color: #8f8064;
+  letter-spacing: .03em;
+}
