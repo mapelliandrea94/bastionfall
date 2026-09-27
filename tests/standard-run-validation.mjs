@@ -10,6 +10,10 @@ const migration = fs.readFileSync(
   new URL('../supabase/migrations/20260927231420_standard_run_validation_foundation.sql', import.meta.url),
   'utf8'
 );
+const antiCheatMigration = fs.readFileSync(
+  new URL('../supabase/migrations/20260927232020_standard_record_anticheat_v2.sql', import.meta.url),
+  'utf8'
+);
 
 assert(migration.includes('create table if not exists public.standard_run_sessions'), 'Standard run session table must exist');
 assert(migration.includes('persist_standard_run_checkpoint'), 'Checkpoint RPC must exist');
@@ -31,6 +35,9 @@ assert(server.includes("'final_gold_checkpoint_mismatch'"), 'Final gold must mat
 assert(server.includes("'final_core_checkpoint_mismatch'"), 'Final core state must match the final checkpoint');
 assert(main.includes('const finalCheckpoint = await reportStandardRunProgress'), 'Client must send a final standard-run checkpoint before completion');
 assert(migration.includes('standard_run_sessions'), 'Standard validation migration must persist run sessions');
+assert(antiCheatMigration.includes('completed_matches_standard_run_match_uidx'), 'Standard match results must be unique in the database');
+assert(antiCheatMigration.includes('already_recorded boolean'), 'Standard result RPC must expose idempotent replay state');
+assert(antiCheatMigration.includes('update public.profiles'), 'Standard record and profile rewards must commit atomically');
 
 console.log('Standard run validation foundation QA PASS', {
   persistedSessions: true,
