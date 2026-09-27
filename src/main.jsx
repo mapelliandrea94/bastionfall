@@ -961,6 +961,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     : [];
   const lastBastionSelf = lastBastionParticipants.find((participant) => participant.self) ?? null;
   const lastBastionAliveCount = lastBastionParticipants.filter((participant) => participant.alive).length;
+  const lastBastionFairness = run?.lastBastionFairness ?? null;
   const isLastBastionSpectating =
     run?.mode === MODES.LAST_BASTION &&
     lastBastionSelf?.alive === false &&
@@ -1488,7 +1489,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             <section className="last-bastion-status" aria-label="Last Bastion participant status">
               <div className="last-bastion-status__header">
                 <span>{isLastBastionFinished ? 'MATCH COMPLETE' : isLastBastionSpectating ? 'SPECTATING' : 'LIVE MATCH'}</span>
-                <strong>{lastBastionAliveCount}/{lastBastionParticipants.length || 0} ALIVE</strong>
+                <strong>
+                  {lastBastionFairness?.desynced ? `DESYNC +${lastBastionFairness.waveSpread}` : 'SYNC'} · {lastBastionAliveCount}/{lastBastionParticipants.length || 0} ALIVE
+                </strong>
               </div>
               <div className="last-bastion-status__players">
                 {lastBastionParticipants.map((participant) => (
@@ -2741,7 +2744,8 @@ function App() {
         if (!current || current.matchId !== result.payload.match.id) return current;
         return {
           ...current,
-          lastBastionParticipants: result.payload.match.participants ?? current.lastBastionParticipants ?? []
+          lastBastionParticipants: result.payload.match.participants ?? current.lastBastionParticipants ?? [],
+          lastBastionFairness: result.payload.match.fairness ?? current.lastBastionFairness ?? null
         };
       });
     };
@@ -2791,6 +2795,8 @@ function App() {
           ...(shouldFreezeWinner ? { phase: RUN_PHASES.ENDED } : {}),
           lastBastionParticipants:
             result.payload.match.participants ?? current.lastBastionParticipants ?? [],
+          lastBastionFairness:
+            result.payload.match.fairness ?? current.lastBastionFairness ?? null,
           lastBastionWinnerSlot:
             result.payload.match.winnerSlot ?? current.lastBastionWinnerSlot ?? null,
           lastBastionMatchStatus: nextStatus
