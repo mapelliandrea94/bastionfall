@@ -2253,3 +2253,57 @@ body { background:#1c3f61; }
 .results-hero { background:radial-gradient(circle at 50% 10%,#679ac5,#225386 75%); }
 :where(button,a):focus-visible { outline:3px solid #ffdc7a; outline-offset:3px; }
 @media (prefers-reduced-motion:reduce) { .mode-card:hover,.pre-run-start:hover,.results-actions button:hover { transform:none; } }
+
+
+/* BATCH 74 — Profile real data */
+.profile-state {
+  padding: 1.25rem;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  background: rgba(8,12,18,.68);
+}
+
+.profile-state strong,
+.profile-state small {
+  display: block;
+}
+
+.profile-state small {
+  margin-top: .35rem;
+  opacity: .7;
+}
+
+.profile-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.profile-mode-card {
+  padding: 1rem;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 16px;
+  background: rgba(8,12,18,.68);
+}
+
+.profile-mode-card span,
+.profile-mode-card small {
+  display: block;
+}
+
+.profile-mode-card strong {
+  display: block;
+  margin: .35rem 0 .55rem;
+  font-size: 1.35rem;
+}
+
+.profile-mode-card small + small {
+  margin-top: .35rem;
+}
+
+@media (max-width: 900px) {
+  .profile-mode-grid {
+    grid-template-columns: 1fr;
+  }
+}
