@@ -321,31 +321,71 @@ app.get('/api/last-bastion/matchmaking/status', requireUser, async (req, res) =>
   return res.json(attachLastBastionMatchToken(getLastBastionQueueStatus(req.user.id), req.user.id));
 });
 
-app.post('/api/last-bastion/match/heartbeat', requireUser, (req, res) => {
+app.post('/api/last-bastion/match/heartbeat', requireUser, async (req, res) => {
   const matchToken = String(req.body?.matchToken || '');
   const identity = verifyMatchIdentity(matchToken);
   if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
   if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
   if (identity.mode !== 'last-bastion') return res.status(400).json({ error: 'match_mode_mismatch' });
 
-  const result = recordLastBastionHeartbeat(req.user.id, identity.matchId, {
-    wave: req.body?.wave,
-    coreHp: req.body?.coreHp
-  });
-
-  if (!result.ok) {
-    if (result.error === 'heartbeat_rate_limited') {
-      return res.status(429).json({ error: result.error });
-    }
-    if (['invalid_wave', 'invalid_core_hp', 'wave_regression'].includes(result.error)) {
-      return res.status(400).json({ error: result.error });
-    }
-    if (['participant_eliminated', 'match_finished'].includes(result.error)) {
-      return res.status(409).json({ error: result.error });
-    }
-    return res.status(404).json({ error: result.error || 'heartbeat_failed' });
+  const wave = Number(req.body?.wave);
+  const coreHp = Number(req.body?.coreHp);
+  if (!Number.isInteger(wave) || wave < 0 || wave > 9999) {
+    return res.status(400).json({ error: 'invalid_wave' });
   }
-  return res.json(result);
+  if (!Number.isInteger(coreHp) || coreHp < 0 || coreHp > 100000) {
+    return res.status(400).json({ error: 'invalid_core_hp' });
+  }
+
+  const hydrated = await hydratePersistentLastBastionState(req);
+  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+
+  const now = new Date().toISOString();
+  const { error } = await hydrated.serverDb.rpc(
+    'persist_last_bastion_heartbeat',
+    {
+      p_match_id: identity.matchId,
+      p_user_id: req.user.id,
+      p_wave: wave,
+      p_core_hp: coreHp,
+      p_seen_at: now
+    }
+  );
+
+  if (error) {
+    const message = String(error.message || '');
+    if (message.includes('heartbeat_rate_limited')) {
+      return res.status(429).json({ error: 'heartbeat_rate_limited' });
+    }
+    if (message.includes('wave_regression')) {
+      return res.status(400).json({ error: 'wave_regression' });
+    }
+    if (message.includes('invalid_wave')) {
+      return res.status(400).json({ error: 'invalid_wave' });
+    }
+    if (message.includes('invalid_core_hp')) {
+      return res.status(400).json({ error: 'invalid_core_hp' });
+    }
+    if (message.includes('participant_eliminated')) {
+      return res.status(409).json({ error: 'participant_eliminated' });
+    }
+    if (message.includes('match_finished')) {
+      return res.status(409).json({ error: 'match_finished' });
+    }
+    if (message.includes('match_not_found')) {
+      return res.status(404).json({ error: 'match_not_found' });
+    }
+    console.error('Last Bastion heartbeat persistence failed:', error.message);
+    return res.status(500).json({ error: 'heartbeat_persistence_failed' });
+  }
+
+  const refreshed = await hydratePersistentLastBastionState(req);
+  if (!refreshed.ok) return res.status(503).json({ error: refreshed.error });
+
+  const result = getLastBastionMatchStatus(req.user.id, identity.matchId);
+  if (!result.ok) return res.status(404).json({ error: result.error || 'heartbeat_failed' });
+
+  return res.json(attachLastBastionMatchToken(result, req.user.id));
 });
 
 app.get('/api/last-bastion/match/status', requireUser, async (req, res) => {
