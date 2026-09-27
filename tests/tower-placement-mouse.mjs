@@ -50,8 +50,13 @@ async function verifyMousePlacement(defense, slotId, { verifyOccupiedClick = fal
   await slot.hover();
   const ghost = slot.locator('.tower-visual--ghost');
   assert(await ghost.count() === 1, `Ghost preview missing for ${defense.id} on ${slotId}`);
-  const ghostOpacity = Number(await ghost.evaluate((node) => getComputedStyle(node).opacity));
-  assert(ghostOpacity > 0, `Ghost preview stayed hidden for ${defense.id} on ${slotId}`);
+  await page.waitForFunction(
+    ({ slotId: id }) => {
+      const node = document.querySelector(`[data-slot-id="${id}"] .tower-visual--ghost`);
+      return node && Number(getComputedStyle(node).opacity) > 0;
+    },
+    { slotId }
+  );
 
   const box = await slot.boundingBox();
   assert(box, `No mouse target box for ${slotId}`);
