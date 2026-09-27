@@ -917,6 +917,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   );
   const [tftBench, setTftBench] = useState(() => matchingTftSnapshot?.tftBench ?? createEmptyBench());
   const [tftFeedback, setTftFeedback] = useState(() => matchingTftSnapshot ? 'RUN RESTORED' : '');
+  const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
@@ -943,6 +944,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const activeWorldModifiers = getActiveWorldModifiers(run?.seed ?? 'run', waveScaling.waveNumber);
   const tftShopOffers = createTftShopOffers(run?.seed ?? 'run', tftRollIndex)
     .filter((offer) => !tftPurchasedSlotIds.includes(offer.slotId));
+  const selectedTftShopOffer = tftShopOffers.find((offer) => offer.slotId === selectedTftShopSlotId) ?? null;
   const worldModifierEffects = getWorldModifierEffects(activeWorldModifiers);
   const threatWave = generateWavePlan({
     seed: run?.seed ?? 'run',
@@ -1978,30 +1980,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <button
                   key={offer.slotId}
                   type="button"
-                  className={`tft-shop-card tft-shop-card--${offer.faction}`}
-                  disabled={(run?.gold ?? 0) < offer.cost || tftBench.every(Boolean)}
+                  className={`tft-shop-card tft-shop-card--${offer.faction} ${selectedTftShopSlotId === offer.slotId ? 'tft-shop-card--selected' : ''}`}
                   data-shop-slot={offer.slotId}
                   data-shop-faction={offer.faction}
                   data-shop-tower-id={offer.towerId}
                   onClick={() => {
-                    if ((run?.gold ?? 0) < offer.cost) return;
-                    const result = addCopyToBench(tftBench, {
-                      copyId: `${run?.seed ?? 'run'}:${tftRollIndex}:${offer.slotId}:${Date.now()}`,
-                      towerId: offer.towerId,
-                      name: offer.name,
-                      faction: offer.faction,
-                      role: offer.role,
-                      cost: offer.cost
-                    });
-                    if (!result.ok) {
-                      setTftFeedback('BENCH FULL');
-                      return;
-                    }
-                    setTftBench(result.bench);
-                    setTftPurchasedSlotIds((current) => (
-                      current.includes(offer.slotId) ? current : [...current, offer.slotId]
-                    ));
-                    onSpendGold(offer.cost);
+                    setSelectedTftShopSlotId(offer.slotId);
+                    setSelectedDefenseId(offer.towerId);
+                    setSelectedPlacedDefenseId(null);
                     setTftFeedback('');
                   }}
                 >
@@ -2023,6 +2009,40 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <span>GOLD</span>
                 <strong>{run?.gold ?? 0}</strong>
               </div>
+              <div className="tft-shop-actions">
+                <button
+                  type="button"
+                  className="tft-shop-buy"
+                  disabled={!selectedTftShopOffer || (run?.gold ?? 0) < (selectedTftShopOffer?.cost ?? 0) || tftBench.every(Boolean)}
+                  onClick={() => {
+                    if (!selectedTftShopOffer) return;
+                    if ((run?.gold ?? 0) < selectedTftShopOffer.cost) return;
+                    const result = addCopyToBench(tftBench, {
+                      copyId: `${run?.seed ?? 'run'}:${tftRollIndex}:${selectedTftShopOffer.slotId}:${Date.now()}`,
+                      towerId: selectedTftShopOffer.towerId,
+                      name: selectedTftShopOffer.name,
+                      faction: selectedTftShopOffer.faction,
+                      role: selectedTftShopOffer.role,
+                      cost: selectedTftShopOffer.cost
+                    });
+                    if (!result.ok) {
+                      setTftFeedback('BENCH FULL');
+                      return;
+                    }
+                    setTftBench(result.bench);
+                    setTftPurchasedSlotIds((current) => (
+                      current.includes(selectedTftShopOffer.slotId)
+                        ? current
+                        : [...current, selectedTftShopOffer.slotId]
+                    ));
+                    onSpendGold(selectedTftShopOffer.cost);
+                    setSelectedTftShopSlotId(null);
+                    setTftFeedback('');
+                  }}
+                >
+                  <span>BUY</span>
+                  <small>{selectedTftShopOffer ? `${selectedTftShopOffer.cost}G` : 'SELECT'}</small>
+                </button>
               <button
                 type="button"
                 className="tft-shop-roll"
@@ -2031,12 +2051,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   if (tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost) return;
                   onSpendGold(TFT_SHOP.rerollCost);
                   setTftPurchasedSlotIds([]);
+                  setSelectedTftShopSlotId(null);
                   setTftRollIndex((value) => value + 1);
                 }}
               >
                 <span>ROLL</span>
                 <small>{TFT_SHOP.rerollCost}G</small>
               </button>
+              </div>
             </div>
             <button
               type="button"
