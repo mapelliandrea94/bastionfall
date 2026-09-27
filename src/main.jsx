@@ -12,6 +12,7 @@ import { BARRACKS } from './game/structures/barracks.js';
 import { COMBAT_BALANCE_MODEL, COMBAT_BALANCE_SNAPSHOT } from './game/balance/combatBalance.js';
 import { getPlacementValidationFixtures, validateSingleGatePlacement } from './game/placement/singleGatePlacement.js';
 import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
+import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -277,6 +278,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   });
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? ARCHER_TOWER;
   const selectedSellPreview = getSellPreview(selectedDefense);
+  const selectedUpgradePreview = getNextUpgradePreview(selectedDefense, 1);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
@@ -559,6 +561,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
               <span>SELL REFUND</span>
               <strong>{selectedSellPreview.refund}g</strong>
               <small>{Math.round(SELL_ECONOMY.baseRefundRate * 100)}% of invested gold · preview only until a placed defense is selected</small>
+            </div>
+            <div className="defense-inspector__upgrade">
+              <span>NEXT UPGRADE</span>
+              <strong>LV.{selectedUpgradePreview.nextLevel} · {selectedUpgradePreview.upgradeCost}g</strong>
+              <small>
+                {selectedUpgradePreview.efficiency.dpsPer100Gold} DPS/100g · max level {UPGRADE_CURVE.maxLevel}
+              </small>
             </div>
           </section>
 
