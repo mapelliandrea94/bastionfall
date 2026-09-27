@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { supabase } from './lib/supabase.js';
 import { normalizeRunSeed } from './lib/runSeed.js';
 import { SINGLE_GATE_MAP } from './game/maps/singleGate.js';
+import { TRI_GATE_MAP, getTriGateMapFixtures } from './game/maps/triGate.js';
 import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
@@ -148,6 +149,8 @@ const TOWER_SLOT_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures(
   [ARCHER_TOWER, CANNON_TOWER, FROST_TOWER, MAGE_TOWER, BALLISTA_TOWER, BARRACKS],
   ECONOMY_BASELINE.startingGold
 ));
+
+const TRI_GATE_MAP_FIXTURE = Object.freeze(getTriGateMapFixtures());
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
   ARCHER_TOWER,
@@ -973,6 +976,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-flying-enemy-speed={FLYING_ENEMY_BUDGET.speedIndex}
             data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
+            data-tri-gate-map-version={TRI_GATE_MAP.version}
+            data-tri-gate-map-pass={TRI_GATE_MAP_FIXTURE.modeExpected === TRI_GATE_MAP_FIXTURE.modeActual && TRI_GATE_MAP_FIXTURE.entranceCountExpected === TRI_GATE_MAP_FIXTURE.entranceCountActual && TRI_GATE_MAP_FIXTURE.laneCountExpected === TRI_GATE_MAP_FIXTURE.laneCountActual && TRI_GATE_MAP_FIXTURE.uniqueEntrances === true && TRI_GATE_MAP_FIXTURE.uniqueLanes === true && TRI_GATE_MAP_FIXTURE.lanesResolve === true && TRI_GATE_MAP_FIXTURE.bastionCentered === true && TRI_GATE_MAP_FIXTURE.individualSlotPolicy === true}
             data-tower-slot-purchase-pass={TOWER_SLOT_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-placed-defense-count={placedDefenses.length}
             data-run-gold={run?.gold ?? 0}
