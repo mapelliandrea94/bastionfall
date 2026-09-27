@@ -3,6 +3,8 @@ import { createEnemyBaseState } from './enemyBase.js';
 export const RUNNER_ENEMY = Object.freeze({
   id: 'runner',
   name: 'Runner',
+  faction: 'insect',
+  unitType: 'infantry',
   archetype: 'runner',
   maxHp: 62,
   moveSpeed: 1.55,
