@@ -191,7 +191,7 @@ export function hydrateLastBastionActiveMatches(matchRows = [], participantRows 
     const startedAt = String(row?.startedAt || row?.started_at || '');
     const waveStartsAt = String(row?.waveStartsAt || row?.wave_starts_at || '');
     const status = String(row?.status || 'active');
-    if (!id || !seed || !createdAt || !startedAt || !waveStartsAt || status !== 'active') continue;
+    if (!id || !seed || !createdAt || !startedAt || !waveStartsAt || !['active', 'finished'].includes(status)) continue;
 
     const participantRowsForMatch = (participantsByMatch.get(id) || [])
       .sort((a, b) => a.slot - b.slot);
@@ -229,7 +229,7 @@ export function hydrateLastBastionActiveMatches(matchRows = [], participantRows 
       waveStartsAt,
       participantIds,
       participants,
-      status: 'active',
+      status,
       winnerUserId: row?.winnerUserId || row?.winner_user_id || null,
       endedAt: row?.endedAt || row?.ended_at || null
     };
@@ -277,7 +277,7 @@ export function joinLastBastionQueue(userId) {
   if (!id) return Object.freeze({ ok: false, error: 'invalid_user' });
 
   const activeMatch = activeMatchByUserId.get(id);
-  if (activeMatch) {
+  if (activeMatch?.status === 'active') {
     return Object.freeze({
       ok: true,
       created: false,
@@ -307,7 +307,7 @@ export function joinLastBastionQueue(userId) {
 export function leaveLastBastionQueue(userId) {
   const id = String(userId || '').trim();
 
-  if (activeMatchByUserId.has(id)) {
+  if (activeMatchByUserId.get(id)?.status === 'active') {
     return Object.freeze({ ok: false, error: 'match_already_started' });
   }
 
@@ -327,7 +327,7 @@ export function setLastBastionReady(userId, ready = true) {
   const id = String(userId || '').trim();
 
   const activeMatch = activeMatchByUserId.get(id);
-  if (activeMatch) {
+  if (activeMatch?.status === 'active') {
     return Object.freeze({
       ok: true,
       matched: true,
@@ -360,7 +360,7 @@ export function setLastBastionReady(userId, ready = true) {
 export function getLastBastionActiveMatchPersistenceSnapshot(userId) {
   const id = String(userId || '').trim();
   const match = activeMatchByUserId.get(id);
-  if (!match) return null;
+  if (!match || match.status !== 'active') return null;
 
   return Object.freeze({
     id: match.id,
@@ -375,12 +375,13 @@ export function getLastBastionActiveMatchPersistenceSnapshot(userId) {
 export function getLastBastionActiveMatchUserIds(userId) {
   const id = String(userId || '').trim();
   const match = activeMatchByUserId.get(id);
-  return match ? [...match.participantIds] : [];
+  return match?.status === 'active' ? [...match.participantIds] : [];
 }
 
 export function getLastBastionQueueStatus(userId) {
   const id = String(userId || '').trim();
-  const activeMatch = activeMatchByUserId.get(id);
+  const recoveredMatch = activeMatchByUserId.get(id);
+  const activeMatch = recoveredMatch?.status === 'active' ? recoveredMatch : null;
   const existing = byUserId.get(id);
 
   return Object.freeze({
