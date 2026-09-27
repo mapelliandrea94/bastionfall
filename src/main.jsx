@@ -734,45 +734,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       setSpawnQueue((current) => {
         if (current.length === 0) return current;
         const [nextEnemy, ...remaining] = current;
-        setActiveEnemies((active) => [
-          ...active,
-          applyEliteModifiers(nextEnemy.archetype === FLYING_ENEMY.archetype
-          ? createFlyingEnemyState({
-              ...nextEnemy,
-              progress: 0,
-              spawnedAt: performance.now()
-            })
+        const baseEnemyState = nextEnemy.archetype === FLYING_ENEMY.archetype
+          ? createFlyingEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
           : nextEnemy.archetype === SHIELDED_ENEMY.archetype
-            ? createShieldedEnemyState({
-                ...nextEnemy,
-                progress: 0,
-                spawnedAt: performance.now()
-              })
+            ? createShieldedEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
             : nextEnemy.archetype === ARMORED_ENEMY.archetype
-              ? createArmoredEnemyState({
-                  ...nextEnemy,
-                  progress: 0,
-                  spawnedAt: performance.now()
-                })
+              ? createArmoredEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
               : nextEnemy.archetype === TANK_ENEMY.archetype
-                ? createTankEnemyState({
-                    ...nextEnemy,
-                    progress: 0,
-                    spawnedAt: performance.now()
-                  })
+                ? createTankEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
                 : nextEnemy.archetype === RUNNER_ENEMY.archetype
-                  ? createRunnerEnemyState({
-                      ...nextEnemy,
-                      progress: 0,
-                      spawnedAt: performance.now()
-                    })
-                  : createNormalEnemyState({
-                      ...nextEnemy,
-                      progress: 0,
-                      spawnedAt: performance.now()
-                    }))
-          )
-        ]);
+                  ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+                  : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() });
+
+        setActiveEnemies((active) => [...active, applyEliteModifiers(baseEnemyState)]);
         return remaining;
       });
     }, activeEnemies.length === 0 ? 150 : waveScaling.spawnIntervalMs);
