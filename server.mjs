@@ -87,6 +87,24 @@ app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, 
 const STARTABLE_MODES = new Set(['single-gate', 'tri-gate', 'last-bastion']);
 const LAST_BASTION_MATCHMAKING_FIXTURE = Object.freeze(getLastBastionMatchmakingFixtures());
 
+function attachLastBastionMatchToken(result, userId) {
+  if (!result?.match) return result;
+  const identityPayload = {
+    v: 1,
+    matchId: result.match.id,
+    userId,
+    mode: 'last-bastion',
+    startedAt: result.match.startedAt
+  };
+  return {
+    ...result,
+    match: {
+      ...result.match,
+      token: signMatchIdentity(identityPayload)
+    }
+  };
+}
+
 app.post('/api/match/start', requireUser, (req, res) => {
   if (!matchTokenSecret) {
     return res.status(503).json({ error: 'match_identity_not_configured' });
@@ -134,11 +152,11 @@ app.post('/api/last-bastion/matchmaking/leave', requireUser, (req, res) => {
 app.post('/api/last-bastion/matchmaking/ready', requireUser, (req, res) => {
   const result = setLastBastionReady(req.user.id, req.body?.ready !== false);
   if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_ready_failed' });
-  return res.json(result);
+  return res.json(attachLastBastionMatchToken(result, req.user.id));
 });
 
 app.get('/api/last-bastion/matchmaking/status', requireUser, (req, res) => {
-  return res.json(getLastBastionQueueStatus(req.user.id));
+  return res.json(attachLastBastionMatchToken(getLastBastionQueueStatus(req.user.id), req.user.id));
 });
 
 app.get('/api/last-bastion/matchmaking/health', (_req, res) => {
