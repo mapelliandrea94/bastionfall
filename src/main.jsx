@@ -2055,8 +2055,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   >
                     {copy ? (
                       <>
-                        <strong>{copy.name}</strong>
-                        <small>{copy.faction.toUpperCase()}</small>
+                        <div
+                          className="tft-bench-slot__art"
+                          style={getTowerArtStyleForTower(copy.towerId)}
+                          aria-hidden="true"
+                        />
+                        <div className="tft-bench-slot__copy">
+                          <strong>{copy.name}</strong>
+                          <small>{copy.faction.toUpperCase()}</small>
+                        </div>
                         {selectedPlacedDefense && (
                           <button
                             type="button"
