@@ -15,6 +15,7 @@ import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
 import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
+import { ENEMY_BASE_MODEL, createEnemyBaseState, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -85,6 +86,8 @@ const TARGETING_VALIDATION_SNAPSHOT = Object.freeze(
 );
 
 const ATTACK_FEEDBACK_FIXTURE = Object.freeze(getAttackFeedbackFixtures());
+
+const ENEMY_BASE_FIXTURE = Object.freeze(getEnemyBaseFixtures());
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -339,7 +342,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
         const [nextEnemy, ...remaining] = current;
         setActiveEnemies((active) => [
           ...active,
-          { ...nextEnemy, progress: 0, spawnedAt: performance.now() }
+          createEnemyBaseState({
+          ...nextEnemy,
+          progress: 0,
+          spawnedAt: performance.now()
+        })
         ]);
         return remaining;
       });
@@ -523,6 +530,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-targeting-validation-pass={TARGETING_VALIDATION_SNAPSHOT.every((entry) => entry.expected === entry.actual)}
             data-attack-feedback-version={ATTACK_FEEDBACK.version}
             data-attack-feedback-pass={ATTACK_FEEDBACK_FIXTURE.travelMsExpected === ATTACK_FEEDBACK_FIXTURE.travelMsActual && ATTACK_FEEDBACK_FIXTURE.dpsExpected === ATTACK_FEEDBACK_FIXTURE.dpsActual}
+            data-enemy-base-version={ENEMY_BASE_MODEL.version}
+            data-enemy-base-pass={ENEMY_BASE_FIXTURE.shieldExpected === ENEMY_BASE_FIXTURE.shieldActual && ENEMY_BASE_FIXTURE.hpExpected === ENEMY_BASE_FIXTURE.hpActual && ENEMY_BASE_FIXTURE.slowedSpeedExpected === ENEMY_BASE_FIXTURE.slowedSpeedActual && ENEMY_BASE_FIXTURE.expiredSlowSpeedExpected === ENEMY_BASE_FIXTURE.expiredSlowSpeedActual}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
