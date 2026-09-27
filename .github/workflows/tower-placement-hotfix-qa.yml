@@ -1,27 +1,7 @@
 name: Tower Placement Hotfix QA
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "src/game/maps/singleGate.js"
-      - "src/game/placement/singleGatePlacement.js"
-      - "src/main.jsx"
-      - "src/game/spawning/waveDirector.js"
-      - "src/game/enemies/enemyRoster.js"
-      - "src/game/balance/endToEndRegressionQa.js"
-      - "src/game/combat/counterplay.js"
-      - "src/game/combat/baseTowerCombat.js"
-      - "tests/end-to-end-regression.mjs"
-      - "src/menu.css"
-      - "server.mjs"
-      - "tests/tower-placement-mouse.mjs"
-      - "tests/wave-director.mjs"
-      - "tests/last-bastion-sync.mjs"
-      - "tests/last-bastion-spectate.mjs"
-      - "tests/game-feedback.mjs"
-      - "tests/accessibility-responsive.mjs"
-      - ".github/workflows/tower-placement-hotfix-qa.yml"
+  workflow_dispatch:
 
 jobs:
   mouse-placement:
@@ -32,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
       - run: npm run build
       - name: End-to-End 24x24 Regression QA
         run: node tests/end-to-end-regression.mjs

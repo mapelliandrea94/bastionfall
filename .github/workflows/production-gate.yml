@@ -15,7 +15,7 @@ concurrency:
 jobs:
   production-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,6 +39,25 @@ jobs:
         run: node tests/last-bastion-spectate.mjs
       - name: Gameplay Feedback QA
         run: node tests/game-feedback.mjs
+      - name: Install Playwright QA runtime
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start production preview for browser QA
+        run: |
+          nohup npx vite preview --host 127.0.0.1 --port 4173 > /tmp/bastionfall-preview.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/bastionfall-preview.log
+          exit 1
+      - name: Accessibility responsive QA
+        run: node tests/accessibility-responsive.mjs
+      - name: Tower placement mouse QA
+        run: node tests/tower-placement-mouse.mjs
       - name: Boot production server and verify health
         env:
           PORT: 3000
