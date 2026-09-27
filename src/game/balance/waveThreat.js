@@ -1,3 +1,4 @@
+import { getDifficultyBand } from './difficultyBands.js';
 import { NORMAL_ENEMY } from '../enemies/normal.js';
 import { RUNNER_ENEMY } from '../enemies/runner.js';
 import { TANK_ENEMY } from '../enemies/tank.js';
@@ -24,11 +25,13 @@ export const WAVE_THREAT_MODEL = Object.freeze({
 export function getWaveThreatBudget(waveNumber) {
   const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
   const band = Math.floor((wave - 1) / WAVE_THREAT_MODEL.bandSize);
-  return Number((
+  const difficultyBand = getDifficultyBand(wave);
+  const rawThreat =
     WAVE_THREAT_MODEL.baseThreat +
     (wave - 1) * WAVE_THREAT_MODEL.threatPerWave +
-    band * WAVE_THREAT_MODEL.bandBonusThreat
-  ).toFixed(2));
+    band * WAVE_THREAT_MODEL.bandBonusThreat;
+
+  return Number((rawThreat * difficultyBand.threatMultiplier).toFixed(2));
 }
 
 function addEnemy(composition, definition) {
