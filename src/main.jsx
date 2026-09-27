@@ -1512,7 +1512,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </header>
 
           {run?.mode === MODES.LAST_BASTION && (
-            <section className="last-bastion-status" aria-label="Last Bastion participant status">
+            <section
+              className="last-bastion-status"
+              aria-label="Last Bastion participant status"
+              aria-live="polite"
+              aria-atomic="false"
+            >
               <div className="last-bastion-status__header">
                 <span>{isLastBastionFinished ? 'MATCH COMPLETE' : isLastBastionSpectating ? 'SPECTATING' : 'LIVE MATCH'}</span>
                 <strong>
@@ -1540,7 +1545,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           )}
 
           {(isLastBastionSpectating || isLastBastionFinished) && (
-            <div className="last-bastion-spectate-banner">
+            <div className="last-bastion-spectate-banner" role="status" aria-live="assertive">
               <span>{isLastBastionFinished ? 'LAST BASTION COMPLETE' : 'BASTION FALLEN — SPECTATOR MODE'}</span>
               <strong>
                 {isLastBastionFinished
@@ -1561,8 +1566,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             className="battlefield-map"
             viewBox={`0 0 ${SINGLE_GATE_MAP.size.width} ${SINGLE_GATE_MAP.size.height}`}
             preserveAspectRatio="xMidYMid meet"
-            aria-label="Single Gate battlefield"
+            role="img"
+            aria-labelledby="battlefield-title battlefield-desc"
           >
+            <title id="battlefield-title">Bastionfall battlefield</title>
+            <desc id="battlefield-desc">Tower defense battlefield with build slots, enemy path, Bastion and live combat state.</desc>
             <defs>
               <linearGradient id="bf-river" x2="0" y2="1"><stop stopColor="#d2faff"/><stop offset=".5" stopColor="#42b9da"/><stop offset="1" stopColor="#177dbe"/></linearGradient>
               <linearGradient id="bf-cliff" x2="0" y2="1"><stop stopColor="#e7d7af"/><stop offset=".22" stopColor="#a2a793"/><stop offset="1" stopColor="#4c7377"/></linearGradient>
@@ -1596,7 +1604,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     transform={`translate(${slot.x} ${slot.y})`}
                     role="button"
                     tabIndex="0"
-                    aria-label={placed ? `Select ${defenseDefinitions[placed.defenseId]?.name || 'tower'}` : `Build ${selectedDefense.name}`}
+                    aria-label={placed
+                      ? `Select ${defenseDefinitions[placed.defenseId]?.name || 'tower'} on ${slot.id}`
+                      : `Build ${selectedDefense.name} on ${slot.id}`}
+                    aria-disabled={!placed && !affordable ? 'true' : 'false'}
                     data-slot-id={slot.id}
                     data-occupied={Boolean(placed)}
                     data-defense-id={placed?.defenseId ?? ''}
