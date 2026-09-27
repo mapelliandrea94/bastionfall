@@ -68,7 +68,7 @@ const PLACEMENT_VALIDATION_SNAPSHOT = Object.freeze(
   getPlacementValidationFixtures().map((fixture) => ({
     id: fixture.id,
     expected: fixture.expectValid,
-    actual: validateSingleGatePlacement(fixture.point).valid
+    actual: validateSingleGatePlacement(fixture.point, fixture.placedStructures).valid
   }))
 );
 
