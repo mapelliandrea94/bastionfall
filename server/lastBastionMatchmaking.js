@@ -278,6 +278,8 @@ export function recordLastBastionHeartbeat(userId, matchId, payload = {}, nowMs 
 
   const state = match.participants.get(id);
   if (!state) return Object.freeze({ ok: false, error: 'participant_not_found' });
+  if (match.status === 'finished') return Object.freeze({ ok: false, error: 'match_finished' });
+  if (state.alive === false) return Object.freeze({ ok: false, error: 'participant_eliminated' });
 
   const wave = Number(payload.wave ?? state.wave);
   const coreHp = Number(payload.coreHp ?? state.coreHp);
@@ -328,6 +330,11 @@ export function eliminateLastBastionParticipant(userId, matchId, payload = {}, n
   const state = match.participants.get(id);
   if (!state) return Object.freeze({ ok: false, error: 'participant_not_found' });
 
+  const eliminationWave = Number(payload.wave ?? state.wave);
+  if (!Number.isInteger(eliminationWave) || eliminationWave < 0 || eliminationWave > LAST_BASTION_MATCHMAKING.maxWave) {
+    return Object.freeze({ ok: false, error: 'invalid_wave' });
+  }
+
   if (state.alive === false) {
     return Object.freeze({
       ok: true,
@@ -338,7 +345,7 @@ export function eliminateLastBastionParticipant(userId, matchId, payload = {}, n
   }
 
   state.lastSeenAtMs = nowMs;
-  state.wave = Math.max(0, Math.floor(Number(payload.wave ?? state.wave) || 0));
+  state.wave = eliminationWave;
   state.coreHp = 0;
   state.alive = false;
   state.eliminatedAtMs = state.eliminatedAtMs ?? nowMs;
