@@ -1084,3 +1084,170 @@ button { font: inherit; }
   .build-slot--5 { right: 18%; top: 23%; }
   .build-slot--6 { right: 12%; top: 57%; }
 }
+
+
+/* BATCH 10 — responsive battlefield breakpoints */
+@media (max-width: 1280px) and (min-width: 901px) {
+  .run-layout {
+    grid-template-columns: minmax(0, 1fr) 270px;
+  }
+
+  .run-hud {
+    left: 10px;
+    right: 10px;
+    top: 10px;
+    grid-template-columns: 1.1fr repeat(3, .58fr) auto;
+  }
+
+  .battlefield__lane {
+    height: 76px;
+  }
+
+  .battlefield__lane--a {
+    width: 64%;
+    top: 44%;
+  }
+
+  .battlefield__lane--b {
+    width: 42%;
+    right: 4%;
+    top: 32%;
+  }
+
+  .battlefield__spawn {
+    left: 20px;
+    top: calc(44% + 15px);
+  }
+
+  .battlefield__core {
+    right: 24px;
+    top: calc(32% + 116px);
+  }
+
+  .build-slot {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+@media (max-width: 900px) {
+  .battlefield {
+    min-height: max(520px, 62dvh);
+  }
+
+  .battlefield__lane {
+    height: 68px;
+  }
+
+  .battlefield__lane--a {
+    width: 68%;
+    top: 46%;
+  }
+
+  .battlefield__lane--b {
+    width: 46%;
+    right: 1%;
+    top: 34%;
+  }
+
+  .battlefield__spawn {
+    left: 16px;
+    top: calc(46% + 11px);
+  }
+
+  .battlefield__core {
+    right: 18px;
+    top: calc(34% + 100px);
+  }
+
+  .build-slot--1 { left: 18%; top: 27%; }
+  .build-slot--2 { left: 33%; top: 57%; }
+  .build-slot--3 { left: 47%; top: 29%; }
+  .build-slot--4 { left: 57%; top: 61%; }
+  .build-slot--5 { right: 18%; top: 26%; }
+  .build-slot--6 { right: 12%; top: 60%; }
+}
+
+@media (max-width: 640px) {
+  .battlefield {
+    min-height: max(500px, 66dvh);
+    background-size: 32px 32px, 32px 32px, auto, auto;
+  }
+
+  .battlefield::after {
+    box-shadow: inset 0 0 72px rgba(0,0,0,.5);
+  }
+
+  .battlefield__lane {
+    height: 56px;
+  }
+
+  .battlefield__lane--a {
+    width: 72%;
+    top: 49%;
+  }
+
+  .battlefield__lane--b {
+    width: 50%;
+    right: -4%;
+    top: 37%;
+  }
+
+  .battlefield__spawn,
+  .battlefield__core {
+    min-width: 78px;
+    padding: 8px 9px;
+    font-size: 7px;
+    letter-spacing: .07em;
+  }
+
+  .battlefield__spawn {
+    left: 10px;
+    top: calc(49% + 8px);
+  }
+
+  .battlefield__core {
+    right: 10px;
+    top: calc(37% + 82px);
+  }
+
+  .build-slot {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+  }
+
+  .build-slot--1 { left: 11%; top: 31%; }
+  .build-slot--2 { left: 27%; top: 61%; }
+  .build-slot--3 { left: 43%; top: 33%; }
+  .build-slot--4 { left: 53%; top: 65%; }
+  .build-slot--5 { right: 15%; top: 30%; }
+  .build-slot--6 { right: 8%; top: 64%; }
+}
+
+@media (max-width: 420px) {
+  .battlefield {
+    min-height: max(470px, 68dvh);
+  }
+
+  .battlefield__lane--a {
+    width: 76%;
+  }
+
+  .battlefield__lane--b {
+    width: 54%;
+    right: -8%;
+  }
+
+  .build-slot {
+    width: 38px;
+    height: 38px;
+  }
+
+  .build-slot--1 { left: 8%; top: 33%; }
+  .build-slot--2 { left: 23%; top: 63%; }
+  .build-slot--3 { left: 39%; top: 35%; }
+  .build-slot--4 { left: 50%; top: 67%; }
+  .build-slot--5 { right: 12%; top: 31%; }
+  .build-slot--6 { right: 5%; top: 66%; }
+}
