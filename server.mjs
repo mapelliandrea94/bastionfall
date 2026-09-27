@@ -223,6 +223,9 @@ app.post('/api/last-bastion/match/heartbeat', requireUser, (req, res) => {
     if (['invalid_wave', 'invalid_core_hp', 'wave_regression'].includes(result.error)) {
       return res.status(400).json({ error: result.error });
     }
+    if (['participant_eliminated', 'match_finished'].includes(result.error)) {
+      return res.status(409).json({ error: result.error });
+    }
     return res.status(404).json({ error: result.error || 'heartbeat_failed' });
   }
   return res.json(result);
@@ -251,7 +254,10 @@ app.post('/api/last-bastion/match/eliminate', requireUser, rateLimitUser('lb-eli
     wave: req.body?.wave
   });
 
-  if (!result.ok) return res.status(404).json({ error: result.error || 'elimination_failed' });
+  if (!result.ok) {
+    if (result.error === 'invalid_wave') return res.status(400).json({ error: result.error });
+    return res.status(404).json({ error: result.error || 'elimination_failed' });
+  }
   return res.json(result);
 });
 
