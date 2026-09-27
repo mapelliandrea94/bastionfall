@@ -26,6 +26,7 @@ import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from 
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
+import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
 import { ENEMY_BASE_MODEL, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
@@ -116,6 +117,8 @@ const RUN_TIMER_FIXTURE = Object.freeze(getRunTimerFixtures());
 const RUN_SCORE_FIXTURE = Object.freeze(getRunScoreFixtures());
 
 const RUN_END_FIXTURE = Object.freeze(getRunEndFixtures());
+
+const PERSONAL_BEST_FIXTURE = Object.freeze(getPersonalBestFixtures());
 
 const ENEMY_BASE_FIXTURE = Object.freeze(getEnemyBaseFixtures());
 
@@ -213,7 +216,8 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`) {
     elapsedMs: 0,
     endedAtMs: null,
     result: null,
-    endSnapshot: null
+    endSnapshot: null,
+    personalBestResult: null
   };
 }
 
@@ -703,6 +707,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
             data-run-end-reason={run?.endSnapshot?.reason ?? ''}
             data-run-end-score={run?.endSnapshot?.score ?? ''}
             data-results-screen-ready={Boolean(run?.endSnapshot)}
+            data-personal-best-version={PERSONAL_BEST.version}
+            data-personal-best-pass={PERSONAL_BEST_FIXTURE.firstRecord === true && PERSONAL_BEST_FIXTURE.higherWave === true && PERSONAL_BEST_FIXTURE.longerSameWave === true && PERSONAL_BEST_FIXTURE.higherScoreSameWaveTime === true && PERSONAL_BEST_FIXTURE.worseRejected === true}
             data-wave-threat-budget={threatWave.budget}
             data-wave-threat-spent={threatWave.spentThreat}
             data-wave-threat-unused={threatWave.unusedThreat}
@@ -904,7 +910,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
   );
 }
 
-function ResultsScreen({ snapshot, onRetry, onBack }) {
+function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
   if (!snapshot) return null;
 
   return (
@@ -915,9 +921,15 @@ function ResultsScreen({ snapshot, onRetry, onBack }) {
       subtitle="Your run has ended. Review the final snapshot before trying again."
     >
       <div className="results-hero">
-        <span>FINAL SCORE</span>
+        <span>{personalBestResult?.isPersonalBest ? 'NEW PERSONAL BEST' : 'FINAL SCORE'}</span>
         <strong>{snapshot.score.toLocaleString()}</strong>
-        <small>{snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED ? 'Bastion destroyed' : snapshot.reason}</small>
+        <small>
+          {personalBestResult?.isPersonalBest
+            ? `Improved by ${personalBestResult.reason}`
+            : snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED
+              ? 'Bastion destroyed'
+              : snapshot.reason}
+        </small>
       </div>
 
       <div className="results-grid">
@@ -1132,6 +1144,7 @@ function App() {
   const [screen, setScreen] = useState(SCREENS.MENU);
   const [selectedMode, setSelectedMode] = useState(null);
   const [runState, setRunState] = useState(null);
+  const [personalBestByMode, setPersonalBestByMode] = useState({});
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
 
@@ -1152,9 +1165,25 @@ function App() {
       runState?.phase === RUN_PHASES.ENDED &&
       runState?.endSnapshot
     ) {
+      const mode = runState.endSnapshot.mode ?? MODES.SINGLE_GATE;
+      const previous = personalBestByMode[mode] ?? null;
+      const personalBestResult = comparePersonalBest(runState.endSnapshot, previous);
+
+      setRunState((current) => {
+        if (!current || current.personalBestResult) return current;
+        return { ...current, personalBestResult };
+      });
+
+      if (personalBestResult.isPersonalBest) {
+        setPersonalBestByMode((current) => ({
+          ...current,
+          [mode]: personalBestResult.candidate
+        }));
+      }
+
       setScreen(SCREENS.RESULTS);
     }
-  }, [screen, runState?.phase, runState?.endSnapshot]);
+  }, [screen, runState?.phase, runState?.endSnapshot, personalBestByMode]);
 
   if (screen === SCREENS.PLAY) {
     return (
@@ -1246,6 +1275,7 @@ function App() {
     return (
       <ResultsScreen
         snapshot={runState?.endSnapshot}
+        personalBestResult={runState?.personalBestResult ?? null}
         onRetry={() => {
           const mode = runState?.mode ?? selectedMode;
           const nextRun = createInitialRunState(mode);
