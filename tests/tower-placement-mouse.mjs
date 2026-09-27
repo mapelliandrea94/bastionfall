@@ -39,20 +39,21 @@ try {
       await slot.waitFor({ state: 'visible' });
       assert((await slot.getAttribute('data-occupied')) === 'false', `${slotId} should begin empty`);
 
+      await slot.hover();
+      await page.waitForTimeout(80);
+
+      const ghost = slot.locator('.tower-visual--ghost');
+      assert(await ghost.count() === 1, `Ghost preview missing for ${defense.id} on ${slotId}`);
+      const ghostOpacity = Number(await ghost.evaluate((node) => getComputedStyle(node).opacity));
+      assert(ghostOpacity > 0, `Ghost preview stayed hidden for ${defense.id} on ${slotId}`);
+
       const box = await slot.boundingBox();
       assert(box, `No mouse target box for ${slotId}`);
       const x = box.x + box.width / 2;
       const y = box.y + box.height / 2;
 
-      await page.mouse.move(x, y);
-      await page.waitForTimeout(40);
-      assert(
-        await slot.locator('.tower-visual--ghost').count() === 1,
-        `Ghost preview missing for ${defense.id} on ${slotId}`
-      );
-
       await page.mouse.click(x, y);
-      await page.waitForTimeout(40);
+      await page.waitForTimeout(80);
 
       assert((await slot.getAttribute('data-occupied')) === 'true', `${defense.id} did not occupy ${slotId}`);
       assert((await slot.getAttribute('data-defense-id')) === defense.id, `Wrong defense built on ${slotId}`);
