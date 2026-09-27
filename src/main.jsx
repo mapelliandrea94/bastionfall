@@ -476,6 +476,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
               {run?.phase === RUN_PHASES.ENDED && 'Bastion fallen'}
             </strong>
           </div>
+          <div className="run-wave-preview" aria-label="Next wave preview">
+            <div className="run-wave-preview__title">
+              <span>NEXT WAVE</span>
+              <strong>WAVE {waveScaling.waveNumber}</strong>
+            </div>
+            <div className="run-wave-preview__grid">
+              <div><span>ENEMIES</span><strong>{waveScaling.enemyCount}</strong></div>
+              <div><span>TRAVEL</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
+              <div><span>SPAWN</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
+              <div><span>CORE DMG</span><strong>{waveScaling.bastionDamage}</strong></div>
+            </div>
+          </div>
+
 
           <button
             className="run-prep-start"
