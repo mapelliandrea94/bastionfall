@@ -33,6 +33,8 @@ jobs:
         run: node tests/wave-director.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
+      - name: Last Bastion Final Result QA
+        run: node tests/last-bastion-final-result.mjs
       - name: Last Bastion Spectate QA
         run: node tests/last-bastion-spectate.mjs
       - name: Gameplay Feedback QA
