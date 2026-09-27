@@ -157,34 +157,54 @@ async function hydratePersistentLastBastionState(req) {
     'x-bastionfall-server-secret': matchTokenSecret
   });
 
-  const [matchesRead, participantsRead, queueRead] = await Promise.all([
+  const finishedRetentionCutoff = new Date(Date.now() - COMPLETION_REPLAY_TTL_MS).toISOString();
+  const [activeMatchesRead, recentFinishedMatchesRead, queueRead] = await Promise.all([
     serverDb
       .from('last_bastion_matches')
       .select('id,seed,status,created_at,started_at,wave_starts_at,ended_at,winner_user_id')
       .eq('status', 'active')
       .order('created_at', { ascending: true }),
     serverDb
-      .from('last_bastion_participants')
-      .select('match_id,user_id,slot,alive,last_seen_at,wave,core_hp,placement,eliminated_at')
-      .order('slot', { ascending: true }),
+      .from('last_bastion_matches')
+      .select('id,seed,status,created_at,started_at,wave_starts_at,ended_at,winner_user_id')
+      .eq('status', 'finished')
+      .gte('ended_at', finishedRetentionCutoff)
+      .order('ended_at', { ascending: true }),
     serverDb
       .from('last_bastion_queue')
       .select('user_id,ticket_id,joined_at,ready')
       .order('joined_at', { ascending: true })
   ]);
 
-  if (matchesRead.error || participantsRead.error || queueRead.error) {
+  if (activeMatchesRead.error || recentFinishedMatchesRead.error || queueRead.error) {
     console.error(
       'Last Bastion state hydrate failed:',
-      matchesRead.error?.message || participantsRead.error?.message || queueRead.error?.message
+      activeMatchesRead.error?.message || recentFinishedMatchesRead.error?.message || queueRead.error?.message
     );
     return { ok: false, error: 'last_bastion_persistence_read_failed', serverDb };
   }
 
-  const activeMatchIds = new Set((matchesRead.data || []).map((match) => match.id));
-  const activeParticipants = (participantsRead.data || []).filter((entry) => activeMatchIds.has(entry.match_id));
+  const recoveredMatches = [
+    ...(activeMatchesRead.data || []),
+    ...(recentFinishedMatchesRead.data || [])
+  ];
+  const recoveredMatchIds = recoveredMatches.map((match) => match.id);
 
-  hydrateLastBastionActiveMatches(matchesRead.data || [], activeParticipants);
+  let participantsRead = { data: [], error: null };
+  if (recoveredMatchIds.length > 0) {
+    participantsRead = await serverDb
+      .from('last_bastion_participants')
+      .select('match_id,user_id,slot,alive,last_seen_at,wave,core_hp,placement,eliminated_at')
+      .in('match_id', recoveredMatchIds)
+      .order('slot', { ascending: true });
+  }
+
+  if (participantsRead.error) {
+    console.error('Last Bastion participant hydrate failed:', participantsRead.error.message);
+    return { ok: false, error: 'last_bastion_persistence_read_failed', serverDb };
+  }
+
+  hydrateLastBastionActiveMatches(recoveredMatches, participantsRead.data || []);
   hydrateLastBastionQueue(queueRead.data || []);
 
   return { ok: true, serverDb };
