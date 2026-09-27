@@ -260,7 +260,7 @@ export function hydrateLastBastionQueue(entries = []) {
     .sort((a, b) => Date.parse(a.joinedAt) - Date.parse(b.joinedAt));
 
   for (const entry of normalized) {
-    if (activeMatchByUserId.has(entry.userId)) continue;
+    if (activeMatchByUserId.get(entry.userId)?.status === 'active') continue;
     const frozen = Object.freeze(entry);
     queue.push(frozen);
     byUserId.set(entry.userId, frozen);
