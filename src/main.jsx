@@ -803,6 +803,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             </div>
             <div className="run-wave-preview__grid">
               <div><span>ENEMIES</span><strong>{threatWave.enemyCount}</strong></div>
+              <div><span>DIFFICULTY</span><strong>{waveScaling.bandId.toUpperCase()}</strong></div>
               <div><span>TRAVEL</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
               <div><span>SPAWN</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
               <div><span>CORE DMG</span><strong>{waveScaling.bastionDamage}</strong></div>
