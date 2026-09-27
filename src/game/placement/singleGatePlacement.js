@@ -67,14 +67,6 @@ export function validateSingleGateSlotPlacement(slotId, placedStructures = []) {
   }
 
   const pathDistance = distanceToPath(slot, SINGLE_GATE_MAP.path.waypoints);
-  if (pathDistance < PLACEMENT_RULES.minimumPathCenterDistance) {
-    return Object.freeze({
-      valid: false,
-      reason: 'slot-too-close-to-path',
-      slotId: slot.id,
-      pathDistance: Number(pathDistance.toFixed(2))
-    });
-  }
 
   return Object.freeze({
     valid: true,
