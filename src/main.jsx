@@ -377,7 +377,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
     tick();
     const intervalId = window.setInterval(tick, RUN_TIMER.tickIntervalMs);
     return () => window.clearInterval(intervalId);
-  }, [run?.startedAtMs, run?.phase, onTimerTick]);
+  }, [run?.startedAtMs, run?.phase]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
