@@ -688,7 +688,14 @@ button { font: inherit; }
 
 
 .run-screen {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background:
     radial-gradient(circle at 50% 0%, rgba(59,82,100,.18), transparent 36%),
     linear-gradient(180deg, #101821 0%, #070a0f 100%);
@@ -696,6 +703,7 @@ button { font: inherit; }
 }
 
 .run-hud {
+  flex: 0 0 auto;
   min-height: 78px;
   padding: 12px 22px;
   display: grid;
@@ -736,14 +744,17 @@ button { font: inherit; }
 }
 
 .run-layout {
-  min-height: calc(100vh - 78px);
+  flex: 1 1 auto;
+  min-height: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 310px;
 }
 
 .battlefield {
   position: relative;
-  min-height: calc(100vh - 78px);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
   background:
     linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
@@ -832,6 +843,9 @@ button { font: inherit; }
 .build-slot--6 { right: 16%; top: 56%; }
 
 .run-sidebar {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 24px 18px;
   border-left: 1px solid rgba(225,176,77,.14);
   background: linear-gradient(180deg, rgba(13,18,25,.97), rgba(7,10,14,.98));
@@ -903,11 +917,17 @@ button { font: inherit; }
 }
 
 @media (max-width: 900px) {
+  .run-screen {
+    overflow-y: auto;
+  }
+
   .run-hud {
     grid-template-columns: repeat(2, 1fr);
   }
 
   .run-layout {
+    flex: none;
+    min-height: calc(100dvh - 78px);
     grid-template-columns: 1fr;
   }
 
@@ -967,7 +987,7 @@ button { font: inherit; }
 }
 
 .run-screen {
-  overflow-x: hidden;
+  overscroll-behavior: none;
 }
 
 @media (max-width: 760px) {
