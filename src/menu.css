@@ -3188,3 +3188,45 @@ body { background:#1c3f61; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* HOTFIX — crisp towers, compact HUD, protected battlefield top */
+.tower-art-sprite {
+  width: 84px;
+  height: 84px;
+  transform: none;
+  image-rendering: auto;
+  backface-visibility: hidden;
+  filter: drop-shadow(0 4px 3px rgba(0,0,0,.24));
+}
+
+@media (min-width: 901px) {
+  .run-hud {
+    top: 6px;
+    left: 8px;
+    right: 8px;
+    min-height: 38px;
+    padding: 4px 8px;
+    grid-template-columns: minmax(120px, 1fr) repeat(5, minmax(58px, .42fr)) minmax(110px, .8fr);
+    gap: 6px;
+  }
+
+  .run-hud__label {
+    font-size: 7px;
+  }
+
+  .run-hud strong {
+    font-size: 10px;
+  }
+
+  .run-exit {
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 9px;
+  }
+
+  .battlefield-map {
+    inset: 52px 0 0;
+    height: auto;
+  }
+}
