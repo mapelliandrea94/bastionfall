@@ -280,6 +280,25 @@ async function completeServerRun(session, run) {
   return { ok: true, payload };
 }
 
+async function fetchProfileData(session) {
+  if (!session?.access_token) {
+    return { ok: false, error: 'authentication_required' };
+  }
+
+  const response = await fetch('/api/profile', {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`
+    }
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return { ok: false, error: payload?.error || 'profile_load_failed' };
+  }
+
+  return { ok: true, payload };
+}
+
 function getPathPosition(waypoints, progress) {
   if (!waypoints.length) return { x: 0, y: 0 };
   if (waypoints.length === 1) return waypoints[0];
@@ -1038,20 +1057,76 @@ function Leaderboard({ onBack }) {
   );
 }
 
-function Profile({ onBack }) {
+function Profile({ session, onBack }) {
+  const [profileData, setProfileData] = useState(null);
+  const [profileStatus, setProfileStatus] = useState('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchProfileData(session).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setProfileStatus(result.error);
+        return;
+      }
+
+      setProfileData(result.payload);
+      setProfileStatus('ready');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.access_token]);
+
+  const single = profileData?.modes?.['single-gate'] ?? null;
+  const tri = profileData?.modes?.['tri-gate'] ?? null;
+  const last = profileData?.lastBastion ?? null;
+  const totalRuns = Number(profileData?.profile?.runs || 0);
+  const totalSurvivalMs = Number(last?.total_survival_ms || 0);
+
   return (
     <Shell
       onBack={onBack}
       kicker="DEFENDER RECORD"
-      title="PROFILE"
-      subtitle="Account progress tracks records, achievements and prestige. Every run starts equal."
+      title={profileData?.profile?.display_name || 'PROFILE'}
+      subtitle="Verified account and mode statistics from the live Bastionfall database."
     >
-      <div className="profile-grid">
-        <div className="stat-card"><span>DEFENDER PRESTIGE</span><strong>1</strong><small>Cosmetic/status progression only</small></div>
-        <div className="stat-card"><span>BEST SURVIVAL WAVE</span><strong>—</strong><small>No verified run recorded</small></div>
-        <div className="stat-card"><span>TOTAL RUNS</span><strong>0</strong><small>Across all modes</small></div>
-        <div className="stat-card"><span>PLAYTIME</span><strong>0h</strong><small>Recorded online</small></div>
-      </div>
+      {profileStatus !== 'ready' ? (
+        <div className="profile-state">
+          <strong>{profileStatus === 'loading' ? 'LOADING PROFILE…' : 'PROFILE UNAVAILABLE'}</strong>
+          <small>{profileStatus === 'loading' ? 'Fetching verified stats.' : profileStatus}</small>
+        </div>
+      ) : (
+        <>
+          <div className="profile-grid">
+            <div className="stat-card"><span>FORTRESS LEVEL</span><strong>{profileData.profile.fortress_level}</strong><small>Account prestige progression</small></div>
+            <div className="stat-card"><span>TOTAL RUNS</span><strong>{totalRuns}</strong><small>Verified completed runs</small></div>
+            <div className="stat-card"><span>LIFETIME KILLS</span><strong>{Number(profileData.profile.lifetime_kills || 0).toLocaleString()}</strong><small>Across verified runs</small></div>
+            <div className="stat-card"><span>SHARDS</span><strong>{profileData.profile.shards}</strong><small>Account progression currency</small></div>
+          </div>
+
+          <div className="profile-mode-grid">
+            <section className="profile-mode-card">
+              <span>SINGLE GATE</span>
+              <strong>Wave {single?.best_wave ?? 0}</strong>
+              <small>Survival {formatSurvivalTime(single?.best_survival_ms ?? 0)} · Score {(single?.best_score ?? 0).toLocaleString()} · Kills {(single?.best_kills ?? 0).toLocaleString()}</small>
+            </section>
+            <section className="profile-mode-card">
+              <span>TRI-GATE</span>
+              <strong>Wave {tri?.best_wave ?? 0}</strong>
+              <small>Survival {formatSurvivalTime(tri?.best_survival_ms ?? 0)} · Score {(tri?.best_score ?? 0).toLocaleString()} · Kills {(tri?.best_kills ?? 0).toLocaleString()}</small>
+            </section>
+            <section className="profile-mode-card">
+              <span>LAST BASTION</span>
+              <strong>{last?.runs ?? 0} Runs</strong>
+              <small>Best Wave {last?.best_wave ?? 0} · Best Survival {formatSurvivalTime(last?.best_survival_ms ?? 0)} · Best Score {(last?.best_score ?? 0).toLocaleString()}</small>
+              <small>Lifetime Kills {(last?.lifetime_kills ?? 0).toLocaleString()} · Total Survival {formatSurvivalTime(totalSurvivalMs)}</small>
+            </section>
+          </div>
+        </>
+      )}
     </Shell>
   );
 }
@@ -1389,7 +1464,7 @@ function App() {
     );
   }
   if (screen === SCREENS.LEADERBOARD) return <Leaderboard onBack={() => setScreen(SCREENS.MENU)} />;
-  if (screen === SCREENS.PROFILE) return <Profile onBack={() => setScreen(SCREENS.MENU)} />;
+  if (screen === SCREENS.PROFILE) return <Profile session={session} onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.HOW_TO_PLAY) return <HowToPlay onBack={() => setScreen(SCREENS.MENU)} />;
 
