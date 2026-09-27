@@ -1,0 +1,152 @@
+export const BLESSING_RARITIES = Object.freeze({
+  COMMON: 'common',
+  RARE: 'rare',
+  EPIC: 'epic'
+});
+
+export const BLESSING_CATEGORIES = Object.freeze({
+  OFFENSE: 'offense',
+  DEFENSE: 'defense',
+  ECONOMY: 'economy',
+  CONTROL: 'control'
+});
+
+export const BLESSINGS = Object.freeze([
+  Object.freeze({
+    id: 'keen-edge',
+    name: 'Keen Edge',
+    rarity: BLESSING_RARITIES.COMMON,
+    category: BLESSING_CATEGORIES.OFFENSE,
+    tags: Object.freeze(['tower-damage']),
+    maxStacks: 3,
+    effect: Object.freeze({ towerDamageMultiplier: 1.08 })
+  }),
+  Object.freeze({
+    id: 'iron-bastion',
+    name: 'Iron Bastion',
+    rarity: BLESSING_RARITIES.COMMON,
+    category: BLESSING_CATEGORIES.DEFENSE,
+    tags: Object.freeze(['bastion']),
+    maxStacks: 3,
+    effect: Object.freeze({ bastionDamageTakenMultiplier: 0.92 })
+  }),
+  Object.freeze({
+    id: 'war-chest',
+    name: 'War Chest',
+    rarity: BLESSING_RARITIES.COMMON,
+    category: BLESSING_CATEGORIES.ECONOMY,
+    tags: Object.freeze(['gold']),
+    maxStacks: 2,
+    effect: Object.freeze({ waveClearGoldBonus: 2 })
+  }),
+  Object.freeze({
+    id: 'frostbound',
+    name: 'Frostbound',
+    rarity: BLESSING_RARITIES.RARE,
+    category: BLESSING_CATEGORIES.CONTROL,
+    tags: Object.freeze(['slow']),
+    maxStacks: 2,
+    effect: Object.freeze({ slowStrengthBonus: 0.12 })
+  }),
+  Object.freeze({
+    id: 'siegebreaker',
+    name: 'Siegebreaker',
+    rarity: BLESSING_RARITIES.RARE,
+    category: BLESSING_CATEGORIES.OFFENSE,
+    tags: Object.freeze(['boss']),
+    maxStacks: 2,
+    effect: Object.freeze({ bossDamageMultiplier: 1.18 })
+  }),
+  Object.freeze({
+    id: 'last-light',
+    name: 'Last Light',
+    rarity: BLESSING_RARITIES.EPIC,
+    category: BLESSING_CATEGORIES.DEFENSE,
+    tags: Object.freeze(['bastion', 'emergency']),
+    maxStacks: 1,
+    effect: Object.freeze({ lowHpDamageReductionMultiplier: 0.75 })
+  })
+]);
+
+export const BLESSING_SYSTEM = Object.freeze({
+  version: 1,
+  choiceCount: 3,
+  offerEveryBossClear: true,
+  rarities: BLESSING_RARITIES,
+  categories: BLESSING_CATEGORIES
+});
+
+function normalizeSeed(seed) {
+  const value = String(seed ?? 'blessing-seed');
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function seededIndex(seed, modulo) {
+  if (modulo <= 0) return 0;
+  return normalizeSeed(seed) % modulo;
+}
+
+export function getBlessingById(blessingId) {
+  return BLESSINGS.find((entry) => entry.id === blessingId) ?? null;
+}
+
+export function getEligibleBlessings(ownedBlessings = []) {
+  const stackCountById = ownedBlessings.reduce((acc, blessingId) => {
+    acc[blessingId] = (acc[blessingId] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  return BLESSINGS.filter((blessing) => (stackCountById[blessing.id] ?? 0) < blessing.maxStacks);
+}
+
+export function getBlessingOffer(seed, ownedBlessings = [], choiceCount = BLESSING_SYSTEM.choiceCount) {
+  const eligible = [...getEligibleBlessings(ownedBlessings)];
+  const count = Math.max(1, Math.min(Math.floor(Number(choiceCount) || 1), eligible.length));
+  const selected = [];
+
+  for (let pick = 0; pick < count; pick += 1) {
+    const index = seededIndex(`${seed}:${pick}:${eligible.length}`, eligible.length);
+    selected.push(eligible.splice(index, 1)[0]);
+  }
+
+  return Object.freeze(selected.map((entry) => Object.freeze(entry)));
+}
+
+export function addBlessingToLoadout(ownedBlessings = [], blessingId) {
+  const blessing = getBlessingById(blessingId);
+  if (!blessing) return Object.freeze([...ownedBlessings]);
+
+  const currentStacks = ownedBlessings.filter((id) => id === blessingId).length;
+  if (currentStacks >= blessing.maxStacks) return Object.freeze([...ownedBlessings]);
+
+  return Object.freeze([...ownedBlessings, blessingId]);
+}
+
+export function getBlessingSystemFixtures() {
+  const offerA = getBlessingOffer('run-123', [], 3);
+  const offerB = getBlessingOffer('run-123', [], 3);
+  const capped = addBlessingToLoadout(['last-light'], 'last-light');
+  const stacked = addBlessingToLoadout(['keen-edge'], 'keen-edge');
+
+  return Object.freeze({
+    choiceCountExpected: 3,
+    choiceCountActual: offerA.length,
+    deterministicOffer:
+      offerA.map((entry) => entry.id).join('|') === offerB.map((entry) => entry.id).join('|'),
+    uniqueChoices: new Set(offerA.map((entry) => entry.id)).size === offerA.length,
+    validDefinitions: BLESSINGS.every((entry) =>
+      Boolean(entry.id) &&
+      Boolean(entry.name) &&
+      Object.values(BLESSING_RARITIES).includes(entry.rarity) &&
+      Object.values(BLESSING_CATEGORIES).includes(entry.category) &&
+      entry.maxStacks >= 1
+    ),
+    maxStackRespected: capped.length === 1,
+    stackAddedWhenAllowed: stacked.length === 2
+  });
+}
