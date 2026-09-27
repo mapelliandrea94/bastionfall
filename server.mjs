@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
@@ -9,8 +9,46 @@ const port = Number(process.env.PORT || 3000);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || '';
+const matchTokenSecret = process.env.MATCH_TOKEN_SECRET || '';
 
 app.use(express.json({ limit: '64kb' }));
+
+function encodeBase64Url(value) {
+  return Buffer.from(value).toString('base64url');
+}
+
+function decodeBase64Url(value) {
+  return Buffer.from(value, 'base64url').toString('utf8');
+}
+
+function signMatchIdentity(payload) {
+  if (!matchTokenSecret) return null;
+  const body = encodeBase64Url(JSON.stringify(payload));
+  const signature = createHmac('sha256', matchTokenSecret).update(body).digest('base64url');
+  return `${body}.${signature}`;
+}
+
+function verifyMatchIdentity(token) {
+  if (!matchTokenSecret || !token || !String(token).includes('.')) return null;
+  const [body, signature] = String(token).split('.');
+  if (!body || !signature) return null;
+
+  const expected = createHmac('sha256', matchTokenSecret).update(body).digest();
+  let actual;
+  try {
+    actual = Buffer.from(signature, 'base64url');
+  } catch {
+    return null;
+  }
+
+  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
+
+  try {
+    return JSON.parse(decodeBase64Url(body));
+  } catch {
+    return null;
+  }
+}
 
 function clientForToken(token) {
   return createClient(supabaseUrl, supabaseKey, {
@@ -31,12 +69,21 @@ async function requireUser(req, res, next) {
   next();
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, game: 'Bastionfall', version: '0.1.1' }));
+app.get('/api/health', (_req, res) => res.json({
+  ok: true,
+  game: 'Bastionfall',
+  version: '0.1.1',
+  matchIdentityConfigured: Boolean(matchTokenSecret)
+}));
 app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35, towerCap: 32 }));
 
 const STARTABLE_MODES = new Set(['single-gate', 'tri-gate', 'last-bastion']);
 
 app.post('/api/match/start', requireUser, (req, res) => {
+  if (!matchTokenSecret) {
+    return res.status(503).json({ error: 'match_identity_not_configured' });
+  }
+
   const mode = String(req.body?.mode || '').trim();
   if (!STARTABLE_MODES.has(mode)) {
     return res.status(400).json({ error: 'invalid_mode' });
@@ -45,6 +92,14 @@ app.post('/api/match/start', requireUser, (req, res) => {
   const matchId = randomUUID();
   const startedAt = new Date().toISOString();
   const seed = `${mode}:${matchId}`;
+  const identityPayload = {
+    v: 1,
+    matchId,
+    userId: req.user.id,
+    mode,
+    startedAt
+  };
+  const matchToken = signMatchIdentity(identityPayload);
 
   return res.status(201).json({
     match: {
@@ -52,7 +107,8 @@ app.post('/api/match/start', requireUser, (req, res) => {
       userId: req.user.id,
       mode,
       startedAt,
-      seed
+      seed,
+      token: matchToken
     }
   });
 });
