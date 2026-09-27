@@ -19,6 +19,20 @@ export const SINGLE_GATE_MAP = Object.freeze({
       y: 450
     })
   }),
+  path: Object.freeze({
+    id: 'single-gate-main-path',
+    width: 96,
+    waypoints: Object.freeze([
+      Object.freeze({ x: 80, y: 450 }),
+      Object.freeze({ x: 320, y: 450 }),
+      Object.freeze({ x: 520, y: 330 }),
+      Object.freeze({ x: 760, y: 330 }),
+      Object.freeze({ x: 960, y: 560 }),
+      Object.freeze({ x: 1190, y: 560 }),
+      Object.freeze({ x: 1320, y: 450 }),
+      Object.freeze({ x: 1460, y: 450 })
+    ])
+  }),
   camera: Object.freeze({
     centerX: 800,
     centerY: 450,
@@ -34,4 +48,8 @@ export const SINGLE_GATE_MAP = Object.freeze({
 
 export function getSingleGateMapModel() {
   return SINGLE_GATE_MAP;
+}
+
+export function getSingleGatePath() {
+  return SINGLE_GATE_MAP.path;
 }
