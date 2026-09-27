@@ -205,6 +205,7 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
   return {
     mode,
     matchId: serverMatch?.id ?? null,
+    matchToken: serverMatch?.token ?? null,
     serverStartedAt: serverMatch?.startedAt ?? null,
     seed: normalizeRunSeed(seedInput),
     phase: RUN_PHASES.PREPARATION,
