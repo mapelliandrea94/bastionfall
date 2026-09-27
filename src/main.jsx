@@ -16,6 +16,7 @@ import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurv
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
+import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { ENEMY_BASE_MODEL, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
@@ -95,6 +96,8 @@ const TARGETING_VALIDATION_SNAPSHOT = Object.freeze(
 const ATTACK_FEEDBACK_FIXTURE = Object.freeze(getAttackFeedbackFixtures());
 
 const COUNTERPLAY_FIXTURE = Object.freeze(getCounterplayFixtures());
+
+const THREAT_MODEL_FIXTURE = Object.freeze(getThreatModelFixtures());
 
 const ENEMY_BASE_FIXTURE = Object.freeze(getEnemyBaseFixtures());
 
@@ -304,6 +307,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
   const waveScaling = getWaveScaling(run?.wave ?? 0);
+  const threatWave = composeWaveByThreatBudget(waveScaling.waveNumber);
   const defenseDefinitions = Object.freeze({
     archer: ARCHER_TOWER,
     cannon: CANNON_TOWER,
@@ -348,27 +352,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
 
     queuedWaveRef.current = run?.wave;
     setSpawnQueue(
-      Array.from({ length: waveScaling.enemyCount }, (_, index) => {
-        const isFlying = waveScaling.waveNumber >= 11 && (index + 1) % 12 === 0;
-        const isShielded = !isFlying && waveScaling.waveNumber >= 9 && (index + 1) % 10 === 0;
-        const isArmored = !isFlying && !isShielded && waveScaling.waveNumber >= 7 && (index + 1) % 8 === 0;
-        const isTank = !isFlying && !isShielded && !isArmored && waveScaling.waveNumber >= 5 && (index + 1) % 6 === 0;
-        const isRunner = !isFlying && !isShielded && !isArmored && !isTank && waveScaling.waveNumber >= 3 && (index + 1) % 4 === 0;
-        return {
-          id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`,
-          archetype: isFlying
-            ? FLYING_ENEMY.archetype
-            : isShielded
-              ? SHIELDED_ENEMY.archetype
-              : isArmored
-                ? ARMORED_ENEMY.archetype
-                : isTank
-                  ? TANK_ENEMY.archetype
-                  : isRunner
-                    ? RUNNER_ENEMY.archetype
-                    : NORMAL_ENEMY.archetype
-        };
-      })
+      threatWave.composition.map((enemy, index) => ({
+        id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`,
+        archetype: enemy.archetype,
+        threatValue: enemy.threatValue
+      }))
     );
   }, [run?.phase, run?.wave]);
 
@@ -628,6 +616,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-attack-feedback-pass={ATTACK_FEEDBACK_FIXTURE.travelMsExpected === ATTACK_FEEDBACK_FIXTURE.travelMsActual && ATTACK_FEEDBACK_FIXTURE.dpsExpected === ATTACK_FEEDBACK_FIXTURE.dpsActual}
             data-counterplay-version={COUNTERPLAY_MATRIX.version}
             data-counterplay-pass={COUNTERPLAY_FIXTURE.physicalVsArmor.hpDamage === 60 && COUNTERPLAY_FIXTURE.piercingVsArmor.hpDamage === 86 && COUNTERPLAY_FIXTURE.arcaneVsShield.shieldDamage === 100 && COUNTERPLAY_FIXTURE.archerVsFlying === true && COUNTERPLAY_FIXTURE.cannonVsFlying === false && COUNTERPLAY_FIXTURE.barracksVsFlying === false}
+            data-threat-model-version={WAVE_THREAT_MODEL.version}
+            data-threat-model-pass={THREAT_MODEL_FIXTURE.wave1BudgetExpected === THREAT_MODEL_FIXTURE.wave1BudgetActual && THREAT_MODEL_FIXTURE.wave1OnlyNormal === true && THREAT_MODEL_FIXTURE.wave5HasTank === true && THREAT_MODEL_FIXTURE.wave11HasFlying === true && THREAT_MODEL_FIXTURE.wave11WithinBudget === true}
+            data-wave-threat-budget={threatWave.budget}
+            data-wave-threat-spent={threatWave.spentThreat}
+            data-wave-threat-unused={threatWave.unusedThreat}
             data-enemy-base-version={ENEMY_BASE_MODEL.version}
             data-enemy-base-pass={ENEMY_BASE_FIXTURE.shieldExpected === ENEMY_BASE_FIXTURE.shieldActual && ENEMY_BASE_FIXTURE.hpExpected === ENEMY_BASE_FIXTURE.hpActual && ENEMY_BASE_FIXTURE.slowedSpeedExpected === ENEMY_BASE_FIXTURE.slowedSpeedActual && ENEMY_BASE_FIXTURE.expiredSlowSpeedExpected === ENEMY_BASE_FIXTURE.expiredSlowSpeedActual}
             data-normal-enemy={NORMAL_ENEMY.name}
