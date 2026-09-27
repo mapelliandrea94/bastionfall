@@ -1,3 +1,4 @@
+import './standard-run-validation.mjs';
 import assert from 'node:assert/strict';
 import {
   END_TO_END_PAIR_MATRIX,
