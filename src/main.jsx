@@ -1840,6 +1840,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               const hpRatio = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0;
               const shieldRatio = enemy.maxShield > 0 ? Math.max(0, Math.min(1, enemy.shield / enemy.maxShield)) : 0;
               const slowActive = (enemy.statusEffects?.slowUntilMs ?? 0) > performance.now();
+              const enemyArtHref = ENEMY_ROSTER.byId[enemy.archetype]
+                ? `/assets/enemies/${enemy.archetype}.png`
+                : null;
 
               return (
                 <g
@@ -1852,8 +1855,32 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   data-shielded={enemy.maxShield > 0}
                   data-slowed={slowActive}
                 >
-                  <circle r="24" />
-                  <path d="M -10 -5 L 0 -18 L 10 -5 L 8 14 L -8 14 Z" />
+                  {enemyArtHref ? (
+                    <>
+                      <g className="battlefield-map__enemy-fallback" opacity="0">
+                        <circle r="24" />
+                        <path d="M -10 -5 L 0 -18 L 10 -5 L 8 14 L -8 14 Z" />
+                      </g>
+                      <image
+                        className="battlefield-map__enemy-art"
+                        href={enemyArtHref}
+                        x="-36"
+                        y="-36"
+                        width="72"
+                        height="72"
+                        preserveAspectRatio="xMidYMid meet"
+                        onError={(event) => {
+                          event.currentTarget.setAttribute('visibility', 'hidden');
+                          event.currentTarget.previousElementSibling?.setAttribute('opacity', '1');
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <circle r="24" />
+                      <path d="M -10 -5 L 0 -18 L 10 -5 L 8 14 L -8 14 Z" />
+                    </>
+                  )}
 
                   <g className="enemy-status">
                     <rect className="enemy-status__hp-bg" x="-28" y="-42" width="56" height="6" rx="3" />

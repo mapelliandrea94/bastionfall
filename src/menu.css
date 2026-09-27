@@ -1537,6 +1537,16 @@ button { font: inherit; }
   stroke-width: 3;
 }
 
+.battlefield-map__enemy-art {
+  pointer-events: none;
+  image-rendering: auto;
+  filter: drop-shadow(0 5px 4px rgba(18, 25, 38, .34));
+}
+
+.battlefield-map__enemy-fallback {
+  transition: none;
+}
+
 .run-spawn-test {
   width: 100%;
   min-height: 46px;
