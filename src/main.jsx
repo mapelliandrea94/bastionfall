@@ -28,6 +28,7 @@ import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } 
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
 import { FACTION_COUNTER_ENGINE, getFactionCounterFixtures } from './game/combat/factionCounters.js';
 import { getBaseTowerCombatFixtures, getEffectiveTowerAttackInterval, getTowerHitDamage, getTowerTargets } from './game/combat/baseTowerCombat.js';
+import { SUPPORT_STACKING, applyStrongestArmorShred, applyStrongestTimedEffect, getSupportStackingFixtures } from './game/combat/supportStacking.js';
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, getTriGateWaveScaling } from './game/balance/triGatePacing.js';
@@ -44,7 +45,7 @@ import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } f
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
-import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
+import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
@@ -158,6 +159,7 @@ const NORMAL_BUILD_ROSTER_FIXTURE = Object.freeze(getNormalBuildRosterFixtures()
 const NORMAL_BUILD_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures(NORMAL_MODE_TOWERS, 10000));
 const BASE_TOWER_GAMEPLAY_FIXTURE = Object.freeze(getBaseTowerGameplayFixtures());
 const BASE_TOWER_COMBAT_FIXTURE = Object.freeze(getBaseTowerCombatFixtures(BASE_TOWER_GAMEPLAY_BY_ID));
+const SUPPORT_STACKING_FIXTURE = Object.freeze(getSupportStackingFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -779,7 +781,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       setActiveEnemies((current) => current
         .map((enemy) => ({
           ...enemy,
-          progress: Math.min(1, ((now - enemy.spawnedAt) / durationMs) * (enemy.moveSpeed || 1) * blessingModifiers.enemyMoveSpeedMultiplier * worldModifierEffects.enemyMoveSpeedMultiplier)
+          progress: Math.min(1, ((now - enemy.spawnedAt) / durationMs) * getEnemyEffectiveSpeed(enemy, now) * blessingModifiers.enemyMoveSpeedMultiplier * worldModifierEffects.enemyMoveSpeedMultiplier)
         }))
         .filter((enemy) => {
           if (enemy.progress >= 1) {
@@ -838,32 +840,40 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
             let target = enemy;
             if (definition.armorShred) {
-              target = {
-                ...target,
-                armor: Math.max(0, Number(target.armor ?? 0) - Number(definition.armorShred)),
-                statusEffects: {
-                  ...(target.statusEffects ?? {}),
-                  armorShred: Math.max(Number(target.statusEffects?.armorShred ?? 0), Number(definition.armorShred)),
-                  armorShredUntilMs: Math.max(Number(target.statusEffects?.armorShredUntilMs ?? 0), now + Number(definition.armorShredDurationMs ?? 0))
-                }
-              };
+              target = applyStrongestArmorShred(
+                target,
+                definition.armorShred,
+                now + Number(definition.armorShredDurationMs ?? 0)
+              );
             }
 
             const damage = getTowerHitDamage(definition, placed, target, placedDefenses, defenseDefinitions) * damageScale;
             let damaged = applyEnemyDamage(target, damage, definition.damageType);
 
-            const statusEffects = { ...(damaged.statusEffects ?? {}) };
+            let statusEffects = { ...(damaged.statusEffects ?? {}) };
             if (definition.slowPercent) {
-              statusEffects.slowPercent = Math.max(Number(statusEffects.slowPercent ?? 0), Number(definition.slowPercent));
-              statusEffects.slowUntilMs = Math.max(Number(statusEffects.slowUntilMs ?? 0), now + Number(definition.slowDurationMs ?? 0));
+              statusEffects = applyStrongestTimedEffect(statusEffects, {
+                valueKey: 'slowPercent',
+                untilKey: 'slowUntilMs',
+                incomingValue: definition.slowPercent,
+                incomingUntilMs: now + Number(definition.slowDurationMs ?? 0)
+              });
             }
             if (definition.vulnerabilityPercent) {
-              statusEffects.vulnerabilityPercent = Math.max(Number(statusEffects.vulnerabilityPercent ?? 0), Number(definition.vulnerabilityPercent));
-              statusEffects.vulnerabilityUntilMs = Math.max(Number(statusEffects.vulnerabilityUntilMs ?? 0), now + Number(definition.vulnerabilityDurationMs ?? 0));
+              statusEffects = applyStrongestTimedEffect(statusEffects, {
+                valueKey: 'vulnerabilityPercent',
+                untilKey: 'vulnerabilityUntilMs',
+                incomingValue: definition.vulnerabilityPercent,
+                incomingUntilMs: now + Number(definition.vulnerabilityDurationMs ?? 0)
+              });
             }
             if (definition.poisonDamagePerSecond) {
-              statusEffects.poisonDamagePerSecond = Math.max(Number(statusEffects.poisonDamagePerSecond ?? 0), Number(definition.poisonDamagePerSecond));
-              statusEffects.poisonUntilMs = Math.max(Number(statusEffects.poisonUntilMs ?? 0), now + Number(definition.poisonDurationMs ?? 0));
+              statusEffects = applyStrongestTimedEffect(statusEffects, {
+                valueKey: 'poisonDamagePerSecond',
+                untilKey: 'poisonUntilMs',
+                incomingValue: definition.poisonDamagePerSecond,
+                incomingUntilMs: now + Number(definition.poisonDurationMs ?? 0)
+              });
             }
 
             damaged = { ...damaged, statusEffects };
@@ -1294,6 +1304,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
+            data-support-stacking-version={SUPPORT_STACKING.version}
+            data-support-stacking-pass={SUPPORT_STACKING_FIXTURE.weakerSlowDoesNotStack === true && SUPPORT_STACKING_FIXTURE.strongerSlowWins === true && SUPPORT_STACKING_FIXTURE.durationRefreshes === true && SUPPORT_STACKING_FIXTURE.identicalDebuffDoesNotStack === true && SUPPORT_STACKING_FIXTURE.duplicateShredDoesNotStack === true && SUPPORT_STACKING_FIXTURE.duplicateShredValueStable === true}
             data-tower-roster-count={TOWER_ROSTER.towers.length}
             data-tower-roster-pass={TOWER_ROSTER_FIXTURE.towerCountExpected === TOWER_ROSTER_FIXTURE.towerCountActual && TOWER_ROSTER_FIXTURE.humanCount === 3 && TOWER_ROSTER_FIXTURE.insectCount === 3 && TOWER_ROSTER_FIXTURE.alienCount === 3 && TOWER_ROSTER_FIXTURE.neutralCount === 3 && TOWER_ROSTER_FIXTURE.airCounterCount === 3 && TOWER_ROSTER_FIXTURE.armoredCounterCount === 3 && TOWER_ROSTER_FIXTURE.infantryCounterCount === 3 && TOWER_ROSTER_FIXTURE.supportCounterCount === 3 && TOWER_ROSTER_FIXTURE.neutralFlagsValid === true && TOWER_ROSTER_FIXTURE.legacyArcherResolves === true && TOWER_ROSTER_FIXTURE.legacySaveNormalizes === true}
             data-tri-gate-map-version={TRI_GATE_MAP.version}
