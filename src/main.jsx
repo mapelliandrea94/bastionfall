@@ -74,6 +74,7 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`) {
     gold: RUN_DEFAULTS.startingGold,
     coreHp: RUN_DEFAULTS.coreHp,
     coreMaxHp: RUN_DEFAULTS.coreHp,
+    bastionHitId: 0,
     kills: 0,
     elapsedMs: 0,
     result: null
@@ -177,7 +178,15 @@ function ModePreRun({ mode, onBack, onStart }) {
 }
 
 
-function SoloRun({ run, onExit }) {
+function SoloRun({ run, onExit, onDamageBastion }) {
+  const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
+  const bastionStateClass = coreRatio <= 0.25
+    ? 'battlefield-map__bastion--critical'
+    : coreRatio <= 0.5
+      ? 'battlefield-map__bastion--damaged'
+      : '';
+
+
   return (
     <main className="run-screen">
       <section className="run-layout">
@@ -229,9 +238,10 @@ function SoloRun({ run, onExit }) {
               r="42"
             />
             <g
-              className="battlefield-map__bastion"
+              className={`battlefield-map__bastion ${bastionStateClass}`}
               transform={`translate(${SINGLE_GATE_MAP.anchors.bastion.x} ${SINGLE_GATE_MAP.anchors.bastion.y})`}
               aria-label="Bastion structure"
+              data-hit-id={run?.bastionHitId ?? 0}
             >
               <ellipse className="battlefield-map__bastion-shadow" cx="0" cy="42" rx="88" ry="26" />
               <rect className="battlefield-map__bastion-base" x="-74" y="-30" width="148" height="78" rx="14" />
@@ -240,6 +250,18 @@ function SoloRun({ run, onExit }) {
               <rect className="battlefield-map__bastion-tower" x="44" y="-70" width="34" height="70" rx="7" />
               <path className="battlefield-map__bastion-roof" d="M -48 -80 L 0 -116 L 48 -80 Z" />
               <circle className="battlefield-map__bastion-core" cx="0" cy="-20" r="18" />
+              <rect className="battlefield-map__bastion-hp-bg" x="-84" y="-142" width="168" height="14" rx="7" />
+              <rect
+                className="battlefield-map__bastion-hp-fill"
+                x="-84"
+                y="-142"
+                width={168 * coreRatio}
+                height="14"
+                rx="7"
+              />
+              <text className="battlefield-map__bastion-hp-text" x="0" y="-152" textAnchor="middle">
+                {run?.coreHp ?? 0} / {run?.coreMaxHp ?? 0}
+              </text>
               <path className="battlefield-map__bastion-gate" d="M -18 48 V 18 Q 0 2 18 18 V 48 Z" />
             </g>
             <text
@@ -271,6 +293,15 @@ function SoloRun({ run, onExit }) {
             <span>PREPARATION</span>
             <strong>{run?.phase === RUN_PHASES.PREPARATION ? 'Ready for Wave 1' : run?.phase || 'Run unavailable'}</strong>
           </div>
+
+          <button
+            className="run-damage-test"
+            onClick={() => onDamageBastion(5)}
+            disabled={!run || run.coreHp <= 0}
+          >
+            TEST BASTION HIT
+            <small>−5 HP · temporary QA control</small>
+          </button>
 
           <button className="run-wave" disabled>
             START WAVE 1
@@ -521,6 +552,19 @@ function App() {
     return (
       <SoloRun
         run={runState}
+        onDamageBastion={(damage) => {
+          setRunState((current) => {
+            if (!current) return current;
+            const nextHp = Math.max(0, current.coreHp - Math.max(0, damage));
+            return {
+              ...current,
+              coreHp: nextHp,
+              bastionHitId: current.bastionHitId + 1,
+              phase: nextHp === 0 ? RUN_PHASES.ENDED : current.phase,
+              result: nextHp === 0 ? 'bastion-destroyed' : current.result
+            };
+          });
+        }}
         onExit={() => {
           setRunState(null);
           setScreen(SCREENS.MODE_PREP);
