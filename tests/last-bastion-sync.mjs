@@ -3,6 +3,8 @@ import {
   getLastBastionActiveMatchPersistenceSnapshot,
   getLastBastionMatchmakingFixtures,
   getLastBastionQueueStatus,
+  getLastBastionMatchStatus,
+  hydrateLastBastionActiveMatches,
   hydrateLastBastionQueue,
   setLastBastionReady
 } from '../server/lastBastionMatchmaking.js';
@@ -69,6 +71,74 @@ assert(persistenceSnapshot?.participantIds?.length === 2, 'Persistence snapshot 
 
 clearLastBastionMatchForUser(persistedA);
 clearLastBastionMatchForUser(persistedB);
+hydrateLastBastionQueue([]);
+
+const reconnectA = 'restart-fixture-a';
+const reconnectB = 'restart-fixture-b';
+const reconnectMatchId = 'restart-match-001';
+const reconnectStartedAt = '2026-09-27T20:10:05.000Z';
+
+const hydratedRestart = hydrateLastBastionActiveMatches(
+  [{
+    id: reconnectMatchId,
+    seed: 'last-bastion:restart-match-001',
+    status: 'active',
+    created_at: '2026-09-27T20:10:00.000Z',
+    started_at: reconnectStartedAt,
+    wave_starts_at: reconnectStartedAt,
+    winner_user_id: null,
+    ended_at: null
+  }],
+  [
+    {
+      match_id: reconnectMatchId,
+      user_id: reconnectA,
+      slot: 1,
+      alive: true,
+      last_seen_at: '2026-09-27T20:10:10.000Z',
+      wave: 9,
+      core_hp: 15,
+      placement: null,
+      eliminated_at: null
+    },
+    {
+      match_id: reconnectMatchId,
+      user_id: reconnectB,
+      slot: 2,
+      alive: true,
+      last_seen_at: '2026-09-27T20:10:11.000Z',
+      wave: 9,
+      core_hp: 18,
+      placement: null,
+      eliminated_at: null
+    }
+  ]
+);
+
+hydrateLastBastionQueue([
+  {
+    ticketId: 'stale-restart-ticket',
+    userId: reconnectA,
+    joinedAt: '2026-09-27T20:09:00.000Z',
+    ready: true
+  }
+]);
+
+const reconnectStatusA = getLastBastionMatchStatus(reconnectA, reconnectMatchId, Date.parse('2026-09-27T20:10:12.000Z'));
+const reconnectQueueA = getLastBastionQueueStatus(reconnectA);
+
+assert(hydratedRestart.hydratedMatches === 1, 'Restart hydration must restore the active match');
+assert(hydratedRestart.hydratedParticipants === 2, 'Restart hydration must restore all match participants');
+assert(reconnectStatusA.ok === true, 'Reconnected player must resolve its persisted active match');
+assert(reconnectStatusA.match?.seed === 'last-bastion:restart-match-001', 'Reconnect must preserve the original shared seed');
+assert(reconnectStatusA.match?.startedAt === reconnectStartedAt, 'Reconnect must preserve the original synchronized start');
+assert(reconnectStatusA.match?.participants?.find((p) => p.self)?.slot === 1, 'Reconnect must preserve the original participant slot');
+assert(reconnectStatusA.match?.participants?.find((p) => p.self)?.wave === 9, 'Reconnect must restore persisted wave progress');
+assert(reconnectQueueA.matched === true && reconnectQueueA.queued === false, 'Active match must win over any stale queue ticket after restart');
+
+clearLastBastionMatchForUser(reconnectA);
+clearLastBastionMatchForUser(reconnectB);
+hydrateLastBastionActiveMatches([], []);
 hydrateLastBastionQueue([]);
 
 const seed = 'last-bastion:sync-fixture';
