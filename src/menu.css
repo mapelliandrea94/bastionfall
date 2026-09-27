@@ -1753,3 +1753,31 @@ button { font: inherit; }
   font-size: 8px;
   letter-spacing: .02em;
 }
+
+
+/* BATCH 34 — Mage tower foundation */
+.tower-card--mage {
+  position: relative;
+  text-align: left;
+  align-items: start;
+  border-color: rgba(133, 104, 190, .34);
+  background:
+    linear-gradient(180deg, rgba(80, 51, 127, .16), rgba(28, 23, 38, .1));
+}
+
+.tower-card--mage strong {
+  color: #dbcaf3;
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.tower-card--mage > span {
+  color: #b7a0df;
+  font-weight: 900;
+}
+
+.tower-card--mage small {
+  color: #9183a4;
+  font-size: 8px;
+  letter-spacing: .02em;
+}
