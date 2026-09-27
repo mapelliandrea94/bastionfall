@@ -1,0 +1,41 @@
+name: Tower Placement Hotfix QA
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/game/maps/singleGate.js"
+      - "src/game/placement/singleGatePlacement.js"
+      - "src/main.jsx"
+      - "src/menu.css"
+      - "server.mjs"
+      - "tests/tower-placement-mouse.mjs"
+      - ".github/workflows/tower-placement-hotfix-qa.yml"
+
+jobs:
+  mouse-placement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-save playwright@1.55.0
+      - run: npx playwright install --with-deps chromium
+      - name: Start production preview
+        run: |
+          nohup npx vite preview --host 127.0.0.1 --port 4173 > /tmp/bastionfall-preview.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/bastionfall-preview.log
+          exit 1
+      - name: Mouse placement QA
+        run: node tests/tower-placement-mouse.mjs
