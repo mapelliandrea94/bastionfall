@@ -1993,3 +1993,33 @@ button { font: inherit; }
   font-size: 8px;
   line-height: 1.4;
 }
+
+
+/* BATCH 43 — attack feedback / DPS instrumentation */
+.defense-inspector__instrumentation {
+  padding-top: 9px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  align-items: baseline;
+}
+
+.defense-inspector__instrumentation span {
+  color: #8f8a7d;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .11em;
+}
+
+.defense-inspector__instrumentation strong {
+  color: #f0b88e;
+  font-size: 12px;
+}
+
+.defense-inspector__instrumentation small {
+  grid-column: 1 / -1;
+  color: #7e8389;
+  font-size: 8px;
+  line-height: 1.4;
+}
