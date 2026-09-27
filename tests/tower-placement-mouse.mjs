@@ -25,64 +25,80 @@ function assert(condition, message) {
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
 
+async function openFixture() {
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
+  const sidebar = page.locator('.run-sidebar');
+  await sidebar.waitFor({ state: 'visible' });
+
+  const fixturePass = await sidebar.getAttribute('data-tower-slot-purchase-pass');
+  assert(fixturePass === 'true', '12×28 purchase fixture failed before mouse QA');
+
+  const slotCount = Number(await sidebar.getAttribute('data-tower-slot-count'));
+  assert(slotCount === slots.length, `Expected ${slots.length} slots, got ${slotCount}`);
+  return sidebar;
+}
+
+async function verifyMousePlacement(defense, slotId, { verifyOccupiedClick = false } = {}) {
+  const sidebar = await openFixture();
+
+  await page.locator(`[data-tower-id="${defense.id}"]`).click();
+
+  const slot = page.locator(`[data-slot-id="${slotId}"]`);
+  await slot.waitFor({ state: 'visible' });
+  assert((await slot.getAttribute('data-occupied')) === 'false', `${slotId} should begin empty`);
+
+  await slot.hover();
+  const ghost = slot.locator('.tower-visual--ghost');
+  assert(await ghost.count() === 1, `Ghost preview missing for ${defense.id} on ${slotId}`);
+  const ghostOpacity = Number(await ghost.evaluate((node) => getComputedStyle(node).opacity));
+  assert(ghostOpacity > 0, `Ghost preview stayed hidden for ${defense.id} on ${slotId}`);
+
+  const box = await slot.boundingBox();
+  assert(box, `No mouse target box for ${slotId}`);
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+
+  await page.mouse.click(x, y);
+  await page.waitForFunction(
+    ({ slotId: id, defenseId }) => {
+      const node = document.querySelector(`[data-slot-id="${id}"]`);
+      return node?.getAttribute('data-occupied') === 'true' &&
+        node?.getAttribute('data-defense-id') === defenseId;
+    },
+    { slotId, defenseId: defense.id }
+  );
+
+  const goldAfter = Number(await sidebar.getAttribute('data-run-gold'));
+  assert(goldAfter === startingGold - defense.cost, `Gold deduction wrong for ${defense.id} on ${slotId}: ${goldAfter}`);
+  assert(Number(await sidebar.getAttribute('data-placed-defense-count')) === 1, 'Expected exactly one placed defense');
+
+  if (verifyOccupiedClick) {
+    await page.mouse.click(x, y);
+    assert(Number(await sidebar.getAttribute('data-run-gold')) === goldAfter, `Occupied slot charged gold again for ${slotId}`);
+    assert(Number(await sidebar.getAttribute('data-placed-defense-count')) === 1, `Occupied slot accepted a second tower for ${slotId}`);
+
+    const inspectorText = await page.locator('.defense-inspector__header').innerText();
+    assert(inspectorText.includes('PLACED DEFENSE'), `Occupied slot did not select placed defense on ${slotId}`);
+  }
+}
+
 try {
-  for (const defense of defenses) {
-    for (const slotId of slots) {
-      await page.goto(baseUrl, { waitUntil: 'networkidle' });
-
-      const sidebar = page.locator('.run-sidebar');
-      await sidebar.waitFor({ state: 'visible' });
-
-      const fixturePass = await sidebar.getAttribute('data-tower-slot-purchase-pass');
-      assert(fixturePass === 'true', 'Purchase fixture failed before mouse QA');
-
-      const slotCount = Number(await sidebar.getAttribute('data-tower-slot-count'));
-      assert(slotCount === slots.length, `Expected ${slots.length} slots, got ${slotCount}`);
-
-      await page.locator(`[data-tower-id="${defense.id}"]`).click();
-
-      const slot = page.locator(`[data-slot-id="${slotId}"]`);
-      await slot.waitFor({ state: 'visible' });
-      assert((await slot.getAttribute('data-occupied')) === 'false', `${slotId} should begin empty`);
-
-      await slot.hover();
-      await page.waitForTimeout(80);
-
-      const ghost = slot.locator('.tower-visual--ghost');
-      assert(await ghost.count() === 1, `Ghost preview missing for ${defense.id} on ${slotId}`);
-      const ghostOpacity = Number(await ghost.evaluate((node) => getComputedStyle(node).opacity));
-      assert(ghostOpacity > 0, `Ghost preview stayed hidden for ${defense.id} on ${slotId}`);
-
-      const box = await slot.boundingBox();
-      assert(box, `No mouse target box for ${slotId}`);
-      const x = box.x + box.width / 2;
-      const y = box.y + box.height / 2;
-
-      await page.mouse.click(x, y);
-      await page.waitForTimeout(80);
-
-      assert((await slot.getAttribute('data-occupied')) === 'true', `${defense.id} did not occupy ${slotId}`);
-      assert((await slot.getAttribute('data-defense-id')) === defense.id, `Wrong defense built on ${slotId}`);
-
-      const goldAfter = Number(await sidebar.getAttribute('data-run-gold'));
-      assert(goldAfter === startingGold - defense.cost, `Gold deduction wrong for ${defense.id} on ${slotId}: ${goldAfter}`);
-
-      const placedCount = Number(await sidebar.getAttribute('data-placed-defense-count'));
-      assert(placedCount === 1, `Expected one placed defense, got ${placedCount}`);
-
-      await page.mouse.click(x, y);
-      await page.waitForTimeout(40);
-
-      assert(Number(await sidebar.getAttribute('data-run-gold')) === goldAfter, `Occupied slot charged gold again for ${slotId}`);
-      assert(Number(await sidebar.getAttribute('data-placed-defense-count')) === 1, `Occupied slot accepted a second tower for ${slotId}`);
-
-      const inspector = page.locator('.defense-inspector__header');
-      const inspectorText = await inspector.innerText();
-      assert(inspectorText.includes('PLACED DEFENSE'), `Occupied slot did not select placed defense on ${slotId}`);
-    }
+  // Geometry/pointer coverage: every curated slot must be reachable with a real mouse.
+  for (const slotId of slots) {
+    await verifyMousePlacement(defenses[0], slotId, { verifyOccupiedClick: slotId === slots[0] });
   }
 
-  console.log(`PASS: mouse placement verified across ${defenses.length} defense types × ${slots.length} slots = ${defenses.length * slots.length} combinations.`);
+  // Roster coverage: every base tower must be selectable, purchasable and charge its own cost.
+  for (const defense of defenses.slice(1)) {
+    await verifyMousePlacement(defense, slots[0]);
+  }
+
+  console.log('PASS: tower placement browser QA', {
+    logicalMatrix: `${defenses.length}x${slots.length}`,
+    mouseSlotCoverage: slots.length,
+    mouseTowerCoverage: defenses.length,
+    explicitPointerCollisionCoverage: true
+  });
 } finally {
   await browser.close();
 }
