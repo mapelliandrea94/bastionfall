@@ -1949,7 +1949,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       height="82"
                       rx="12"
                       fill="transparent"
-                      pointerEvents="all"
+                      pointerEvents="none"
                     />
                     <rect className="wall-slot__base" x="-34" y="-18" width="68" height="36" rx="8" />
                     {built ? (
