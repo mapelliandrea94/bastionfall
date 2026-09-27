@@ -3581,3 +3581,104 @@ button:focus-visible,
     background: linear-gradient(180deg, transparent, rgba(7,10,14,.98) 28%);
   }
 }
+
+
+/* HOTFIX — visual TFT bench cards */
+.run-sidebar--tft .tft-bench {
+  margin-top: .8rem;
+  gap: .5rem;
+}
+
+.run-sidebar--tft .tft-bench__header {
+  font-size: .72rem;
+  font-weight: 900;
+}
+
+.run-sidebar--tft .tft-bench__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+}
+
+.run-sidebar--tft .tft-bench-slot {
+  min-height: 126px;
+  grid-template-columns: 82px minmax(0, 1fr);
+  align-items: center;
+  column-gap: .55rem;
+  row-gap: .3rem;
+  padding: .55rem;
+  align-content: center;
+  overflow: hidden;
+}
+
+.run-sidebar--tft .tft-bench-slot:nth-child(7) {
+  grid-column: auto;
+}
+
+.tft-bench-slot__art {
+  width: 82px;
+  height: 82px;
+  grid-row: 1 / span 2;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,.32));
+  transform: scale(1.05);
+  transform-origin: 50% 68%;
+}
+
+.tft-bench-slot__copy {
+  min-width: 0;
+  display: grid;
+  gap: .2rem;
+}
+
+.run-sidebar--tft .tft-bench-slot strong {
+  font-size: .82rem;
+  line-height: 1.05;
+  color: #f2ead8;
+}
+
+.run-sidebar--tft .tft-bench-slot small,
+.run-sidebar--tft .tft-bench-slot span {
+  font-size: .56rem;
+}
+
+.run-sidebar--tft .tft-bench-slot button {
+  grid-column: 1 / -1;
+  min-height: 30px;
+  margin-top: .08rem;
+  padding: .3rem .38rem;
+  font-size: .58rem;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.055);
+}
+
+.run-sidebar--tft .tft-bench-slot--selected {
+  border-color: rgba(241,212,119,.9);
+  box-shadow:
+    0 0 0 1px rgba(241,212,119,.22),
+    0 0 18px rgba(241,212,119,.14);
+}
+
+@media (max-width: 1180px) and (min-width: 901px) {
+  .run-sidebar--tft .tft-bench-slot {
+    min-height: 112px;
+    grid-template-columns: 70px minmax(0, 1fr);
+  }
+
+  .tft-bench-slot__art {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+@media (max-width: 900px) {
+  .run-sidebar--tft .tft-bench-slot {
+    min-height: 104px;
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .tft-bench-slot__art {
+    width: 64px;
+    height: 64px;
+  }
+}
