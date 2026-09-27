@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from './lib/supabase.js';
 import { normalizeRunSeed } from './lib/runSeed.js';
@@ -79,6 +79,37 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`) {
     elapsedMs: 0,
     result: null
   };
+}
+
+function getPathPosition(waypoints, progress) {
+  if (!waypoints.length) return { x: 0, y: 0 };
+  if (waypoints.length === 1) return waypoints[0];
+
+  const segments = [];
+  let totalLength = 0;
+
+  for (let index = 0; index < waypoints.length - 1; index += 1) {
+    const from = waypoints[index];
+    const to = waypoints[index + 1];
+    const length = Math.hypot(to.x - from.x, to.y - from.y);
+    segments.push({ from, to, length });
+    totalLength += length;
+  }
+
+  let remaining = Math.max(0, Math.min(1, progress)) * totalLength;
+
+  for (const segment of segments) {
+    if (remaining <= segment.length) {
+      const ratio = segment.length === 0 ? 0 : remaining / segment.length;
+      return {
+        x: segment.from.x + (segment.to.x - segment.from.x) * ratio,
+        y: segment.from.y + (segment.to.y - segment.from.y) * ratio
+      };
+    }
+    remaining -= segment.length;
+  }
+
+  return waypoints[waypoints.length - 1];
 }
 
 function Shell({ title, kicker, subtitle, onBack, children }) {
@@ -179,12 +210,44 @@ function ModePreRun({ mode, onBack, onStart }) {
 
 
 function SoloRun({ run, onExit, onDamageBastion }) {
+  const [testEnemy, setTestEnemy] = useState(null);
+  const animationFrameRef = useRef(null);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
     : coreRatio <= 0.5
       ? 'battlefield-map__bastion--damaged'
       : '';
+
+  useEffect(() => {
+    if (!testEnemy || run?.phase === RUN_PHASES.ENDED) return undefined;
+
+    const startedAt = performance.now();
+    const durationMs = 7000;
+
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startedAt) / durationMs);
+      setTestEnemy((current) => current ? { ...current, progress } : current);
+
+      if (progress >= 1) {
+        setTestEnemy(null);
+        onDamageBastion(1);
+        return;
+      }
+
+      animationFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
+  }, [testEnemy?.id, run?.phase, onDamageBastion]);
+
+  const enemyPosition = testEnemy
+    ? getPathPosition(SINGLE_GATE_MAP.path.waypoints, testEnemy.progress)
+    : null;
 
 
   return (
@@ -237,6 +300,16 @@ function SoloRun({ run, onExit, onDamageBastion }) {
               cy={SINGLE_GATE_MAP.anchors.enemySpawn.y}
               r="42"
             />
+            {enemyPosition && (
+              <g
+                className="battlefield-map__enemy"
+                transform={`translate(${enemyPosition.x} ${enemyPosition.y})`}
+                aria-label="Test enemy"
+              >
+                <circle r="24" />
+                <path d="M -10 -5 L 0 -18 L 10 -5 L 8 14 L -8 14 Z" />
+              </g>
+            )}
             <g
               className={`battlefield-map__bastion ${bastionStateClass}`}
               transform={`translate(${SINGLE_GATE_MAP.anchors.bastion.x} ${SINGLE_GATE_MAP.anchors.bastion.y})`}
@@ -293,6 +366,15 @@ function SoloRun({ run, onExit, onDamageBastion }) {
             <span>PREPARATION</span>
             <strong>{run?.phase === RUN_PHASES.PREPARATION ? 'Ready for Wave 1' : run?.phase || 'Run unavailable'}</strong>
           </div>
+
+          <button
+            className="run-spawn-test"
+            onClick={() => setTestEnemy({ id: Date.now(), progress: 0 })}
+            disabled={!run || run.coreHp <= 0 || Boolean(testEnemy)}
+          >
+            SPAWN TEST ENEMY
+            <small>Follows the Single Gate path</small>
+          </button>
 
           <button
             className="run-damage-test"
