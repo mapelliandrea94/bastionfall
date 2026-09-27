@@ -34,6 +34,14 @@ export function getTowerArtPalette(faction) {
   return factionPalette[faction] ?? factionPalette.neutral;
 }
 
+export function getRepresentativeEvolutionId(towerId, branch = 'A') {
+  return TOWER_EVOLUTIONS.find((entry) => entry.towerId === towerId && entry.branch === branch)?.id ?? null;
+}
+
+export function getTowerArtStyleForTower(towerId, evolutionId = null) {
+  return getTowerArtStyle(evolutionId ?? getRepresentativeEvolutionId(towerId, 'A'));
+}
+
 export function getTowerArtStyle(evolutionId) {
   const frame = getTowerArtFrame(evolutionId);
   if (!frame) return Object.freeze({});
@@ -61,6 +69,7 @@ export function getTowerArtFixtures() {
     everyEvolutionMapped: frames.every(Boolean),
     uniqueFrames: new Set(frames.map((frame) => frame.index)).size === 24,
     humanPaletteDistinct: getTowerArtPalette('human').primary !== getTowerArtPalette('alien').primary,
-    alienNeutralDistinct: getTowerArtPalette('alien').secondary !== getTowerArtPalette('neutral').secondary
+    alienNeutralDistinct: getTowerArtPalette('alien').secondary !== getTowerArtPalette('neutral').secondary,
+    everyBaseTowerHasRepresentativeArt: new Set(TOWER_EVOLUTIONS.map((entry) => entry.towerId)).size === 12
   });
 }
