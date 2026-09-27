@@ -466,3 +466,126 @@ button { font: inherit; }
     text-align: left;
   }
 }
+
+
+.account-strip {
+  margin: 0 0 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 28px;
+}
+
+.account-strip span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #9fb0bf;
+}
+
+.account-strip button,
+.auth-switch {
+  border: 0;
+  background: transparent;
+  color: #d7b66a;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .09em;
+  cursor: pointer;
+}
+
+.auth-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3,5,8,.78);
+  backdrop-filter: blur(8px);
+}
+
+.auth-modal {
+  width: min(100%, 440px);
+  padding: 32px;
+  border: 1px solid rgba(225,176,77,.34);
+  background: linear-gradient(180deg, rgba(19,25,34,.98), rgba(8,11,16,.98));
+  box-shadow: 0 30px 90px rgba(0,0,0,.6);
+  text-align: left;
+}
+
+.auth-modal h3 {
+  margin: 0;
+  text-align: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  color: #f5e8c4;
+}
+
+.auth-modal__copy {
+  margin: 10px 0 24px;
+  text-align: center;
+  color: #8f9aa5;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.auth-modal label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+}
+
+.auth-modal label span {
+  color: #c6a96a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.auth-modal input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.035);
+  color: #f4f0e5;
+  outline: none;
+}
+
+.auth-modal input:focus {
+  border-color: rgba(225,176,77,.58);
+}
+
+.auth-error {
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(194,74,74,.35);
+  background: rgba(120,36,36,.16);
+  color: #efb4b4;
+  font-size: 12px;
+}
+
+.auth-submit {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border: 1px solid rgba(225,176,77,.7);
+  background: linear-gradient(180deg, rgba(183,127,32,.34), rgba(99,62,15,.24));
+  color: #fff3cf;
+  font-weight: 900;
+  letter-spacing: .1em;
+  cursor: pointer;
+}
+
+.auth-submit:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.auth-switch {
+  display: block;
+  margin: 16px auto 0;
+}
