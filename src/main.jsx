@@ -11,6 +11,7 @@ import { FROST_TOWER } from './game/towers/frost.js';
 import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.js';
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
+import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -22,7 +23,7 @@ import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOp
 import { WAR_FORGE, applyWarForgePreview, getWarForgeFixtures } from './game/structures/warForge.js';
 import { GUARDIAN_SHRINE, applyGuardianShrineRangePreview, applyGuardianShrineToBastionDamage, getGuardianShrineFixtures } from './game/structures/guardianShrine.js';
 import { ECONOMY_SPEND_CURVE, getEconomyRiskProfile, getSpendCurveFixtures, getStrategicSpendProfile } from './game/balance/economySpendCurve.js';
-import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
+import { UPGRADE_CURVE, getNextUpgradePreview, getUpgradeCost } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
@@ -160,6 +161,7 @@ const NORMAL_BUILD_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures
 const BASE_TOWER_GAMEPLAY_FIXTURE = Object.freeze(getBaseTowerGameplayFixtures());
 const BASE_TOWER_COMBAT_FIXTURE = Object.freeze(getBaseTowerCombatFixtures(BASE_TOWER_GAMEPLAY_BY_ID));
 const SUPPORT_STACKING_FIXTURE = Object.freeze(getSupportStackingFixtures());
+const EVOLUTION_FIXTURE = Object.freeze(getEvolutionFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -658,11 +660,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? NORMAL_MODE_TOWERS[0];
   const selectedPlacedDefense = placedDefenses.find((entry) => entry.id === selectedPlacedDefenseId) ?? null;
-  const inspectedDefense = selectedPlacedDefense
+  const inspectedDefenseBase = selectedPlacedDefense
     ? defenseDefinitions[selectedPlacedDefense.defenseId] ?? selectedDefense
     : selectedDefense;
-  const selectedSellPreview = getSellPreview(inspectedDefense);
-  const selectedUpgradePreview = getNextUpgradePreview(inspectedDefense, 1);
+  const inspectedDefense = selectedPlacedDefense
+    ? getRuntimeTowerDefinition(inspectedDefenseBase, selectedPlacedDefense)
+    : inspectedDefenseBase;
+  const selectedSellPreview = getSellPreview(inspectedDefenseBase);
+  const selectedUpgradePreview = getNextUpgradePreview(inspectedDefenseBase, selectedPlacedDefense?.level ?? 1);
+  const selectedEvolutionChoices = selectedPlacedDefense ? getEvolutionChoices(selectedPlacedDefense.defenseId) : [];
   const selectedTargetingValue = getTargetingValue(inspectedDefense);
   const selectedAttackInstrumentation = getAttackInstrumentation(inspectedDefense);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
@@ -818,8 +824,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         }));
 
         for (const placed of placedDefenses) {
-          const definition = defenseDefinitions[placed.defenseId];
-          if (!definition) continue;
+          const baseDefinition = defenseDefinitions[placed.defenseId];
+          if (!baseDefinition) continue;
+          const definition = getRuntimeTowerDefinition(baseDefinition, placed);
 
           const attackInterval = getEffectiveTowerAttackInterval(definition, placed, placedDefenses, defenseDefinitions);
           const lastAttackAt = Number(towerAttackTimesRef.current[placed.id] ?? 0);
@@ -972,6 +979,30 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const handleDefenseSelection = (defenseId) => {
     setSelectedDefenseId(defenseId);
     setSelectedPlacedDefenseId(null);
+  };
+
+  const handleUpgradeSelectedTower = () => {
+    if (!selectedPlacedDefense || selectedPlacedDefense.level >= UPGRADE_CURVE.maxLevel) return;
+    const baseDefinition = defenseDefinitions[selectedPlacedDefense.defenseId];
+    if (!baseDefinition) return;
+    const targetLevel = selectedPlacedDefense.level + 1;
+    const cost = getUpgradeCost(baseDefinition, targetLevel);
+    if (availableGoldRef.current < cost) return;
+
+    availableGoldRef.current -= cost;
+    setPlacedDefenses((current) => current.map((tower) =>
+      tower.id === selectedPlacedDefense.id
+        ? { ...tower, level: targetLevel, investedGold: Number(tower.investedGold ?? 0) + cost }
+        : tower
+    ));
+    onSpendGold(cost);
+  };
+
+  const handleEvolutionChoice = (evolutionId) => {
+    if (!selectedPlacedDefense || !canChooseEvolution(selectedPlacedDefense)) return;
+    setPlacedDefenses((current) => current.map((tower) =>
+      tower.id === selectedPlacedDefense.id ? chooseTowerEvolution(tower, evolutionId) : tower
+    ));
   };
 
   const handleBuildSlot = (slotId) => {
@@ -1304,6 +1335,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
+            data-evolution-count={TOWER_EVOLUTIONS.length}
+            data-evolution-pass={EVOLUTION_FIXTURE.evolutionCountExpected === EVOLUTION_FIXTURE.evolutionCountActual && EVOLUTION_FIXTURE.everyTowerHasTwoChoices === true && EVOLUTION_FIXTURE.levelGateBlocksEarly === true && EVOLUTION_FIXTURE.levelFourAllowsChoice === true && EVOLUTION_FIXTURE.choiceIsPerTower === true && EVOLUTION_FIXTURE.counterFactionPreserved === true && EVOLUTION_FIXTURE.counterTypePreserved === true}
             data-support-stacking-version={SUPPORT_STACKING.version}
             data-support-stacking-pass={SUPPORT_STACKING_FIXTURE.weakerSlowDoesNotStack === true && SUPPORT_STACKING_FIXTURE.strongerSlowWins === true && SUPPORT_STACKING_FIXTURE.durationRefreshes === true && SUPPORT_STACKING_FIXTURE.identicalDebuffDoesNotStack === true && SUPPORT_STACKING_FIXTURE.duplicateShredDoesNotStack === true && SUPPORT_STACKING_FIXTURE.duplicateShredValueStable === true}
             data-tower-roster-count={TOWER_ROSTER.towers.length}
@@ -1396,11 +1429,28 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <small>{Math.round(SELL_ECONOMY.baseRefundRate * 100)}% of invested gold · preview only until a placed defense is selected</small>
             </div>
             <div className="defense-inspector__upgrade">
-              <span>NEXT UPGRADE</span>
-              <strong>LV.{selectedUpgradePreview.nextLevel} · {selectedUpgradePreview.upgradeCost}g</strong>
-              <small>
-                {selectedUpgradePreview.efficiency.dpsPer100Gold} DPS/100g · max level {UPGRADE_CURVE.maxLevel}
-              </small>
+              <span>{selectedPlacedDefense ? `LEVEL ${selectedPlacedDefense.level}` : 'NEXT UPGRADE'}</span>
+              {!selectedPlacedDefense && !selectedUpgradePreview.maxed && (
+                <strong>LV.{selectedUpgradePreview.nextLevel} · {selectedUpgradePreview.upgradeCost}g</strong>
+              )}
+              {selectedPlacedDefense && selectedPlacedDefense.level < UPGRADE_CURVE.maxLevel && (
+                <button type="button" onClick={handleUpgradeSelectedTower}>
+                  UPGRADE TO LV.{selectedPlacedDefense.level + 1} · {getUpgradeCost(inspectedDefenseBase, selectedPlacedDefense.level + 1)}g
+                </button>
+              )}
+              {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && !selectedPlacedDefense.evolution && (
+                <div className="tower-evolution-choice">
+                  {selectedEvolutionChoices.map((choice) => (
+                    <button key={choice.id} type="button" onClick={() => handleEvolutionChoice(choice.id)}>
+                      {choice.branch} · {choice.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedPlacedDefense?.evolution && (
+                <strong>{TOWER_EVOLUTIONS.find((entry) => entry.id === selectedPlacedDefense.evolution)?.name ?? selectedPlacedDefense.evolution}</strong>
+              )}
+              <small>Max level {UPGRADE_CURVE.maxLevel} · evolution at Lv.4</small>
             </div>
             <div className="defense-inspector__targeting">
               <span>TARGETING</span>
