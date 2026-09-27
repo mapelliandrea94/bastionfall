@@ -50,10 +50,15 @@ function verifyMatchIdentity(token) {
   }
 }
 
-function clientForToken(token) {
+function clientForToken(token, extraHeaders = {}) {
   return createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: 'Bearer ' + token } }
+    global: {
+      headers: {
+        Authorization: 'Bearer ' + token,
+        ...extraHeaders
+      }
+    }
   });
 }
 
@@ -66,6 +71,7 @@ async function requireUser(req, res, next) {
   if (error || !data.user) return res.status(401).json({ error: 'invalid_token' });
   req.user = data.user;
   req.db = userClient;
+  req.accessToken = token;
   next();
 }
 
@@ -179,31 +185,100 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
 
   let persistedRecord = null;
   if (mode === 'single-gate' || mode === 'tri-gate') {
+    const serverDb = clientForToken(req.accessToken, {
+      'x-bastionfall-server-secret': matchTokenSecret
+    });
     const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
-    const { data: recordRows, error: recordError } = await req.db.rpc(
-      'persist_verified_standard_result',
-      {
-        p_server_secret: matchTokenSecret,
-        p_mode: mode,
-        p_result_reason: resultReason,
-        p_wave: wave,
-        p_elapsed_ms: Math.floor(elapsedMs),
-        p_score: Math.floor(score),
-        p_gold: gold,
-        p_core_hp: coreHp,
-        p_core_max_hp: coreMaxHp,
-        p_kills: kills,
-        p_started_at: identity.startedAt,
-        p_ended_at: endedAt
-      }
-    );
 
-    if (recordError) {
-      console.error('Standard record persistence failed:', recordError.message);
-      return res.status(500).json({ error: 'record_persist_failed' });
+    const matchInsert = await serverDb
+      .from('completed_matches')
+      .insert({
+        user_id: req.user.id,
+        mode,
+        result_reason: resultReason,
+        wave,
+        elapsed_ms: Math.floor(elapsedMs),
+        score: Math.floor(score),
+        gold,
+        core_hp: coreHp,
+        core_max_hp: coreMaxHp,
+        kills,
+        started_at: identity.startedAt,
+        ended_at: endedAt
+      })
+      .select('id')
+      .single();
+
+    if (matchInsert.error) {
+      console.error('Completed match persistence failed:', matchInsert.error.message);
+      return res.status(500).json({ error: 'completed_match_persist_failed' });
     }
 
-    persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
+    const currentRecord = await serverDb
+      .from('mode_records')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .eq('mode', mode)
+      .maybeSingle();
+
+    if (currentRecord.error) {
+      console.error('Mode record read failed:', currentRecord.error.message);
+      return res.status(500).json({ error: 'mode_record_read_failed' });
+    }
+
+    const candidate = {
+      best_wave: wave,
+      best_survival_ms: Math.floor(elapsedMs),
+      best_score: Math.floor(score),
+      best_kills: kills
+    };
+
+    const currentBest = currentRecord.data;
+    const candidateIsBetter =
+      !currentBest ||
+      candidate.best_wave > currentBest.best_wave ||
+      (
+        candidate.best_wave === currentBest.best_wave &&
+        candidate.best_survival_ms > currentBest.best_survival_ms
+      ) ||
+      (
+        candidate.best_wave === currentBest.best_wave &&
+        candidate.best_survival_ms === currentBest.best_survival_ms &&
+        candidate.best_score > currentBest.best_score
+      );
+
+    const nextRecord = currentBest
+      ? {
+          best_wave: candidateIsBetter ? candidate.best_wave : currentBest.best_wave,
+          best_survival_ms: candidateIsBetter ? candidate.best_survival_ms : currentBest.best_survival_ms,
+          best_score: candidateIsBetter ? candidate.best_score : currentBest.best_score,
+          best_kills: Math.max(currentBest.best_kills || 0, candidate.best_kills)
+        }
+      : candidate;
+
+    const recordWrite = currentBest
+      ? await serverDb
+          .from('mode_records')
+          .update(nextRecord)
+          .eq('user_id', req.user.id)
+          .eq('mode', mode)
+          .select('*')
+          .single()
+      : await serverDb
+          .from('mode_records')
+          .insert({ user_id: req.user.id, mode, ...nextRecord })
+          .select('*')
+          .single();
+
+    if (recordWrite.error) {
+      console.error('Mode record persistence failed:', recordWrite.error.message);
+      return res.status(500).json({ error: 'mode_record_persist_failed' });
+    }
+
+    persistedRecord = {
+      completedMatchId: matchInsert.data.id,
+      ...recordWrite.data
+    };
   }
 
   const { data: current, error: profileError } = await req.db
