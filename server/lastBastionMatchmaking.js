@@ -1,18 +1,46 @@
 import { randomUUID } from 'node:crypto';
 
 export const LAST_BASTION_MATCHMAKING = Object.freeze({
-  version: 2,
+  version: 3,
   mode: 'last-bastion',
   minPlayers: 2,
   maxPlayers: 8,
-  synchronizedStartDelayMs: 5000
+  synchronizedStartDelayMs: 5000,
+  heartbeatIntervalMs: 5000,
+  heartbeatTimeoutMs: 15000
 });
 
 const queue = [];
 const byUserId = new Map();
 const activeMatchByUserId = new Map();
+const matchesById = new Map();
 
-function publicMatch(match, userId) {
+function nowIso(nowMs = Date.now()) {
+  return new Date(nowMs).toISOString();
+}
+
+function participantSnapshot(match, userId, nowMs = Date.now()) {
+  if (!match) return [];
+  return match.participantIds.map((participantId, index) => {
+    const state = match.participants.get(participantId);
+    const lastSeenAtMs = Number(state?.lastSeenAtMs ?? 0);
+    const connected =
+      lastSeenAtMs > 0 &&
+      nowMs - lastSeenAtMs <= LAST_BASTION_MATCHMAKING.heartbeatTimeoutMs;
+
+    return Object.freeze({
+      slot: index + 1,
+      self: participantId === userId,
+      alive: state?.alive !== false,
+      connected,
+      lastSeenAt: lastSeenAtMs > 0 ? nowIso(lastSeenAtMs) : null,
+      wave: Math.max(0, Math.floor(Number(state?.wave ?? 0) || 0)),
+      coreHp: Math.max(0, Math.floor(Number(state?.coreHp ?? 0) || 0))
+    });
+  });
+}
+
+function publicMatch(match, userId, nowMs = Date.now()) {
   if (!match || !match.participantIds.includes(userId)) return null;
   return Object.freeze({
     id: match.id,
@@ -21,7 +49,10 @@ function publicMatch(match, userId) {
     createdAt: match.createdAt,
     startedAt: match.startedAt,
     waveStartsAt: match.waveStartsAt,
-    participantCount: match.participantIds.length
+    participantCount: match.participantIds.length,
+    heartbeatIntervalMs: LAST_BASTION_MATCHMAKING.heartbeatIntervalMs,
+    heartbeatTimeoutMs: LAST_BASTION_MATCHMAKING.heartbeatTimeoutMs,
+    participants: Object.freeze(participantSnapshot(match, userId, nowMs))
   });
 }
 
@@ -41,6 +72,15 @@ function snapshot(entry) {
   });
 }
 
+function createParticipantState(createdAtMs) {
+  return {
+    alive: true,
+    lastSeenAtMs: createdAtMs,
+    wave: 0,
+    coreHp: 20
+  };
+}
+
 function tryCreateReadyMatch() {
   const readyEntries = queue
     .filter((entry) => entry.ready && !activeMatchByUserId.has(entry.userId))
@@ -52,14 +92,20 @@ function tryCreateReadyMatch() {
   const matchId = randomUUID();
   const startedAtMs = createdAtMs + LAST_BASTION_MATCHMAKING.synchronizedStartDelayMs;
   const participantIds = Object.freeze(readyEntries.map((entry) => entry.userId));
-  const match = Object.freeze({
+  const participants = new Map(
+    participantIds.map((participantId) => [participantId, createParticipantState(createdAtMs)])
+  );
+  const match = {
     id: matchId,
     seed: `last-bastion:${matchId}`,
-    createdAt: new Date(createdAtMs).toISOString(),
-    startedAt: new Date(startedAtMs).toISOString(),
-    waveStartsAt: new Date(startedAtMs).toISOString(),
-    participantIds
-  });
+    createdAt: nowIso(createdAtMs),
+    startedAt: nowIso(startedAtMs),
+    waveStartsAt: nowIso(startedAtMs),
+    participantIds,
+    participants
+  };
+
+  matchesById.set(matchId, match);
 
   for (const entry of readyEntries) {
     activeMatchByUserId.set(entry.userId, match);
@@ -93,7 +139,7 @@ export function joinLastBastionQueue(userId) {
   const entry = Object.freeze({
     ticketId: randomUUID(),
     userId: id,
-    joinedAt: new Date().toISOString(),
+    joinedAt: nowIso(),
     ready: false
   });
   queue.push(entry);
@@ -170,9 +216,54 @@ export function getLastBastionQueueStatus(userId) {
   });
 }
 
+export function recordLastBastionHeartbeat(userId, matchId, payload = {}, nowMs = Date.now()) {
+  const id = String(userId || '').trim();
+  const requestedMatchId = String(matchId || '').trim();
+  const match = activeMatchByUserId.get(id);
+
+  if (!match || !requestedMatchId || match.id !== requestedMatchId) {
+    return Object.freeze({ ok: false, error: 'match_not_found' });
+  }
+
+  const state = match.participants.get(id);
+  if (!state) return Object.freeze({ ok: false, error: 'participant_not_found' });
+
+  state.lastSeenAtMs = nowMs;
+  state.wave = Math.max(0, Math.floor(Number(payload.wave ?? state.wave) || 0));
+  state.coreHp = Math.max(0, Math.floor(Number(payload.coreHp ?? state.coreHp) || 0));
+
+  return Object.freeze({
+    ok: true,
+    match: publicMatch(match, id, nowMs)
+  });
+}
+
+export function getLastBastionMatchStatus(userId, matchId, nowMs = Date.now()) {
+  const id = String(userId || '').trim();
+  const requestedMatchId = String(matchId || '').trim();
+  const match = activeMatchByUserId.get(id);
+
+  if (!match || !requestedMatchId || match.id !== requestedMatchId) {
+    return Object.freeze({ ok: false, error: 'match_not_found' });
+  }
+
+  return Object.freeze({
+    ok: true,
+    match: publicMatch(match, id, nowMs)
+  });
+}
+
 export function clearLastBastionMatchForUser(userId) {
   const id = String(userId || '').trim();
-  return activeMatchByUserId.delete(id);
+  const match = activeMatchByUserId.get(id);
+  if (!match) return false;
+
+  activeMatchByUserId.delete(id);
+  match.participants.delete(id);
+
+  const anyRemaining = match.participantIds.some((participantId) => activeMatchByUserId.has(participantId));
+  if (!anyRemaining) matchesById.delete(match.id);
+  return true;
 }
 
 export function getLastBastionMatchmakingFixtures() {
@@ -181,8 +272,11 @@ export function getLastBastionMatchmakingFixtures() {
 
   clearLastBastionMatchForUser(a);
   clearLastBastionMatchForUser(b);
-  leaveLastBastionQueue(a);
-  leaveLastBastionQueue(b);
+  byUserId.delete(a);
+  byUserId.delete(b);
+  for (let index = queue.length - 1; index >= 0; index -= 1) {
+    if (queue[index].userId === a || queue[index].userId === b) queue.splice(index, 1);
+  }
 
   const joinA = joinLastBastionQueue(a);
   const joinAAgain = joinLastBastionQueue(a);
@@ -202,6 +296,14 @@ export function getLastBastionMatchmakingFixtures() {
     statusA.match.startedAt === statusB.match?.startedAt &&
     statusA.match.waveStartsAt === statusB.match?.waveStartsAt;
 
+  const heartbeatAt = Date.now();
+  const heartbeatA = recordLastBastionHeartbeat(a, statusA.match?.id, { wave: 7, coreHp: 14 }, heartbeatAt);
+  const afterHeartbeatA = getLastBastionMatchStatus(a, statusA.match?.id, heartbeatAt + 1000);
+  const afterTimeoutA = getLastBastionMatchStatus(a, statusA.match?.id, heartbeatAt + LAST_BASTION_MATCHMAKING.heartbeatTimeoutMs + 1);
+
+  const selfA = afterHeartbeatA.match?.participants?.find((participant) => participant.self);
+  const selfAAfterTimeout = afterTimeoutA.match?.participants?.find((participant) => participant.self);
+
   clearLastBastionMatchForUser(a);
   clearLastBastionMatchForUser(b);
   byUserId.delete(a);
@@ -216,6 +318,10 @@ export function getLastBastionMatchmakingFixtures() {
     sharedSeed,
     sharedStart,
     participantCountCorrect: statusA.match?.participantCount === 2 && statusB.match?.participantCount === 2,
-    matchedPlayersRemovedFromQueue: getLastBastionQueueStatus('fixture-none').queuedPlayers === 0
+    matchedPlayersRemovedFromQueue: getLastBastionQueueStatus('fixture-none').queuedPlayers === 0,
+    heartbeatAccepted: heartbeatA.ok === true,
+    heartbeatUpdatesProgress: selfA?.wave === 7 && selfA?.coreHp === 14,
+    heartbeatMarksConnected: selfA?.connected === true,
+    timeoutMarksDisconnectedWithoutElimination: selfAAfterTimeout?.connected === false && selfAAfterTimeout?.alive === true
   });
 }
