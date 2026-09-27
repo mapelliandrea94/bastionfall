@@ -2751,3 +2751,60 @@ body { background:#1c3f61; }
   opacity: .42;
   cursor: not-allowed;
 }
+
+
+/* HOTFIX H4 — normal mode 12-tower build panel */
+.normal-build-roster {
+  display: grid;
+  gap: .55rem;
+  margin-bottom: .8rem;
+}
+
+.normal-build-group {
+  display: grid;
+  gap: .28rem;
+}
+
+.normal-build-group__title {
+  font-size: .62rem;
+  font-weight: 950;
+  letter-spacing: .12em;
+  color: #b8c4cf;
+}
+
+.normal-build-group__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .34rem;
+}
+
+.tower-card--compact {
+  min-height: 68px;
+  padding: .48rem .52rem;
+  gap: .18rem;
+}
+
+.tower-card--compact strong {
+  font-size: .72rem;
+  line-height: 1.1;
+}
+
+.tower-card--compact span {
+  font-size: .68rem;
+}
+
+.tower-card--compact small {
+  font-size: .52rem;
+  line-height: 1.15;
+}
+
+.tower-card--human { border-color: rgba(88, 158, 221, .34); }
+.tower-card--insect { border-color: rgba(142, 201, 101, .34); }
+.tower-card--alien { border-color: rgba(80, 206, 213, .34); }
+.tower-card--neutral { border-color: rgba(217, 184, 118, .34); }
+
+@media (max-width: 1180px) {
+  .normal-build-group__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
