@@ -9,6 +9,7 @@ import { FROST_TOWER } from './game/towers/frost.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
+import { COMBAT_BALANCE_MODEL, COMBAT_BALANCE_SNAPSHOT } from './game/balance/combatBalance.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -57,6 +58,10 @@ const MODE_PRE_RUN = Object.freeze({
     status: 'MATCHMAKING LATER'
   })
 });
+
+const COMBAT_BALANCE_BY_ID = Object.freeze(
+  Object.fromEntries(COMBAT_BALANCE_SNAPSHOT.map((entry) => [entry.id, entry]))
+);
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -466,7 +471,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             </text>
           </svg>
 
-          <aside className="run-sidebar">
+          <aside
+            className="run-sidebar"
+            data-balance-version={COMBAT_BALANCE_MODEL.version}
+            data-archer-power={COMBAT_BALANCE_BY_ID.archer?.powerIndex}
+            data-cannon-power={COMBAT_BALANCE_BY_ID.cannon?.powerIndex}
+            data-frost-power={COMBAT_BALANCE_BY_ID.frost?.powerIndex}
+            data-mage-power={COMBAT_BALANCE_BY_ID.mage?.powerIndex}
+            data-ballista-power={COMBAT_BALANCE_BY_ID.ballista?.powerIndex}
+            data-barracks-power={COMBAT_BALANCE_BY_ID.barracks?.powerIndex}
+          >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
           <button className="tower-card tower-card--archer" disabled>
