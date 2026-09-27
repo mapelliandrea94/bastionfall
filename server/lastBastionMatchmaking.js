@@ -8,6 +8,7 @@ export const LAST_BASTION_MATCHMAKING = Object.freeze({
   synchronizedStartDelayMs: 5000,
   heartbeatIntervalMs: 5000,
   heartbeatTimeoutMs: 15000,
+  abandonTimeoutMs: 60000,
   heartbeatMinIntervalMs: 750,
   maxWave: 9999,
   maxCoreHp: 100000,
@@ -443,6 +444,61 @@ export function recordLastBastionHeartbeat(userId, matchId, payload = {}, nowMs 
     ok: true,
     match: publicMatch(match, id, nowMs)
   });
+}
+
+export function resolveLastBastionAbandons(nowMs = Date.now(), timeoutMs = LAST_BASTION_MATCHMAKING.abandonTimeoutMs) {
+  const effectiveTimeoutMs = Math.max(30000, Math.floor(Number(timeoutMs) || LAST_BASTION_MATCHMAKING.abandonTimeoutMs));
+  let resolvedParticipants = 0;
+  let finishedMatches = 0;
+
+  for (const match of matchesById.values()) {
+    if (!match || match.status !== 'active') continue;
+
+    const aliveIds = match.participantIds.filter((participantId) => match.participants.get(participantId)?.alive !== false);
+    const staleIds = aliveIds
+      .filter((participantId) => {
+        const state = match.participants.get(participantId);
+        const lastSeenAtMs = Number(state?.lastSeenAtMs ?? 0);
+        return lastSeenAtMs > 0 && nowMs - lastSeenAtMs >= effectiveTimeoutMs;
+      })
+      .sort((left, right) => {
+        const a = match.participants.get(left);
+        const b = match.participants.get(right);
+        return Number(a?.lastSeenAtMs ?? 0) - Number(b?.lastSeenAtMs ?? 0)
+          || match.participantIds.indexOf(left) - match.participantIds.indexOf(right);
+      });
+
+    if (staleIds.length === 0) continue;
+
+    let aliveCount = aliveIds.length;
+    for (const participantId of staleIds) {
+      const state = match.participants.get(participantId);
+      if (!state || state.alive === false) continue;
+      state.alive = false;
+      state.coreHp = 0;
+      state.placement = aliveCount;
+      state.eliminatedAtMs = state.eliminatedAtMs ?? nowMs;
+      aliveCount -= 1;
+      resolvedParticipants += 1;
+    }
+
+    const remainingIds = match.participantIds.filter((participantId) => match.participants.get(participantId)?.alive !== false);
+    if (remainingIds.length === 1) {
+      const winnerState = match.participants.get(remainingIds[0]);
+      if (winnerState) winnerState.placement = 1;
+      match.status = 'finished';
+      match.winnerUserId = remainingIds[0];
+      match.endedAt = nowIso(nowMs);
+      finishedMatches += 1;
+    } else if (remainingIds.length === 0) {
+      match.status = 'finished';
+      match.winnerUserId = null;
+      match.endedAt = nowIso(nowMs);
+      finishedMatches += 1;
+    }
+  }
+
+  return Object.freeze({ resolvedParticipants, finishedMatches });
 }
 
 export function eliminateLastBastionParticipant(userId, matchId, payload = {}, nowMs = Date.now()) {
