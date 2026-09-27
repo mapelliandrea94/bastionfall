@@ -956,6 +956,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
             data-tower-slot-purchase-pass={TOWER_SLOT_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-placed-defense-count={placedDefenses.length}
+            data-run-gold={run?.gold ?? 0}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
@@ -1389,9 +1390,15 @@ function AuthModal({ mode, onClose, onSuccess }) {
 }
 
 function App() {
-  const [screen, setScreen] = useState(SCREENS.MENU);
-  const [selectedMode, setSelectedMode] = useState(null);
-  const [runState, setRunState] = useState(null);
+  const towerPlacementQa = (
+    ['127.0.0.1', 'localhost'].includes(window.location.hostname) &&
+    new URLSearchParams(window.location.search).get('qa') === 'tower-placement'
+  );
+  const [screen, setScreen] = useState(towerPlacementQa ? SCREENS.SINGLE_GATE_RUN : SCREENS.MENU);
+  const [selectedMode, setSelectedMode] = useState(towerPlacementQa ? MODES.SINGLE_GATE : null);
+  const [runState, setRunState] = useState(
+    towerPlacementQa ? createInitialRunState(MODES.SINGLE_GATE, 'tower-placement-qa') : null
+  );
   const [personalBestByMode, setPersonalBestByMode] = useState({});
   const [completedMatchId, setCompletedMatchId] = useState(null);
   const [session, setSession] = useState(null);
