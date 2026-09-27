@@ -319,6 +319,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
     };
   }, [activeEnemies.length, run?.phase]);
 
+  useEffect(() => {
+    const queueInitialized = queuedWaveRef.current === run?.wave;
+
+    if (
+      run?.phase === RUN_PHASES.ACTIVE &&
+      queueInitialized &&
+      spawnQueue.length === 0 &&
+      activeEnemies.length === 0
+    ) {
+      onPhaseChange(RUN_PHASES.RESOLVING);
+    }
+  }, [run?.phase, run?.wave, spawnQueue.length, activeEnemies.length]);
+
   const positionedEnemies = activeEnemies.map((enemy) => ({
     ...enemy,
     position: getPathPosition(SINGLE_GATE_MAP.path.waypoints, enemy.progress)
@@ -442,7 +455,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
             <strong>
               {run?.phase === RUN_PHASES.PREPARATION && `Wave ${(run?.wave ?? 0) + 1} starts in ${preparationRemaining}s`}
-              {run?.phase === RUN_PHASES.ACTIVE && 'Wave in progress'}
+              {run?.phase === RUN_PHASES.ACTIVE && `Wave in progress · ${spawnQueue.length + activeEnemies.length} remaining`}
               {run?.phase === RUN_PHASES.RESOLVING && 'Resolving wave outcome'}
               {run?.phase === RUN_PHASES.ENDED && 'Bastion fallen'}
             </strong>
@@ -481,8 +494,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
           </button>
 
           <button className="run-wave" disabled>
-            WAVE COMPLETION LOCKED
-            <small>Completion detection arrives in Batch 28</small>
+            AUTO COMPLETION ACTIVE
+            <small>Resolves when queue and battlefield are empty</small>
           </button>
           </aside>
         </div>
