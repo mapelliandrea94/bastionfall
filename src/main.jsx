@@ -182,6 +182,8 @@ const EVOLUTION_FIXTURE = Object.freeze(getEvolutionFixtures());
 const TOWER_ART_FIXTURE = Object.freeze(getTowerArtFixtures());
 const TOWER_EVOLUTION_INTEGRITY_QA = Object.freeze(getTowerEvolutionIntegrityQa());
 const TOWER_EVOLUTION_INTEGRITY_PASS = getTowerEvolutionIntegrityPass();
+const NORMAL_MODE_EVOLUTION_FLOW_QA = Object.freeze(getNormalModeEvolutionFlowQa());
+const NORMAL_MODE_EVOLUTION_FLOW_PASS = getNormalModeEvolutionFlowPass();
 const WALL_SYSTEM_FIXTURE = Object.freeze(getWallSystemFixtures());
 const TFT_SHOP_FIXTURE = Object.freeze(getTftShopFixtures());
 const TFT_BENCH_FIXTURE = Object.freeze(getTftBenchFixtures());
@@ -1531,6 +1533,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-evolution-integrity-pass={TOWER_EVOLUTION_INTEGRITY_PASS}
             data-final-tower-count={TOWER_EVOLUTION_INTEGRITY_QA.towerCountIs12 ? 12 : 0}
             data-final-evolution-count={TOWER_EVOLUTION_INTEGRITY_QA.evolutionCountIs24 ? 24 : 0}
+            data-normal-mode-evolution-flow-pass={NORMAL_MODE_EVOLUTION_FLOW_PASS}
+            data-normal-mode-evolution-towers-checked={NORMAL_MODE_EVOLUTION_FLOW_QA.towerCountChecked}
             data-gauntlet-wall-pass={WALL_SYSTEM_FIXTURE.socketCount === 4 && WALL_SYSTEM_FIXTURE.maximumActive === 4 && WALL_SYSTEM_FIXTURE.allSocketIdsUnique === true && WALL_SYSTEM_FIXTURE.allWallsKeepPathOpen === true && WALL_SYSTEM_FIXTURE.compatibleWithSingleGate === true && WALL_SYSTEM_FIXTURE.compatibleWithTftShop === true}
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
