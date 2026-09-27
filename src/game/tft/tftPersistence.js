@@ -16,7 +16,8 @@ export function createTftRunSnapshot({
   tftBench = [],
   selectedTftBenchIndex = null,
   tftRollIndex = 0,
-  tftShopLocked = false
+  tftShopLocked = false,
+  tftPurchasedSlotIds = []
 } = {}) {
   if (!run || run.mode !== 'tft-shop') return null;
 
@@ -29,7 +30,12 @@ export function createTftRunSnapshot({
     tftBench: Object.freeze(tftBench.map((copy) => copy ? Object.freeze({ ...copy }) : null)),
     selectedTftBenchIndex: selectedTftBenchIndex == null ? null : clampInt(selectedTftBenchIndex, 0, 6, null),
     tftRollIndex: clampInt(tftRollIndex, 0, Number.MAX_SAFE_INTEGER, 0),
-    tftShopLocked: Boolean(tftShopLocked)
+    tftShopLocked: Boolean(tftShopLocked),
+    tftPurchasedSlotIds: Object.freeze(
+      Array.isArray(tftPurchasedSlotIds)
+        ? [...new Set(tftPurchasedSlotIds.map((id) => String(id)).filter(Boolean))].slice(0, 7)
+        : []
+    )
   });
 }
 
@@ -62,7 +68,10 @@ export function normalizeTftRunSnapshot(snapshot) {
       ? null
       : clampInt(snapshot.selectedTftBenchIndex, 0, 6, null),
     tftRollIndex: clampInt(snapshot.tftRollIndex, 0, Number.MAX_SAFE_INTEGER, 0),
-    tftShopLocked: Boolean(snapshot.tftShopLocked)
+    tftShopLocked: Boolean(snapshot.tftShopLocked),
+    tftPurchasedSlotIds: Array.isArray(snapshot.tftPurchasedSlotIds)
+      ? [...new Set(snapshot.tftPurchasedSlotIds.map((id) => String(id)).filter(Boolean))].slice(0, 7)
+      : []
   };
 }
 
@@ -107,7 +116,8 @@ export function getTftPersistenceFixtures() {
     tftBench: [{ copyId: 'copy-a', towerId: 'human-aa' }, null, null, null, null, null, null],
     selectedTftBenchIndex: 0,
     tftRollIndex: 4,
-    tftShopLocked: true
+    tftShopLocked: true,
+    tftPurchasedSlotIds: ['human-1', 'alien-2']
   });
   const restored = normalizeTftRunSnapshot(JSON.parse(JSON.stringify(source)));
   const corrupt = normalizeTftRunSnapshot({ version: 999, run: { mode: 'tft-shop' } });
@@ -120,6 +130,8 @@ export function getTftPersistenceFixtures() {
     benchPersists: restored?.tftBench?.[0]?.copyId === 'copy-a' && restored?.tftBench?.length === 7,
     wallsPersist: restored?.activeWallIds?.join(',') === 'wall-01,wall-03',
     rollLockPersist: restored?.tftRollIndex === 4 && restored?.tftShopLocked === true,
+    purchasedSlotsPersist:
+      restored?.tftPurchasedSlotIds?.join(',') === 'human-1,alien-2',
     invalidVersionRejected: corrupt === null
   });
 }
