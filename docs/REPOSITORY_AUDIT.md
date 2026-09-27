@@ -60,3 +60,26 @@ Source of truth: `mapelliandrea94/bastionfall` / `main`
 ## Audit conclusion
 
 The current project is a small but usable foundation, not a blank repository. The safest route is to evolve the menu-first shell and selectively recover proven gameplay logic from Git history, while replacing conflicting permanent-power and trust-the-client assumptions.
+
+
+## Runtime baseline verification — BATCH 2/120
+
+Verified on Railway production after the roadmap commit:
+
+- Project: `Bastionfall`
+- Service: `bastionfall-web`
+- Environment: `production`
+- Source: `mapelliandrea94/bastionfall`, branch `main`
+- Builder: Railway Railpack
+- Runtime: Node.js 24.21.0 selected by Railpack
+- Build command detected and executed: `npm run build`
+- Vite production build: PASS (71 modules transformed, build completed)
+- Start command: `npm run start` -> `node server.mjs`
+- Server bind: port 3000
+- Latest deployment for roadmap commit `af7a8476fee86566f8df32d9d77b989d45cda20e`: SUCCESS
+- Production domain: `bastionfall-web-production.up.railway.app`
+- Required Supabase server/client variable names are present in Railway configuration.
+- No production crash was observed in deploy logs.
+
+Non-blocking warning:
+- No `package-lock.json` / explicit package-manager version is currently tracked, so installs are not fully deterministic. Address this during deployment hardening rather than inside an unrelated gameplay batch.
