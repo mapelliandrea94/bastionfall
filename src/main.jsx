@@ -10,7 +10,8 @@ const SCREENS = Object.freeze({
   SINGLE_GATE_RUN: 'single-gate-run',
   LEADERBOARD: 'leaderboard',
   PROFILE: 'profile',
-  SETTINGS: 'settings'
+  SETTINGS: 'settings',
+  HOW_TO_PLAY: 'how-to-play'
 });
 
 const MODES = Object.freeze({
@@ -343,6 +344,7 @@ function App() {
   if (screen === SCREENS.LEADERBOARD) return <Leaderboard onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.PROFILE) return <Profile onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
+  if (screen === SCREENS.HOW_TO_PLAY) return <Shell onBack={() => setScreen(SCREENS.MENU)} kicker="FIELD MANUAL" title="HOW TO PLAY" subtitle="Guide coming in the next batch." />;
 
   return (
     <main className="main-menu">
@@ -372,8 +374,9 @@ function App() {
           >
             PLAY
           </button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.LEADERBOARD)}>LEADERBOARD</button>
           <button className="main-menu__button" onClick={() => setScreen(SCREENS.PROFILE)}>PROFILE</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.LEADERBOARD)}>LEADERBOARDS</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.HOW_TO_PLAY)}>HOW TO PLAY</button>
           <button className="main-menu__button" onClick={() => setScreen(SCREENS.SETTINGS)}>SETTINGS</button>
         </nav>
 
