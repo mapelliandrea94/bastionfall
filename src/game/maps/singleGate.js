@@ -33,6 +33,40 @@ export const SINGLE_GATE_MAP = Object.freeze({
       Object.freeze({ x: 1460, y: 450 })
     ])
   }),
+  buildZones: Object.freeze({
+    clearanceFromPath: 72,
+    clearanceFromBastion: 110,
+    zones: Object.freeze([
+      Object.freeze({
+        id: 'north-west',
+        x: 180,
+        y: 90,
+        width: 420,
+        height: 190
+      }),
+      Object.freeze({
+        id: 'north-east',
+        x: 760,
+        y: 90,
+        width: 430,
+        height: 170
+      }),
+      Object.freeze({
+        id: 'south-west',
+        x: 180,
+        y: 610,
+        width: 470,
+        height: 190
+      }),
+      Object.freeze({
+        id: 'south-east',
+        x: 920,
+        y: 670,
+        width: 300,
+        height: 140
+      })
+    ])
+  }),
   camera: Object.freeze({
     centerX: 800,
     centerY: 450,
@@ -52,4 +86,8 @@ export function getSingleGateMapModel() {
 
 export function getSingleGatePath() {
   return SINGLE_GATE_MAP.path;
+}
+
+export function getSingleGateBuildZones() {
+  return SINGLE_GATE_MAP.buildZones;
 }
