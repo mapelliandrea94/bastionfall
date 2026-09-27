@@ -1364,19 +1364,36 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }));
 
   const handleWallPurchase = (wallId) => {
-    if (!run || run.phase !== RUN_PHASES.PREPARATION) return;
+    if (!run || run.phase !== RUN_PHASES.PREPARATION) {
+      if (run?.mode === MODES.TFT_SHOP) setTftFeedback('WALLS CAN ONLY BE BOUGHT DURING PREPARATION');
+      return;
+    }
     if (!SINGLE_GATE_MAP.compatibleModes.includes(run.mode)) return;
 
+    const currentGold = Number(run.gold ?? availableGoldRef.current ?? 0);
     const attempt = purchaseWall({
       wallId,
-      gold: availableGoldRef.current,
+      gold: currentGold,
       activeWallIds
     });
-    if (!attempt.ok) return;
+
+    if (!attempt.ok) {
+      if (run?.mode === MODES.TFT_SHOP) {
+        setTftFeedback(
+          attempt.reason === 'insufficient-gold'
+            ? `NEED ${WALL_SYSTEM.cost}G FOR WALL`
+            : attempt.reason === 'already-built'
+              ? 'WALL ALREADY BUILT'
+              : 'WALL CANNOT BE BUILT'
+        );
+      }
+      return;
+    }
 
     availableGoldRef.current = attempt.goldAfter;
     setActiveWallIds([...attempt.activeWallIds]);
     onSpendGold(WALL_SYSTEM.cost);
+    if (run?.mode === MODES.TFT_SHOP) setTftFeedback(`WALL BUILT · -${WALL_SYSTEM.cost}G`);
   };
 
   const handleDefenseSelection = (defenseId) => {
@@ -1722,6 +1739,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       }
                     }}
                   >
+                    <rect
+                      className="wall-slot__hitbox"
+                      x="-48"
+                      y="-44"
+                      width="96"
+                      height="82"
+                      rx="12"
+                      fill="transparent"
+                      pointerEvents="all"
+                    />
                     <rect className="wall-slot__base" x="-34" y="-18" width="68" height="36" rx="8" />
                     {built ? (
                       <>
