@@ -595,6 +595,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [placedDefenses, setPlacedDefenses] = useState([]);
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
+  const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
@@ -608,6 +609,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const bossArmor = bossIndex ? getBossArmorForIndex(bossIndex) : 0;
   const bossTuning = bossWaveIncoming ? getBossTuningForWave(waveScaling.waveNumber) : null;
   const bossEnragePreview = applyBossEnrageStats({ isBoss: bossWaveIncoming, hp: 35, maxHp: 100, moveSpeed: 1 });
+  const blessingOffer = getBlessingOffer(`${run?.seed ?? 'run'}:boss:${waveScaling.waveNumber}`, [], BLESSING_SYSTEM.choiceCount);
+  const blessingChoiceVisible = run?.phase === RUN_PHASES.RESOLVING && isBossWave(waveScaling.waveNumber);
   const threatWave = composeWaveByThreatBudget(
     waveScaling.waveNumber,
     run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1
@@ -1277,6 +1280,42 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </div>
 
 
+          {blessingChoiceVisible && (
+            <section
+              className="blessing-choice"
+              aria-label="Choose a blessing"
+              data-blessing-choice-ui="ready"
+              data-blessing-choice-selected={selectedBlessingPreviewId ?? ''}
+            >
+              <div className="blessing-choice__header">
+                <span>BOSS DEFEATED</span>
+                <strong>CHOOSE A BLESSING</strong>
+                <small>Pick one reward for the next stage of the run. Effects activate in Batch 91.</small>
+              </div>
+              <div className="blessing-choice__grid">
+                {blessingOffer.map((blessing) => {
+                  const selected = selectedBlessingPreviewId === blessing.id;
+                  const effectLabel = Object.entries(blessing.effect)
+                    .map(([key, value]) => `${key.replace(/([A-Z])/g, ' $1').toUpperCase()} ${typeof value === 'number' && value < 2 ? `×${value}` : `+${value}`}`)
+                    .join(' · ');
+                  return (
+                    <button
+                      key={blessing.id}
+                      type="button"
+                      className={`blessing-card blessing-card--${blessing.rarity}${selected ? ' blessing-card--selected' : ''}`}
+                      onClick={() => setSelectedBlessingPreviewId(blessing.id)}
+                    >
+                      <span>{blessing.rarity.toUpperCase()} · {blessing.category.toUpperCase()}</span>
+                      <strong>{blessing.name}</strong>
+                      <small>{effectLabel}</small>
+                      <em>{selected ? 'SELECTED' : 'CHOOSE'}</em>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           <button
             className="run-prep-start"
             onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
@@ -1293,11 +1332,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           <button
             className="run-phase-test"
-            onClick={() => onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true })}
-            disabled={!run || run.phase !== RUN_PHASES.RESOLVING}
+            onClick={() => {
+              setSelectedBlessingPreviewId(null);
+              onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true });
+            }}
+            disabled={!run || run.phase !== RUN_PHASES.RESOLVING || (blessingChoiceVisible && !selectedBlessingPreviewId)}
           >
             FINISH RESOLUTION
-            <small>Resolving → Preparation</small>
+            <small>{blessingChoiceVisible && !selectedBlessingPreviewId ? 'Choose a blessing first' : 'Resolving → Preparation'}</small>
           </button>
 
           <button
