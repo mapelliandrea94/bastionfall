@@ -2023,3 +2023,16 @@ button { font: inherit; }
   font-size: 8px;
   line-height: 1.4;
 }
+
+
+/* BATCH 46 — Runner enemy archetype */
+.battlefield-map__enemy--runner circle {
+  stroke-width: 5;
+  stroke-dasharray: 8 5;
+}
+
+.battlefield-map__enemy--runner path {
+  transform: scale(.82);
+  transform-box: fill-box;
+  transform-origin: center;
+}
