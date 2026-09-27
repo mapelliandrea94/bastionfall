@@ -2,6 +2,12 @@ import { getBossProfileForWave, isBossWave } from './bossSchedule.js';
 import { getBossArmorForIndex } from './bossArmorEnrage.js';
 import { getBossSummonAddsPlan } from './bossSummonAdds.js';
 
+const BOSS_TAG_ROTATION = Object.freeze([
+  Object.freeze({ faction: 'human', unitType: 'armored' }),
+  Object.freeze({ faction: 'insect', unitType: 'infantry' }),
+  Object.freeze({ faction: 'alien', unitType: 'air' })
+]);
+
 export const BOSS_TUNING = Object.freeze({
   version: 1,
   baseHp: 2200,
@@ -39,6 +45,8 @@ export function getBossTuningForWave(waveNumber) {
     BOSS_TUNING.baseBastionDamage +
     Math.floor((bossIndex - 1) / 2) * BOSS_TUNING.damageGrowthEveryTwoBosses;
 
+  const tags = BOSS_TAG_ROTATION[(bossIndex - 1) % BOSS_TAG_ROTATION.length];
+
   return Object.freeze({
     waveNumber: Math.max(1, Math.floor(Number(waveNumber) || 1)),
     bossIndex,
@@ -49,7 +57,9 @@ export function getBossTuningForWave(waveNumber) {
     moveSpeed,
     bastionDamage,
     goldReward: BOSS_TUNING.baseGoldReward + (bossIndex - 1) * BOSS_TUNING.goldRewardPerBoss,
-    summonedAdds: summonPlan.totalAdds
+    summonedAdds: summonPlan.totalAdds,
+    faction: tags.faction,
+    unitType: tags.unitType
   });
 }
 
@@ -66,6 +76,7 @@ export function getBossTuningFixtures() {
     armorScalesUp: (wave30?.armor ?? 0) > (wave10?.armor ?? 0),
     moveSpeedCapped: (wave30?.moveSpeed ?? 0) <= BOSS_TUNING.maxMoveSpeed,
     rewardScalesUp: (wave30?.goldReward ?? 0) > (wave10?.goldReward ?? 0),
-    summonsIncluded: (wave10?.summonedAdds ?? 0) > 0
+    summonsIncluded: (wave10?.summonedAdds ?? 0) > 0,
+    bossTagsPresent: [wave10, wave20, wave30].every((boss) => Boolean(boss?.faction) && Boolean(boss?.unitType))
   });
 }
