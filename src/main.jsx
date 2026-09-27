@@ -197,6 +197,12 @@ const TOWER_EVOLUTION_INTEGRITY_PASS = getTowerEvolutionIntegrityPass();
 const NORMAL_MODE_EVOLUTION_FLOW_QA = Object.freeze(getNormalModeEvolutionFlowQa());
 const NORMAL_MODE_EVOLUTION_FLOW_PASS = getNormalModeEvolutionFlowPass();
 const WALL_SYSTEM_FIXTURE = Object.freeze(getWallSystemFixtures());
+const WALL_PROGRESS_BY_ID = Object.freeze({
+  'wall-01': 0.115,
+  'wall-02': 0.324,
+  'wall-03': 0.543,
+  'wall-04': 0.760
+});
 const TFT_SHOP_FIXTURE = Object.freeze(getTftShopFixtures());
 const TFT_BENCH_FIXTURE = Object.freeze(getTftBenchFixtures());
 const TFT_COPY_PROGRESSION_FIXTURE = Object.freeze(getTftCopyProgressionFixtures());
@@ -961,10 +967,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       worldModifierEffects.threatMultiplier
   });
   const runScore = calculateRunScore(run ?? {});
-  const activePath = getSingleGatePathForWalls(activeWallIds);
-  const basePathLength = getPathLength(SINGLE_GATE_MAP.path.waypoints);
-  const activePathLength = getPathLength(activePath);
-  const wallTravelMultiplier = basePathLength > 0 ? activePathLength / basePathLength : 1;
+  const activePath = SINGLE_GATE_MAP.path.waypoints;
+  const wallTravelMultiplier = 1;
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? NORMAL_MODE_TOWERS[0];
   const selectedPlacedDefense = placedDefenses.find((entry) => entry.id === selectedPlacedDefenseId) ?? null;
@@ -1022,12 +1026,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || activeWallIds.length === 0) return undefined;
 
-    const wallProgress = {
-      'wall-01': 0.115,
-      'wall-02': 0.324,
-      'wall-03': 0.543,
-      'wall-04': 0.760
-    };
+    const wallProgress = WALL_PROGRESS_BY_ID;
 
     const intervalId = window.setInterval(() => {
       const enemies = activeEnemiesRef.current ?? [];
@@ -1221,10 +1220,40 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       let reachedBastion = 0;
 
       setActiveEnemies((current) => current
-        .map((enemy) => ({
-          ...enemy,
-          progress: Math.min(1, ((now - enemy.spawnedAt) / durationMs) * getEnemyEffectiveSpeed(enemy, now) * blessingModifiers.enemyMoveSpeedMultiplier * worldModifierEffects.enemyMoveSpeedMultiplier)
-        }))
+        .map((enemy) => {
+          const effectiveSpeed =
+            getEnemyEffectiveSpeed(enemy, now) *
+            blessingModifiers.enemyMoveSpeedMultiplier *
+            worldModifierEffects.enemyMoveSpeedMultiplier;
+          const naturalProgress = Math.min(
+            1,
+            ((now - enemy.spawnedAt) / durationMs) * effectiveSpeed
+          );
+
+          if (enemy.airborne || activeWallIds.length === 0) {
+            return { ...enemy, progress: naturalProgress };
+          }
+
+          const blockingWall = Object.entries(WALL_PROGRESS_BY_ID)
+            .filter(([wallId, progress]) => activeWallIds.includes(wallId) && naturalProgress >= progress)
+            .sort((a, b) => a[1] - b[1])[0];
+
+          if (!blockingWall) {
+            return { ...enemy, progress: naturalProgress };
+          }
+
+          const [wallId, wallProgress] = blockingWall;
+          const rebasedSpawnedAt = effectiveSpeed > 0
+            ? now - ((wallProgress * durationMs) / effectiveSpeed)
+            : enemy.spawnedAt;
+
+          return {
+            ...enemy,
+            progress: wallProgress,
+            spawnedAt: rebasedSpawnedAt,
+            blockedByWallId: wallId
+          };
+        })
         .filter((enemy) => {
           if (enemy.progress >= 1) {
             reachedBastion += 1;
@@ -1245,7 +1274,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [activeEnemies.length, run?.phase]);
+  }, [activeEnemies.length, run?.phase, activeWallIds.join('|')]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || placedDefenses.length === 0 || activeEnemies.length === 0) return undefined;
@@ -1699,7 +1728,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <pattern id="bf-grass-texture" width="112" height="94" patternUnits="userSpaceOnUse"><path d="M12 25l4-5m2 5 3-6M77 67l3-5m3 5 4-7M51 12l3-4M100 36l4-6" stroke="#d9e5a1" strokeWidth="2" opacity=".43"/><circle cx="38" cy="61" r="2" fill="#f2eac8"/><circle cx="94" cy="14" r="2" fill="#e8d9a0"/></pattern>
             </defs>
             <image className="battlefield-map__art" href="/assets/maps/bastionfall-field.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
-            <g className={`battlefield-map__road ${activeWallIds.length ? 'battlefield-map__road--detour' : ''}`} aria-hidden="true">
+            <g className="battlefield-map__road" aria-hidden="true">
               <polyline className="battlefield-map__road-edge" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
               <polyline className="battlefield-map__road-sand" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
               <polyline className="battlefield-map__road-wear" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
