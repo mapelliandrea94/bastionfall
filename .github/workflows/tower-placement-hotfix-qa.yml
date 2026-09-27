@@ -9,6 +9,10 @@ on:
       - "src/main.jsx"
       - "src/game/spawning/waveDirector.js"
       - "src/game/enemies/enemyRoster.js"
+      - "src/game/balance/endToEndRegressionQa.js"
+      - "src/game/combat/counterplay.js"
+      - "src/game/combat/baseTowerCombat.js"
+      - "tests/end-to-end-regression.mjs"
       - "src/menu.css"
       - "server.mjs"
       - "tests/tower-placement-mouse.mjs"
@@ -30,6 +34,8 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npm run build
+      - name: End-to-End 24x24 Regression QA
+        run: node tests/end-to-end-regression.mjs
       - name: Wave Director QA
         run: node tests/wave-director.mjs
       - name: Last Bastion Sync QA
