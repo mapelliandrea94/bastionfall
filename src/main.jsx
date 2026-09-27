@@ -1707,7 +1707,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             <g className="battlefield-map__build-slots">
               {SINGLE_GATE_MAP.buildSlots.slots.map((slot) => {
                 const placed = placedDefenses.find((entry) => entry.slotId === slot.id) ?? null;
-                const affordable = (run?.gold ?? 0) >= selectedDefense.cost;
+                const benchCopy = selectedTftBenchIndex == null ? null : tftBench[selectedTftBenchIndex];
+                const previewDefense = run?.mode === MODES.TFT_SHOP && benchCopy
+                  ? defenseDefinitions[benchCopy.towerId] ?? selectedDefense
+                  : selectedDefense;
+                const affordable = run?.mode === MODES.TFT_SHOP
+                  ? Boolean(benchCopy)
+                  : (run?.gold ?? 0) >= selectedDefense.cost;
                 const hovered = hoveredSlotId === slot.id;
                 const selectedPlaced = placed?.id === selectedPlacedDefenseId;
                 const slotClass = [
@@ -1727,7 +1733,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     tabIndex="0"
                     aria-label={placed
                       ? `Select ${defenseDefinitions[placed.defenseId]?.name || 'tower'} on ${slot.id}`
-                      : `Build ${selectedDefense.name} on ${slot.id}`}
+                      : `Build ${previewDefense.name} on ${slot.id}`}
                     aria-disabled={!placed && !affordable ? 'true' : 'false'}
                     data-slot-id={slot.id}
                     data-occupied={Boolean(placed)}
@@ -1748,12 +1754,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     <path className="tower-slot__accent" d="M-25-19H25M-25 18H25" />
 
                     {!placed && affordable && (
-                      <g className={`tower-visual tower-visual--ghost tower-visual--${selectedDefense.id}`}>
+                      <g className={`tower-visual tower-visual--ghost tower-visual--${previewDefense.id}`}>
                         <ellipse className="tower-visual__shadow" cx="0" cy="20" rx="30" ry="10" />
                         <foreignObject x="-42" y="-54" width="84" height="84" pointerEvents="none">
                           <div
                             className="tower-art-sprite"
-                            style={getTowerArtStyleForTower(selectedDefense.id)}
+                            style={getTowerArtStyleForTower(previewDefense.id)}
                             aria-hidden="true"
                           />
                         </foreignObject>
