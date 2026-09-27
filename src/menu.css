@@ -2307,3 +2307,121 @@ body { background:#1c3f61; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* HOTFIX — individual tower slots */
+.battlefield-map__tower-slot {
+  cursor: pointer;
+  outline: none;
+}
+
+.tower-slot__shadow {
+  fill: rgba(24, 67, 76, .24);
+  transform: translateY(7px);
+}
+
+.tower-slot__stone {
+  fill: rgba(196, 204, 176, .88);
+  stroke: rgba(243, 220, 151, .72);
+  stroke-width: 3;
+  filter: drop-shadow(0 4px 3px rgba(41, 76, 67, .32));
+  transition: filter .12s ease, stroke .12s ease, fill .12s ease;
+}
+
+.tower-slot__grass {
+  fill: rgba(104, 151, 91, .92);
+  pointer-events: none;
+}
+
+.tower-slot__accent {
+  fill: none;
+  stroke: rgba(52, 110, 156, .78);
+  stroke-width: 3;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.battlefield-map__tower-slot--available .tower-slot__stone {
+  fill: rgba(211, 216, 182, .92);
+  stroke: rgba(255, 218, 119, .78);
+}
+
+.battlefield-map__tower-slot--available:hover .tower-slot__stone,
+.battlefield-map__tower-slot--hovered .tower-slot__stone,
+.battlefield-map__tower-slot:focus-visible .tower-slot__stone {
+  fill: rgba(232, 229, 183, .98);
+  stroke: #ffe49a;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 11px rgba(255, 224, 138, .72)) drop-shadow(0 5px 4px rgba(37, 76, 67, .35));
+}
+
+.battlefield-map__tower-slot--unaffordable {
+  cursor: not-allowed;
+}
+
+.battlefield-map__tower-slot--unaffordable .tower-slot__stone {
+  fill: rgba(141, 151, 136, .72);
+  stroke: rgba(148, 163, 170, .66);
+  filter: none;
+}
+
+.battlefield-map__tower-slot--occupied .tower-slot__stone {
+  fill: rgba(166, 186, 158, .96);
+  stroke: rgba(245, 207, 113, .86);
+}
+
+.battlefield-map__tower-slot--selected .tower-slot__stone {
+  stroke: #fff0a6;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 14px rgba(255, 226, 121, .82));
+}
+
+.tower-visual {
+  pointer-events: none;
+  transform: translateY(-12px);
+}
+
+.tower-visual__base {
+  fill: rgba(48, 78, 88, .96);
+  stroke: rgba(248, 216, 137, .94);
+  stroke-width: 3;
+}
+
+.tower-visual__body {
+  fill: #477ca1;
+  stroke: #f4d98d;
+  stroke-width: 3;
+}
+
+.tower-visual__crest {
+  fill: #245b85;
+  stroke: #f4d98d;
+  stroke-width: 3;
+}
+
+.tower-visual__label {
+  fill: #fff4cb;
+  font-size: 15px;
+  font-weight: 950;
+  paint-order: stroke;
+  stroke: rgba(20, 54, 75, .95);
+  stroke-width: 3px;
+}
+
+.tower-visual--ghost {
+  opacity: .48;
+  filter: saturate(.8);
+}
+
+.tower-visual--archer .tower-visual__body { fill: #4d9f68; }
+.tower-visual--cannon .tower-visual__body { fill: #a96543; }
+.tower-visual--frost .tower-visual__body { fill: #6fc6d9; }
+.tower-visual--mage .tower-visual__body { fill: #8a69b7; }
+.tower-visual--ballista .tower-visual__body { fill: #9a8153; }
+.tower-visual--barracks .tower-visual__body { fill: #647e9d; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tower-slot__stone {
+    transition: none;
+  }
+}
