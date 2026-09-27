@@ -69,6 +69,7 @@ import { SHIELDED_ENEMY, createShieldedEnemyState, getShieldedEnemyBudget } from
 import { FLYING_ENEMY, createFlyingEnemyState, getFlyingEnemyBudget } from './game/enemies/flying.js';
 import { ELITE_MODIFIER_SYSTEM, applyEliteModifiers, attachEliteModifierFoundation, getEliteModifierFoundationFixtures } from './game/elites/eliteModifiers.js';
 import { WORLD_MODIFIER_SYSTEM, getActiveWorldModifiers, getWorldModifierEffects, getWorldModifierFoundationFixtures } from './game/world/worldModifiers.js';
+import { GAME_FEEDBACK_EVENTS, emitGameFeedback, getGameFeedbackFixtures } from './game/feedback/gameFeedback.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -204,6 +205,7 @@ const EVOLUTION_PERSISTENCE_SELL_RECONNECT_PASS = getEvolutionPersistenceSellRec
 const TFT_PERSISTENCE_FIXTURE = Object.freeze(getTftPersistenceFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
+const GAME_FEEDBACK_FIXTURE = Object.freeze(getGameFeedbackFixtures());
 
 const ECONOMY_BASELINE_FIXTURE = Object.freeze(getEconomyBaselineFixtures({
   archer: ARCHER_TOWER,
@@ -1366,6 +1368,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setPlacedDefenses((current) => current.map((tower) =>
       tower.id === selectedPlacedDefense.id ? chooseTowerEvolution(tower, evolutionId) : tower
     ));
+    emitGameFeedback(GAME_FEEDBACK_EVENTS.TOWER_EVOLVED, {
+      towerId: selectedPlacedDefense.defenseId,
+      evolutionId
+    });
   };
 
   const handleMergeTftCopy = (benchIndex) => {
@@ -1434,6 +1440,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       setTftBench((current) => removeCopyFromBench(current, selectedTftBenchIndex).bench);
       setSelectedTftBenchIndex(null);
       setTftFeedback('');
+      emitGameFeedback(GAME_FEEDBACK_EVENTS.TOWER_BUILT, {
+        towerId: copy.towerId,
+        slotId,
+        mode: run.mode
+      });
       return;
     }
 
@@ -1450,6 +1461,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setPlacedDefenses((current) => [...current, attempt.structure]);
     setSelectedPlacedDefenseId(attempt.structure.id);
     onSpendGold(selectedDefense.cost);
+    emitGameFeedback(GAME_FEEDBACK_EVENTS.TOWER_BUILT, {
+      towerId: selectedDefense.id,
+      slotId,
+      mode: run.mode
+    });
   };
 
 
@@ -2712,6 +2728,15 @@ function App() {
       if (cancelled || !result.ok) return;
       setRunState((current) => {
         if (!current || current.matchId !== runState.matchId) return current;
+        if (!current.lastBastionEliminationSent) {
+          emitGameFeedback(GAME_FEEDBACK_EVENTS.PLAYER_ELIMINATED, {
+            wave: current.wave,
+            placement: result.payload?.match?.selfPlacement ?? null
+          });
+          emitGameFeedback(GAME_FEEDBACK_EVENTS.SPECTATE_START, {
+            aliveCount: (result.payload?.match?.participants ?? []).filter((participant) => participant.alive).length
+          });
+        }
         return {
           ...current,
           lastBastionEliminationSent: true,
@@ -2755,6 +2780,11 @@ function App() {
       });
 
       if (personalBestResult.isPersonalBest) {
+        emitGameFeedback(GAME_FEEDBACK_EVENTS.PERSONAL_BEST, {
+          mode,
+          wave: runState.endSnapshot.wave,
+          score: runState.endSnapshot.score
+        });
         setPersonalBestByMode((current) => ({
           ...current,
           [mode]: personalBestResult.candidate
@@ -2832,6 +2862,12 @@ function App() {
           placement >= 1;
 
         if (matchFinished) {
+          if (won && current.lastBastionMatchStatus !== 'finished') {
+            emitGameFeedback(GAME_FEEDBACK_EVENTS.LAST_BASTION_WIN, {
+              placement,
+              wave: current.wave
+            });
+          }
           const endedAtMs = current.endedAtMs ?? Date.now();
           const reason = won ? 'last-bastion-win' : RUN_END_REASONS.BASTION_DESTROYED;
           const endedRun = {
@@ -2978,6 +3014,21 @@ function App() {
             if (!current) return current;
             const adjustedDamage = applyBlessingBastionDamage(damage, current.coreHp, current.coreMaxHp, current.blessings ?? []);
             const nextHp = Math.max(0, current.coreHp - adjustedDamage);
+            emitGameFeedback(GAME_FEEDBACK_EVENTS.BASTION_HIT, {
+              damage: adjustedDamage,
+              coreHp: nextHp,
+              coreMaxHp: current.coreMaxHp
+            });
+            if (
+              nextHp > 0 &&
+              nextHp / Math.max(1, current.coreMaxHp) <= 0.25 &&
+              current.coreHp / Math.max(1, current.coreMaxHp) > 0.25
+            ) {
+              emitGameFeedback(GAME_FEEDBACK_EVENTS.BASTION_LOW_HP, {
+                coreHp: nextHp,
+                coreMaxHp: current.coreMaxHp
+              });
+            }
             if (nextHp !== 0) {
               return {
                 ...current,
@@ -3008,6 +3059,18 @@ function App() {
             if (!current || !canTransitionWavePhase(current.phase, nextPhase)) return current;
             const advancingWave = Boolean(options.advanceWave);
             const completedWaveNumber = Math.max(1, current.wave + 1);
+            if (nextPhase === RUN_PHASES.ACTIVE) {
+              emitGameFeedback(GAME_FEEDBACK_EVENTS.WAVE_START, {
+                wave: completedWaveNumber,
+                mode: current.mode
+              });
+              if (isBossWave(completedWaveNumber)) {
+                emitGameFeedback(GAME_FEEDBACK_EVENTS.BOSS_WAVE, {
+                  wave: completedWaveNumber,
+                  mode: current.mode
+                });
+              }
+            }
             const baseWaveClearGold = advancingWave
               ? current.mode === MODES.TRI_GATE
                 ? getTriGateWaveClearReward(completedWaveNumber)
