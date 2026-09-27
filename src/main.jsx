@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { createClient } from '@supabase/supabase-js';
 import './menu.css';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 function Shell({ title, kicker, subtitle, onBack, children }) {
   return (
@@ -111,8 +116,114 @@ function Settings({ onBack }) {
   );
 }
 
+function AuthModal({ mode, onClose, onSuccess }) {
+  const [authMode, setAuthMode] = useState(mode);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!supabase) {
+      setError('Online authentication is not configured.');
+      return;
+    }
+
+    setBusy(true);
+    setError('');
+    try {
+      if (authMode === 'register') {
+        const { data, error: registerError } = await supabase.functions.invoke('register-player', {
+          body: { email, password, displayName: name }
+        });
+        if (registerError || data?.error) throw new Error(data?.error || registerError?.message || 'signup_failed');
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw signInError;
+
+      onSuccess();
+      onClose();
+    } catch (err) {
+      const code = String(err?.message || 'auth_failed');
+      const friendly = {
+        email_in_use: 'This email is already registered.',
+        password_length: 'Password must be 8–72 characters.',
+        invalid_email: 'Enter a valid email address.',
+        'Invalid login credentials': 'Email or password is incorrect.'
+      };
+      setError(friendly[code] || code);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="auth-backdrop" onMouseDown={() => !busy && onClose()}>
+      <form className="auth-modal" onSubmit={submit} onMouseDown={e => e.stopPropagation()}>
+        <p className="main-menu__kicker">BASTIONFALL ACCOUNT</p>
+        <h3>{authMode === 'register' ? 'CREATE DEFENDER' : 'SIGN IN'}</h3>
+        <p className="auth-modal__copy">
+          {authMode === 'register'
+            ? 'Your account is active immediately. No email confirmation.'
+            : 'Continue your records from any device.'}
+        </p>
+
+        {authMode === 'register' && (
+          <label>
+            <span>Defender name</span>
+            <input value={name} onChange={e => setName(e.target.value)} maxLength="40" required placeholder="Joker" />
+          </label>
+        )}
+
+        <label>
+          <span>Email</span>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+        </label>
+
+        <label>
+          <span>Password</span>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} minLength="8" maxLength="72" required autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} />
+        </label>
+
+        {error && <div className="auth-error">{error}</div>}
+
+        <button className="auth-submit" type="submit" disabled={busy}>
+          {busy ? 'CONNECTING...' : authMode === 'register' ? 'CREATE ACCOUNT' : 'SIGN IN'}
+        </button>
+
+        <button
+          className="auth-switch"
+          type="button"
+          onClick={() => {
+            setAuthMode(authMode === 'login' ? 'register' : 'login');
+            setError('');
+          }}
+        >
+          {authMode === 'login' ? 'New here? Create account' : 'Already registered? Sign in'}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function App() {
   const [screen, setScreen] = useState('menu');
+  const [session, setSession] = useState(null);
+  const [authMode, setAuthMode] = useState(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function logout() {
+    await supabase?.auth.signOut();
+  }
 
   if (screen === 'play') return <ModeSelect onBack={() => setScreen('menu')} />;
   if (screen === 'leaderboard') return <Leaderboard onBack={() => setScreen('menu')} />;
@@ -125,6 +236,20 @@ function App() {
         <p className="main-menu__kicker">ENDLESS TOWER DEFENSE</p>
         <h1>BASTIONFALL</h1>
         <p className="main-menu__tagline">Build. Hold. Survive.</p>
+
+        <div className="account-strip">
+          {session ? (
+            <>
+              <span>ONLINE · {session.user.email}</span>
+              <button onClick={logout}>SIGN OUT</button>
+            </>
+          ) : (
+            <>
+              <button onClick={() => setAuthMode('login')}>SIGN IN</button>
+              <button onClick={() => setAuthMode('register')}>CREATE ACCOUNT</button>
+            </>
+          )}
+        </div>
 
         <nav className="main-menu__actions" aria-label="Primary navigation">
           <button
@@ -140,6 +265,14 @@ function App() {
 
         <p className="main-menu__version">Prototype v0.1.0</p>
       </section>
+
+      {authMode && (
+        <AuthModal
+          mode={authMode}
+          onClose={() => setAuthMode(null)}
+          onSuccess={() => {}}
+        />
+      )}
     </main>
   );
 }
