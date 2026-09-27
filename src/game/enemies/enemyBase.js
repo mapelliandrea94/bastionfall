@@ -1,3 +1,5 @@
+import { DAMAGE_TYPES, resolveDamagePacket } from '../combat/counterplay.js';
+
 export const ENEMY_BASE_MODEL = Object.freeze({
   version: 1,
   defaults: Object.freeze({
@@ -53,18 +55,13 @@ export function getEnemyEffectiveSpeed(enemy, nowMs = 0) {
   return Number((Number(enemy?.moveSpeed ?? 0) * slowMultiplier).toFixed(4));
 }
 
-export function applyEnemyDamage(enemy, amount) {
-  let remaining = Math.max(0, Number(amount ?? 0));
-  const shieldDamage = Math.min(enemy.shield ?? 0, remaining);
-  remaining -= shieldDamage;
-
-  const armorMitigation = Math.max(0, Math.min(0.8, Number(enemy.armor ?? 0) / 100));
-  const hpDamage = remaining * (1 - armorMitigation);
+export function applyEnemyDamage(enemy, amount, damageType = DAMAGE_TYPES.PHYSICAL) {
+  const packet = resolveDamagePacket(enemy, amount, damageType);
 
   return Object.freeze({
     ...enemy,
-    shield: Math.max(0, Number(enemy.shield ?? 0) - shieldDamage),
-    hp: Math.max(0, Number(enemy.hp ?? 0) - hpDamage)
+    shield: Math.max(0, Number(enemy.shield ?? 0) - packet.shieldDamage),
+    hp: Math.max(0, Number(enemy.hp ?? 0) - packet.hpDamage)
   });
 }
 
