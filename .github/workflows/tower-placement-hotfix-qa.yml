@@ -13,6 +13,7 @@ on:
       - "server.mjs"
       - "tests/tower-placement-mouse.mjs"
       - "tests/wave-director.mjs"
+      - "tests/last-bastion-sync.mjs"
       - ".github/workflows/tower-placement-hotfix-qa.yml"
 
 jobs:
@@ -28,6 +29,8 @@ jobs:
       - run: npm run build
       - name: Wave Director QA
         run: node tests/wave-director.mjs
+      - name: Last Bastion Sync QA
+        run: node tests/last-bastion-sync.mjs
       - run: npm install --no-save playwright@1.55.0
       - run: npx playwright install --with-deps chromium
       - name: Start production preview
