@@ -1725,3 +1725,31 @@ button { font: inherit; }
   font-size: 8px;
   letter-spacing: .02em;
 }
+
+
+/* BATCH 33 — Frost tower foundation */
+.tower-card--frost {
+  position: relative;
+  text-align: left;
+  align-items: start;
+  border-color: rgba(104, 157, 188, .32);
+  background:
+    linear-gradient(180deg, rgba(48, 99, 128, .15), rgba(22, 31, 38, .1));
+}
+
+.tower-card--frost strong {
+  color: #c9e7f3;
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.tower-card--frost > span {
+  color: #92c8df;
+  font-weight: 900;
+}
+
+.tower-card--frost small {
+  color: #7f98a4;
+  font-size: 8px;
+  letter-spacing: .02em;
+}
