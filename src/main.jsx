@@ -14,6 +14,7 @@ import { getPlacementValidationFixtures, validateSingleGatePlacement } from './g
 import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
 import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
+import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -82,6 +83,8 @@ const TARGETING_VALIDATION_SNAPSHOT = Object.freeze(
     actual: resolveTarget(fixture.defense, fixture.enemies)?.id ?? null
   }))
 );
+
+const ATTACK_FEEDBACK_FIXTURE = Object.freeze(getAttackFeedbackFixtures());
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -289,6 +292,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   const selectedSellPreview = getSellPreview(selectedDefense);
   const selectedUpgradePreview = getNextUpgradePreview(selectedDefense, 1);
   const selectedTargetingValue = getTargetingValue(selectedDefense);
+  const selectedAttackInstrumentation = getAttackInstrumentation(selectedDefense);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
@@ -517,6 +521,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-placement-validation-pass={PLACEMENT_VALIDATION_SNAPSHOT.every((entry) => entry.expected === entry.actual)}
             data-targeting-validations={TARGETING_VALIDATION_SNAPSHOT.length}
             data-targeting-validation-pass={TARGETING_VALIDATION_SNAPSHOT.every((entry) => entry.expected === entry.actual)}
+            data-attack-feedback-version={ATTACK_FEEDBACK.version}
+            data-attack-feedback-pass={ATTACK_FEEDBACK_FIXTURE.travelMsExpected === ATTACK_FEEDBACK_FIXTURE.travelMsActual && ATTACK_FEEDBACK_FIXTURE.dpsExpected === ATTACK_FEEDBACK_FIXTURE.dpsActual}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
@@ -585,6 +591,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
               <span>TARGETING</span>
               <strong>{selectedTargetingValue.rule}</strong>
               <small>Targeting value ×{selectedTargetingValue.multiplier.toFixed(2)}</small>
+            </div>
+            <div className="defense-inspector__instrumentation">
+              <span>ATTACK TELEMETRY</span>
+              <strong>{selectedAttackInstrumentation.sustainedDps} DPS</strong>
+              <small>
+                {selectedAttackInstrumentation.attacksPerSecond}/s · {selectedAttackInstrumentation.projectileTravelMs}ms travel @ {selectedAttackInstrumentation.sampleDistance} range
+              </small>
             </div>
           </section>
 
