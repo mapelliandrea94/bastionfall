@@ -619,7 +619,7 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
   const completionKey = identity.matchId + ':' + req.user.id;
   const completionNowMs = Date.now();
   pruneTimedMap(consumedMatchCompletions, completionNowMs, COMPLETION_REPLAY_TTL_MS);
-  if (consumedMatchCompletions.has(completionKey)) {
+  if (consumedMatchCompletions.has(completionKey) && identity.mode !== 'last-bastion') {
     return res.status(409).json({ error: 'completion_replay' });
   }
 
@@ -672,6 +672,8 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
   }
 
   let persistedRecord = null;
+  let savedProfile = null;
+  let earnedShards = 0;
 
   if (mode === 'single-gate' || mode === 'tri-gate') {
     const serverDb = clientForToken(req.accessToken, {
@@ -702,33 +704,45 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     }
 
     persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
+
+    const { data: current, error: profileError } = await req.db
+      .from('profiles')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (profileError || !current) return res.status(404).json({ error: 'profile_missing' });
+
+    earnedShards = Math.max(1, Math.floor(wave / 2));
+    const patch = {
+      best_wave: Math.max(current.best_wave || 0, wave),
+      shards: (current.shards || 0) + earnedShards,
+      runs: (current.runs || 0) + 1,
+      lifetime_kills: (current.lifetime_kills || 0) + kills,
+      updated_at: new Date().toISOString()
+    };
+
+    const saved = await req.db
+      .from('profiles')
+      .update(patch)
+      .eq('user_id', req.user.id)
+      .select('*')
+      .single();
+
+    if (saved.error) return res.status(500).json({ error: 'progress_save_failed' });
+    savedProfile = saved.data;
   }
 
   if (mode === 'last-bastion') {
-    const authoritativeMatch = getLastBastionMatchStatus(req.user.id, identity.matchId);
-    if (!authoritativeMatch.ok || authoritativeMatch.match?.status !== 'finished') {
-      return res.status(409).json({ error: 'last_bastion_match_not_finished' });
-    }
-
-    const placement = Number(authoritativeMatch.match?.selfPlacement);
-    const won = authoritativeMatch.match?.selfWon === true;
-    const expectedReason = won ? 'last-bastion-win' : 'bastion-destroyed';
-
-    if (!Number.isInteger(placement) || placement < 1 || placement > 8) {
-      return res.status(409).json({ error: 'last_bastion_placement_missing' });
-    }
-    if (resultReason !== expectedReason) {
-      return res.status(400).json({ error: 'last_bastion_result_mismatch' });
-    }
-
     const serverDb = clientForToken(req.accessToken, {
       'x-bastionfall-server-secret': matchTokenSecret
     });
     const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
 
     const { data: statRows, error: statError } = await serverDb.rpc(
-      'persist_verified_last_bastion_result_v2',
+      'persist_verified_last_bastion_result_v3',
       {
+        p_match_id: identity.matchId,
         p_result_reason: resultReason,
         p_wave: wave,
         p_elapsed_ms: Math.floor(elapsedMs),
@@ -738,53 +752,48 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
         p_core_max_hp: coreMaxHp,
         p_kills: kills,
         p_started_at: identity.startedAt,
-        p_ended_at: endedAt,
-        p_placement: placement,
-        p_won: won
+        p_ended_at: endedAt
       }
     );
 
     if (statError) {
+      const message = String(statError.message || '');
+      if (message.includes('last_bastion_match_not_found')) {
+        return res.status(404).json({ error: 'last_bastion_match_not_found' });
+      }
+      if (message.includes('last_bastion_match_not_finished')) {
+        return res.status(409).json({ error: 'last_bastion_match_not_finished' });
+      }
+      if (message.includes('last_bastion_placement_missing')) {
+        return res.status(409).json({ error: 'last_bastion_placement_missing' });
+      }
+      if (message.includes('last_bastion_result_mismatch') || message.includes('win_placement_mismatch')) {
+        return res.status(400).json({ error: 'last_bastion_result_mismatch' });
+      }
       console.error('Last Bastion persistence failed:', statError.message);
       return res.status(500).json({ error: 'last_bastion_persist_failed' });
     }
 
     persistedRecord = Array.isArray(statRows) ? statRows[0] ?? null : statRows;
+    earnedShards = Number(persistedRecord?.earned_shards ?? 0);
+
+    const profileRead = await req.db
+      .from('profiles')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (profileRead.error || !profileRead.data) return res.status(404).json({ error: 'profile_missing' });
+    savedProfile = profileRead.data;
   }
-
-  const { data: current, error: profileError } = await req.db
-    .from('profiles')
-    .select('*')
-    .eq('user_id', req.user.id)
-    .single();
-
-  if (profileError || !current) return res.status(404).json({ error: 'profile_missing' });
-
-  const shards = Math.max(1, Math.floor(wave / 2));
-  const patch = {
-    best_wave: Math.max(current.best_wave || 0, wave),
-    shards: (current.shards || 0) + shards,
-    runs: (current.runs || 0) + 1,
-    lifetime_kills: (current.lifetime_kills || 0) + kills,
-    updated_at: new Date().toISOString()
-  };
-
-  const saved = await req.db
-    .from('profiles')
-    .update(patch)
-    .eq('user_id', req.user.id)
-    .select('*')
-    .single();
-
-  if (saved.error) return res.status(500).json({ error: 'progress_save_failed' });
 
   consumedMatchCompletions.set(completionKey, { touchedAtMs: Date.now() });
 
   res.json({
     accepted: true,
     matchId: identity.matchId,
-    profile: saved.data,
-    earnedShards: shards,
+    profile: savedProfile,
+    earnedShards,
     record: persistedRecord
   });
 });
