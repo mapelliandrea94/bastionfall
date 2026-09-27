@@ -41,13 +41,29 @@ export function getBlessingModifiers(ownedBlessings = []) {
   return Object.freeze(result);
 }
 
+
+export function applyBlessingModifierCaps(modifiers) {
+  return Object.freeze({
+    ...modifiers,
+    towerDamageMultiplier: Math.min(1.55, modifiers.towerDamageMultiplier),
+    attackSpeedMultiplier: Math.min(1.35, modifiers.attackSpeedMultiplier),
+    bossDamageMultiplier: Math.min(1.45, modifiers.bossDamageMultiplier),
+    bastionDamageTakenMultiplier: Math.max(0.72, modifiers.bastionDamageTakenMultiplier),
+    waveClearGoldMultiplier: Math.min(1.35, modifiers.waveClearGoldMultiplier),
+    waveClearGoldBonus: Math.min(6, modifiers.waveClearGoldBonus),
+    bastionMaxHpBonus: Math.min(8, modifiers.bastionMaxHpBonus),
+    slowStrengthBonus: Math.min(0.3, modifiers.slowStrengthBonus),
+    enemyMoveSpeedMultiplier: Math.max(0.88, modifiers.enemyMoveSpeedMultiplier)
+  });
+}
+
 export function applyBlessingWaveGold(baseGold, ownedBlessings = []) {
-  const modifiers = getBlessingModifiers(ownedBlessings);
+  const modifiers = applyBlessingModifierCaps(getBlessingModifiers(ownedBlessings));
   return Math.max(0, Math.round((Math.max(0, Number(baseGold) || 0) + modifiers.waveClearGoldBonus) * modifiers.waveClearGoldMultiplier));
 }
 
 export function applyBlessingBastionDamage(baseDamage, coreHp, coreMaxHp, ownedBlessings = []) {
-  const modifiers = getBlessingModifiers(ownedBlessings);
+  const modifiers = applyBlessingModifierCaps(getBlessingModifiers(ownedBlessings));
   const maxHp = Math.max(1, Number(coreMaxHp) || 1);
   const hpRatio = Math.max(0, Number(coreHp) || 0) / maxHp;
   const emergencyMultiplier =
@@ -59,7 +75,7 @@ export function applyBlessingBastionDamage(baseDamage, coreHp, coreMaxHp, ownedB
 }
 
 export function getBlessingAdjustedMaxHp(baseMaxHp, ownedBlessings = []) {
-  return Math.max(1, Math.round((Number(baseMaxHp) || 1) + getBlessingModifiers(ownedBlessings).bastionMaxHpBonus));
+  return Math.max(1, Math.round((Number(baseMaxHp) || 1) + applyBlessingModifierCaps(getBlessingModifiers(ownedBlessings)).bastionMaxHpBonus));
 }
 
 export function getBlessingEngineFixtures() {
