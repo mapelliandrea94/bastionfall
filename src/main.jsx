@@ -32,6 +32,7 @@ import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, ge
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
 import { BLESSING_SYSTEM, addBlessingToLoadout, getBlessingOffer, getBlessingSystemFixtures } from './game/blessings/blessings.js';
 import { BLESSING_ENGINE, applyBlessingBastionDamage, applyBlessingWaveGold, getBlessingAdjustedMaxHp, getBlessingEngineFixtures, getBlessingModifiers } from './game/blessings/blessingEngine.js';
+import { BLESSING_REROLL, canRerollBlessings, getBlessingRerollCost, getBlessingRerollFixtures, getRerolledBlessingOffer } from './game/blessings/blessingReroll.js';
 import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } from './game/boss/bossSummonAdds.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
@@ -169,6 +170,7 @@ const BOSS_ARMOR_ENRAGE_FIXTURE = Object.freeze(getBossArmorEnrageFixtures());
 const BOSS_TUNING_FIXTURE = Object.freeze(getBossTuningFixtures());
 const BLESSING_SYSTEM_FIXTURE = Object.freeze(getBlessingSystemFixtures());
 const BLESSING_ENGINE_FIXTURE = Object.freeze(getBlessingEngineFixtures());
+const BLESSING_REROLL_FIXTURE = Object.freeze(getBlessingRerollFixtures());
 const OPENING_BLESSING_OFFER = Object.freeze(getBlessingOffer('prototype-run', [], BLESSING_SYSTEM.choiceCount));
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
@@ -599,6 +601,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
+  const [blessingRerollCount, setBlessingRerollCount] = useState(0);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
@@ -613,7 +616,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const bossTuning = bossWaveIncoming ? getBossTuningForWave(waveScaling.waveNumber) : null;
   const bossEnragePreview = applyBossEnrageStats({ isBoss: bossWaveIncoming, hp: 35, maxHp: 100, moveSpeed: 1 });
   const blessingModifiers = getBlessingModifiers(run?.blessings ?? []);
-  const blessingOffer = getBlessingOffer(`${run?.seed ?? 'run'}:boss:${waveScaling.waveNumber}`, run?.blessings ?? [], BLESSING_SYSTEM.choiceCount);
+  const blessingOfferSeed = `${run?.seed ?? 'run'}:boss:${waveScaling.waveNumber}`;
+  const blessingOffer = blessingRerollCount > 0
+    ? getRerolledBlessingOffer(blessingOfferSeed, run?.blessings ?? [], blessingRerollCount - 1)
+    : getBlessingOffer(blessingOfferSeed, run?.blessings ?? [], BLESSING_SYSTEM.choiceCount);
+  const blessingRerollCost = getBlessingRerollCost(blessingRerollCount);
+  const blessingCanReroll = canRerollBlessings(run?.gold ?? 0, blessingRerollCount);
   const blessingChoiceVisible = run?.phase === RUN_PHASES.RESOLVING && isBossWave(waveScaling.waveNumber);
   const threatWave = composeWaveByThreatBudget(
     waveScaling.waveNumber,
@@ -1155,6 +1163,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-boss-tuning-version={BOSS_TUNING.version}
             data-blessing-system-version={BLESSING_SYSTEM.version}
             data-blessing-engine-version={BLESSING_ENGINE.version}
+            data-blessing-reroll-version={BLESSING_REROLL.version}
+            data-blessing-reroll-pass={BLESSING_REROLL_FIXTURE.baseCostExpected === BLESSING_REROLL_FIXTURE.baseCostActual && BLESSING_REROLL_FIXTURE.secondCostExpected === BLESSING_REROLL_FIXTURE.secondCostActual && BLESSING_REROLL_FIXTURE.affordableAtExactCost === true && BLESSING_REROLL_FIXTURE.blockedBelowCost === true && BLESSING_REROLL_FIXTURE.blockedAtCap === true && BLESSING_REROLL_FIXTURE.firstRerollChangesOffer === true && BLESSING_REROLL_FIXTURE.rerollsAdvanceDeterministically === true}
             data-blessing-engine-pass={BLESSING_ENGINE_FIXTURE.stackedDamageAboveBase === true && BLESSING_ENGINE_FIXTURE.mixedGoldExpected === BLESSING_ENGINE_FIXTURE.mixedGoldActual && BLESSING_ENGINE_FIXTURE.emergencyDamageExpected === BLESSING_ENGINE_FIXTURE.emergencyDamageActual && BLESSING_ENGINE_FIXTURE.boostedHpExpected === BLESSING_ENGINE_FIXTURE.boostedHpActual && BLESSING_ENGINE_FIXTURE.timeLockSlows === true && BLESSING_ENGINE_FIXTURE.frostboundAddsControl === true}
             data-blessing-count={(run?.blessings ?? []).length}
             data-blessing-tower-damage={blessingModifiers.towerDamageMultiplier}
@@ -1302,6 +1312,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <strong>CHOOSE A BLESSING</strong>
                 <small>Pick one reward for the next stage of the run. The selected effect applies immediately.</small>
               </div>
+              <div className="blessing-choice__actions">
+                <button
+                  type="button"
+                  className="blessing-reroll"
+                  disabled={!blessingCanReroll}
+                  onClick={() => {
+                    if (!blessingCanReroll) return;
+                    onSpendGold(blessingRerollCost);
+                    setSelectedBlessingPreviewId(null);
+                    setBlessingRerollCount((count) => count + 1);
+                  }}
+                >
+                  REROLL · {blessingRerollCost}G
+                  <small>{blessingRerollCount}/{BLESSING_REROLL.maxRerollsPerOffer} used</small>
+                </button>
+              </div>
               <div className="blessing-choice__grid">
                 {blessingOffer.map((blessing) => {
                   const selected = selectedBlessingPreviewId === blessing.id;
@@ -1344,6 +1370,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             className="run-phase-test"
             onClick={() => {
               setSelectedBlessingPreviewId(null);
+              setBlessingRerollCount(0);
               onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true, blessingId: selectedBlessingPreviewId });
             }}
             disabled={!run || run.phase !== RUN_PHASES.RESOLVING || (blessingChoiceVisible && !selectedBlessingPreviewId)}
