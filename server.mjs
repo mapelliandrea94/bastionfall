@@ -124,11 +124,68 @@ app.get('/api/profile', requireUser, async (req, res) => {
 });
 
 app.post('/api/run/complete', requireUser, async (req, res) => {
-  const wave = Math.max(0, Math.min(9999, Number(req.body?.wave || 0)));
-  const kills = Math.max(0, Math.min(1000000, Number(req.body?.kills || 0)));
+  const matchToken = String(req.body?.matchToken || '');
+  const identity = verifyMatchIdentity(matchToken);
+  if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
+  if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
+
+  const mode = String(req.body?.mode || '').trim();
+  if (!STARTABLE_MODES.has(mode) || identity.mode !== mode) {
+    return res.status(400).json({ error: 'match_mode_mismatch' });
+  }
+
+  const wave = Number(req.body?.wave);
+  const kills = Number(req.body?.kills);
+  const elapsedMs = Number(req.body?.elapsedMs);
+  const score = Number(req.body?.score);
+  const gold = Number(req.body?.gold);
+  const coreHp = Number(req.body?.coreHp);
+  const coreMaxHp = Number(req.body?.coreMaxHp);
+  const resultReason = String(req.body?.resultReason || '');
+
+  if (!Number.isInteger(wave) || wave < 0 || wave > 9999) {
+    return res.status(400).json({ error: 'invalid_wave' });
+  }
+  if (!Number.isInteger(kills) || kills < 0 || kills > 1000000) {
+    return res.status(400).json({ error: 'invalid_kills' });
+  }
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0 || elapsedMs > 1000 * 60 * 60 * 24) {
+    return res.status(400).json({ error: 'invalid_elapsed_ms' });
+  }
+  if (!Number.isFinite(score) || score < 0 || score > 1000000000) {
+    return res.status(400).json({ error: 'invalid_score' });
+  }
+  if (!Number.isInteger(gold) || gold < 0 || gold > 10000000) {
+    return res.status(400).json({ error: 'invalid_gold' });
+  }
+  if (!Number.isInteger(coreMaxHp) || coreMaxHp < 1 || coreMaxHp > 100000) {
+    return res.status(400).json({ error: 'invalid_core_max_hp' });
+  }
+  if (!Number.isInteger(coreHp) || coreHp < 0 || coreHp > coreMaxHp) {
+    return res.status(400).json({ error: 'invalid_core_hp' });
+  }
+  if (!['bastion-destroyed', 'player-exit'].includes(resultReason)) {
+    return res.status(400).json({ error: 'invalid_result_reason' });
+  }
+
+  const startedAtMs = Date.parse(identity.startedAt);
+  if (!Number.isFinite(startedAtMs)) return res.status(400).json({ error: 'invalid_match_started_at' });
+
+  const serverElapsedMs = Date.now() - startedAtMs;
+  const clockSkewToleranceMs = 15000;
+  if (serverElapsedMs < 0 || elapsedMs > serverElapsedMs + clockSkewToleranceMs) {
+    return res.status(400).json({ error: 'elapsed_time_exceeds_server_clock' });
+  }
+
+  const { data: current, error: profileError } = await req.db
+    .from('profiles')
+    .select('*')
+    .eq('user_id', req.user.id)
+    .single();
+
+  if (profileError || !current) return res.status(404).json({ error: 'profile_missing' });
+
   const shards = Math.max(1, Math.floor(wave / 2));
-  const { data: current } = await req.db.from('profiles').select('*').eq('user_id', req.user.id).single();
-  if (!current) return res.status(404).json({ error: 'profile_missing' });
   const patch = {
     best_wave: Math.max(current.best_wave || 0, wave),
     shards: (current.shards || 0) + shards,
@@ -136,9 +193,22 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
     lifetime_kills: (current.lifetime_kills || 0) + kills,
     updated_at: new Date().toISOString()
   };
-  const saved = await req.db.from('profiles').update(patch).eq('user_id', req.user.id).select('*').single();
+
+  const saved = await req.db
+    .from('profiles')
+    .update(patch)
+    .eq('user_id', req.user.id)
+    .select('*')
+    .single();
+
   if (saved.error) return res.status(500).json({ error: 'progress_save_failed' });
-  res.json({ profile: saved.data, earnedShards: shards });
+
+  res.json({
+    accepted: true,
+    matchId: identity.matchId,
+    profile: saved.data,
+    earnedShards: shards
+  });
 });
 
 app.post('/api/fortress/upgrade', requireUser, (_req, res) => {
