@@ -42,6 +42,11 @@ export function getDamageProfile(damageType) {
 
 export function canDefenseTargetEnemy(defense, enemy) {
   if (!enemy?.airborne) return true;
+
+  if (defense?.counterType) {
+    return defense.counterType === 'air';
+  }
+
   return COUNTERPLAY_MATRIX.antiAirByDefenseId[defense?.id] ?? false;
 }
 
