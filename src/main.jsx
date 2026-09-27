@@ -470,6 +470,25 @@ async function lastBastionEliminate(session, run) {
   return { ok: true, payload };
 }
 
+async function lastBastionMatchStatus(session, run) {
+  if (!session?.access_token || !run?.matchToken || run?.mode !== MODES.LAST_BASTION) {
+    return { ok: false, error: 'match_status_not_ready' };
+  }
+
+  const response = await fetch(
+    `/api/last-bastion/match/status?matchToken=${encodeURIComponent(run.matchToken)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
+    }
+  );
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: payload?.error || 'match_status_failed' };
+  return { ok: true, payload };
+}
+
 async function fetchLeaderboardData(session, mode) {
   if (!session?.access_token) {
     return { ok: false, error: 'authentication_required' };
@@ -937,6 +956,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const selectedEvolutionChoices = selectedPlacedDefense ? getEvolutionChoices(selectedPlacedDefense.defenseId) : [];
   const selectedTargetingValue = getTargetingValue(inspectedDefense);
   const selectedAttackInstrumentation = getAttackInstrumentation(inspectedDefense);
+  const lastBastionParticipants = run?.mode === MODES.LAST_BASTION
+    ? run?.lastBastionParticipants ?? []
+    : [];
+  const lastBastionSelf = lastBastionParticipants.find((participant) => participant.self) ?? null;
+  const lastBastionAliveCount = lastBastionParticipants.filter((participant) => participant.alive).length;
+  const isLastBastionSpectating =
+    run?.mode === MODES.LAST_BASTION &&
+    lastBastionSelf?.alive === false &&
+    run?.lastBastionMatchStatus !== 'finished';
+  const isLastBastionFinished =
+    run?.mode === MODES.LAST_BASTION &&
+    run?.lastBastionMatchStatus === 'finished';
+
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
@@ -1417,7 +1449,17 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           <header className="run-hud">
             <div>
               <span className="run-hud__label">MODE</span>
-              <strong>{run?.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : run?.mode === MODES.TFT_SHOP ? 'TFT SHOP' : 'UNKNOWN'}</strong>
+              <strong>{
+                run?.mode === MODES.SINGLE_GATE
+                  ? 'SINGLE GATE'
+                  : run?.mode === MODES.TFT_SHOP
+                    ? 'TFT SHOP'
+                    : run?.mode === MODES.LAST_BASTION
+                      ? 'LAST BASTION'
+                      : run?.mode === MODES.TRI_GATE
+                        ? 'TRI-GATE'
+                        : 'UNKNOWN'
+              }</strong>
             </div>
             <div>
               <span className="run-hud__label">WAVE</span>
@@ -1441,6 +1483,51 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
             <button className="run-exit" onClick={onExit}>EXIT RUN</button>
           </header>
+
+          {run?.mode === MODES.LAST_BASTION && (
+            <section className="last-bastion-status" aria-label="Last Bastion participant status">
+              <div className="last-bastion-status__header">
+                <span>{isLastBastionFinished ? 'MATCH COMPLETE' : isLastBastionSpectating ? 'SPECTATING' : 'LIVE MATCH'}</span>
+                <strong>{lastBastionAliveCount}/{lastBastionParticipants.length || 0} ALIVE</strong>
+              </div>
+              <div className="last-bastion-status__players">
+                {lastBastionParticipants.map((participant) => (
+                  <div
+                    key={participant.slot}
+                    className={[
+                      'last-bastion-status__player',
+                      participant.self ? 'last-bastion-status__player--self' : '',
+                      !participant.alive ? 'last-bastion-status__player--dead' : '',
+                      !participant.connected ? 'last-bastion-status__player--offline' : ''
+                    ].filter(Boolean).join(' ')}
+                  >
+                    <span>P{participant.slot}{participant.self ? ' · YOU' : ''}</span>
+                    <strong>{participant.alive ? `W${participant.wave}` : 'ELIMINATED'}</strong>
+                    <small>{participant.connected ? `${participant.coreHp} HP` : 'DISCONNECTED'}</small>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {(isLastBastionSpectating || isLastBastionFinished) && (
+            <div className="last-bastion-spectate-banner">
+              <span>{isLastBastionFinished ? 'LAST BASTION COMPLETE' : 'BASTION FALLEN — SPECTATOR MODE'}</span>
+              <strong>
+                {isLastBastionFinished
+                  ? run?.lastBastionWinnerSlot
+                    ? `PLAYER ${run.lastBastionWinnerSlot} WINS`
+                    : 'MATCH DRAW'
+                  : 'WATCH THE REMAINING DEFENDERS'}
+              </strong>
+              <small>
+                {isLastBastionFinished
+                  ? 'Final results processing follows.'
+                  : 'You are eliminated. Match status remains live until one defender remains.'}
+              </small>
+            </div>
+          )}
+
           <svg
             className="battlefield-map"
             viewBox={`0 0 ${SINGLE_GATE_MAP.size.width} ${SINGLE_GATE_MAP.size.height}`}
@@ -2615,6 +2702,7 @@ function App() {
       runState?.phase === RUN_PHASES.ENDED &&
       runState?.endSnapshot
     ) {
+      if (runState.mode === MODES.LAST_BASTION) return;
       const mode = runState.endSnapshot.mode ?? MODES.SINGLE_GATE;
       const previous = personalBestByMode[mode] ?? null;
       const personalBestResult = comparePersonalBest(runState.endSnapshot, previous);
@@ -2674,6 +2762,55 @@ function App() {
     runState?.phase,
     runState?.wave,
     runState?.coreHp
+  ]);
+
+  useEffect(() => {
+    if (
+      screen !== SCREENS.SINGLE_GATE_RUN ||
+      runState?.mode !== MODES.LAST_BASTION ||
+      !runState?.matchToken
+    ) return undefined;
+
+    let cancelled = false;
+
+    const refreshMatchStatus = async () => {
+      const result = await lastBastionMatchStatus(session, runState);
+      if (cancelled || !result.ok || !result.payload?.match) return;
+
+      setRunState((current) => {
+        if (!current || current.matchId !== result.payload.match.id) return current;
+
+        const nextStatus = result.payload.match.status ?? current.lastBastionMatchStatus ?? 'active';
+        const shouldFreezeWinner =
+          nextStatus === 'finished' &&
+          current.phase !== RUN_PHASES.ENDED &&
+          result.payload.match.winnerSlot != null;
+
+        return {
+          ...current,
+          ...(shouldFreezeWinner ? { phase: RUN_PHASES.ENDED } : {}),
+          lastBastionParticipants:
+            result.payload.match.participants ?? current.lastBastionParticipants ?? [],
+          lastBastionWinnerSlot:
+            result.payload.match.winnerSlot ?? current.lastBastionWinnerSlot ?? null,
+          lastBastionMatchStatus: nextStatus
+        };
+      });
+    };
+
+    refreshMatchStatus();
+    const intervalId = window.setInterval(refreshMatchStatus, 2000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    screen,
+    session,
+    runState?.mode,
+    runState?.matchId,
+    runState?.matchToken
   ]);
 
   useEffect(() => {
