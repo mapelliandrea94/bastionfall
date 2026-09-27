@@ -55,3 +55,19 @@ jobs:
       - name: Promote verified commit to Railway production branch
         run: |
           git push origin HEAD:refs/heads/railway-production --force
+      - name: Verify promoted commit is live in production
+        env:
+          PRODUCTION_HEALTH_URL: https://bastionfall-web-production.up.railway.app/api/health
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          for i in {1..60}; do
+            body="$(curl -fsS "$PRODUCTION_HEALTH_URL" || true)"
+            if echo "$body" | grep -q "\"ok\":true" && echo "$body" | grep -q "\"revision\":\"$EXPECTED_SHA\""; then
+              echo "$body"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Expected revision $EXPECTED_SHA was not observed in production."
+          curl -fsS "$PRODUCTION_HEALTH_URL" || true
+          exit 1
