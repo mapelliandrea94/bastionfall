@@ -2449,3 +2449,42 @@ body { background:#1c3f61; }
     transition: none;
   }
 }
+
+
+/* BATCH 76 — leaderboard real data */
+.leaderboard-tabs {
+  display: flex;
+  gap: .75rem;
+  margin: 1rem 0 1.25rem;
+}
+
+.leaderboard-tab {
+  min-height: 42px;
+  padding: 0 1rem;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.035);
+  color: #cfd5dc;
+  font-weight: 900;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+.leaderboard-tab--active {
+  border-color: rgba(245, 207, 113, .72);
+  background: rgba(176, 132, 47, .16);
+  color: #f5dfa1;
+  box-shadow: 0 0 16px rgba(225,176,77,.16);
+}
+
+.leaderboard-table {
+  overflow-x: auto;
+}
+
+.leaderboard-row {
+  grid-template-columns: 56px minmax(160px, 1.5fr) 90px 120px 120px 100px;
+  min-width: 760px;
+}
+
+.leaderboard-row > span:nth-child(n+3) {
+  text-align: right;
+}
