@@ -1697,3 +1697,31 @@ button { font: inherit; }
   font-size: 8px;
   letter-spacing: .02em;
 }
+
+
+/* BATCH 32 — Cannon tower foundation */
+.tower-card--cannon {
+  position: relative;
+  text-align: left;
+  align-items: start;
+  border-color: rgba(154, 112, 88, .3);
+  background:
+    linear-gradient(180deg, rgba(104, 69, 49, .14), rgba(31, 25, 22, .1));
+}
+
+.tower-card--cannon strong {
+  color: #e0c0a9;
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.tower-card--cannon > span {
+  color: #c99b7b;
+  font-weight: 900;
+}
+
+.tower-card--cannon small {
+  color: #908278;
+  font-size: 8px;
+  letter-spacing: .02em;
+}
