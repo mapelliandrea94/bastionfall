@@ -478,7 +478,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             {positionedEnemies.map((enemy) => (
               <g
                 key={enemy.id}
-                className="battlefield-map__enemy"
+                className={`battlefield-map__enemy battlefield-map__enemy--${enemy.archetype}`}
                 transform={`translate(${enemy.position.x} ${enemy.position.y})`}
                 aria-label="Queued enemy"
               >
