@@ -2,12 +2,18 @@ import { chromium } from 'playwright';
 
 const baseUrl = 'http://127.0.0.1:4173/?qa=tower-placement';
 const defenses = [
-  { id: 'archer', cost: 70, name: 'Archer Tower' },
-  { id: 'cannon', cost: 110, name: 'Cannon Tower' },
-  { id: 'frost', cost: 90, name: 'Frost Tower' },
-  { id: 'mage', cost: 125, name: 'Mage Tower' },
-  { id: 'ballista', cost: 145, name: 'Ballista Tower' },
-  { id: 'barracks', cost: 130, name: 'Barracks' }
+  { id: 'human-aa', cost: 70, name: 'Human Anti-Air' },
+  { id: 'human-armor', cost: 110, name: 'Human Anti-Armor' },
+  { id: 'human-infantry', cost: 95, name: 'Human Anti-Infantry' },
+  { id: 'insect-aa', cost: 72, name: 'Insect Anti-Air' },
+  { id: 'insect-armor', cost: 105, name: 'Insect Anti-Armor' },
+  { id: 'insect-infantry', cost: 88, name: 'Insect Anti-Infantry' },
+  { id: 'alien-aa', cost: 92, name: 'Alien Anti-Air' },
+  { id: 'alien-armor', cost: 118, name: 'Alien Anti-Armor' },
+  { id: 'alien-infantry', cost: 102, name: 'Alien Anti-Infantry' },
+  { id: 'slow', cost: 82, name: 'Slow Tower' },
+  { id: 'debuff', cost: 86, name: 'Debuff Tower' },
+  { id: 'buff', cost: 90, name: 'Buff Tower' }
 ];
 const slots = Array.from({ length: 15 }, (_, index) => `slot-${String(index + 1).padStart(2, '0')}`);
 const startingGold = 240;
@@ -33,7 +39,7 @@ try {
       const slotCount = Number(await sidebar.getAttribute('data-tower-slot-count'));
       assert(slotCount === slots.length, `Expected ${slots.length} slots, got ${slotCount}`);
 
-      await page.locator(`.tower-card--${defense.id}`).click();
+      await page.locator(`[data-tower-id="${defense.id}"]`).click();
 
       const slot = page.locator(`[data-slot-id="${slotId}"]`);
       await slot.waitFor({ state: 'visible' });
