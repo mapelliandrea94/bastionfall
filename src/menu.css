@@ -2808,3 +2808,29 @@ body { background:#1c3f61; }
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+/* HOTFIX H8 — definitive tower art integration */
+.tower-art-sprite {
+  width: 84px;
+  height: 84px;
+  background-repeat: no-repeat;
+  image-rendering: auto;
+  filter: drop-shadow(0 5px 5px rgba(0,0,0,.28));
+  transform: scale(.96);
+  transform-origin: 50% 75%;
+}
+
+.tower-visual--ghost .tower-art-sprite {
+  opacity: .48;
+  filter: saturate(.9) drop-shadow(0 4px 4px rgba(0,0,0,.2));
+}
+
+.tower-visual__shadow {
+  fill: rgba(0,0,0,.22);
+  pointer-events: none;
+}
+
+.battlefield-map__tower-slot--selected .tower-art-sprite {
+  filter: drop-shadow(0 0 8px rgba(255, 220, 120, .72)) drop-shadow(0 5px 5px rgba(0,0,0,.28));
+}
