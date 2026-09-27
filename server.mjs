@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { getLastBastionMatchmakingFixtures, getLastBastionQueueStatus, joinLastBastionQueue, leaveLastBastionQueue, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -157,6 +157,34 @@ app.post('/api/last-bastion/matchmaking/ready', requireUser, (req, res) => {
 
 app.get('/api/last-bastion/matchmaking/status', requireUser, (req, res) => {
   return res.json(attachLastBastionMatchToken(getLastBastionQueueStatus(req.user.id), req.user.id));
+});
+
+app.post('/api/last-bastion/match/heartbeat', requireUser, (req, res) => {
+  const matchToken = String(req.body?.matchToken || '');
+  const identity = verifyMatchIdentity(matchToken);
+  if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
+  if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
+  if (identity.mode !== 'last-bastion') return res.status(400).json({ error: 'match_mode_mismatch' });
+
+  const result = recordLastBastionHeartbeat(req.user.id, identity.matchId, {
+    wave: req.body?.wave,
+    coreHp: req.body?.coreHp
+  });
+
+  if (!result.ok) return res.status(404).json({ error: result.error || 'heartbeat_failed' });
+  return res.json(result);
+});
+
+app.get('/api/last-bastion/match/status', requireUser, (req, res) => {
+  const matchToken = String(req.query?.matchToken || '');
+  const identity = verifyMatchIdentity(matchToken);
+  if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
+  if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
+  if (identity.mode !== 'last-bastion') return res.status(400).json({ error: 'match_mode_mismatch' });
+
+  const result = getLastBastionMatchStatus(req.user.id, identity.matchId);
+  if (!result.ok) return res.status(404).json({ error: result.error || 'match_status_failed' });
+  return res.json(result);
 });
 
 app.get('/api/last-bastion/matchmaking/health', (_req, res) => {
