@@ -1962,3 +1962,34 @@ button { font: inherit; }
   font-size: 8px;
   line-height: 1.4;
 }
+
+
+/* BATCH 42 — targeting rules / targeting value */
+.defense-inspector__targeting {
+  padding-top: 9px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  align-items: baseline;
+}
+
+.defense-inspector__targeting span {
+  color: #8f8a7d;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .11em;
+}
+
+.defense-inspector__targeting strong {
+  color: #b9ccec;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.defense-inspector__targeting small {
+  grid-column: 1 / -1;
+  color: #7e8389;
+  font-size: 8px;
+  line-height: 1.4;
+}
