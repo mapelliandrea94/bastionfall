@@ -1571,3 +1571,26 @@ button { font: inherit; }
   color: #7f8fa2;
   letter-spacing: .03em;
 }
+
+
+/* BATCH 26 — preparation timer & controls */
+.run-prep-start {
+  width: 100%;
+  min-height: 50px;
+  margin-top: 12px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  border: 1px solid rgba(223, 180, 88, .46);
+  background: rgba(135, 93, 24, .18);
+  color: #f1d793;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.run-prep-start small {
+  font-size: 9px;
+  color: #96876b;
+  letter-spacing: .03em;
+}
