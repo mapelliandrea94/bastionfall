@@ -827,6 +827,7 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
   let persistedRecord = null;
   let savedProfile = null;
   let earnedShards = 0;
+  let canonicalRun = null;
 
   if (mode === 'single-gate' || mode === 'tri-gate') {
     const serverDb = clientForToken(req.accessToken, {
@@ -888,6 +889,11 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
       coreHp,
       coreMaxHp
     }).totalScore;
+
+    canonicalRun = Object.freeze({
+      elapsedMs: Math.floor(officialElapsedMs),
+      score: expectedScore
+    });
 
     const endedAt = new Date(checkpointReportedAtMs).toISOString();
 
@@ -1021,12 +1027,7 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     profile: savedProfile,
     earnedShards,
     record: persistedRecord,
-    canonical: mode === 'single-gate' || mode === 'tri-gate'
-      ? {
-          elapsedMs: persistedRecord?.best_survival_ms ?? null,
-          score: persistedRecord?.best_score ?? null
-        }
-      : null
+    canonical: canonicalRun
   });
 });
 
