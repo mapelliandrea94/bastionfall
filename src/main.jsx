@@ -55,8 +55,20 @@ const MODE_PRE_RUN = Object.freeze({
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
   ACTIVE: 'active',
+  RESOLVING: 'resolving',
   ENDED: 'ended'
 });
+
+const WAVE_PHASE_TRANSITIONS = Object.freeze({
+  [RUN_PHASES.PREPARATION]: Object.freeze([RUN_PHASES.ACTIVE, RUN_PHASES.ENDED]),
+  [RUN_PHASES.ACTIVE]: Object.freeze([RUN_PHASES.RESOLVING, RUN_PHASES.ENDED]),
+  [RUN_PHASES.RESOLVING]: Object.freeze([RUN_PHASES.PREPARATION, RUN_PHASES.ENDED]),
+  [RUN_PHASES.ENDED]: Object.freeze([])
+});
+
+function canTransitionWavePhase(from, to) {
+  return WAVE_PHASE_TRANSITIONS[from]?.includes(to) ?? false;
+}
 
 const RUN_DEFAULTS = Object.freeze({
   startingGold: 240,
@@ -209,7 +221,7 @@ function ModePreRun({ mode, onBack, onStart }) {
 }
 
 
-function SoloRun({ run, onExit, onDamageBastion }) {
+function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   const [testEnemy, setTestEnemy] = useState(null);
   const animationFrameRef = useRef(null);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
@@ -232,6 +244,7 @@ function SoloRun({ run, onExit, onDamageBastion }) {
       if (progress >= 1) {
         setTestEnemy(null);
         onDamageBastion(1);
+        onPhaseChange(RUN_PHASES.RESOLVING);
         return;
       }
 
@@ -243,7 +256,7 @@ function SoloRun({ run, onExit, onDamageBastion }) {
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [testEnemy?.id, run?.phase, onDamageBastion]);
+  }, [testEnemy?.id, run?.phase]);
 
   const enemyPosition = testEnemy
     ? getPathPosition(SINGLE_GATE_MAP.path.waypoints, testEnemy.progress)
@@ -363,17 +376,34 @@ function SoloRun({ run, onExit, onDamageBastion }) {
           <button disabled>FROST <span>90g</span></button>
 
           <div className="run-sidebar__status">
-            <span>PREPARATION</span>
-            <strong>{run?.phase === RUN_PHASES.PREPARATION ? 'Ready for Wave 1' : run?.phase || 'Run unavailable'}</strong>
+            <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
+            <strong>
+              {run?.phase === RUN_PHASES.PREPARATION && `Ready for Wave ${(run?.wave ?? 0) + 1}`}
+              {run?.phase === RUN_PHASES.ACTIVE && 'Wave in progress'}
+              {run?.phase === RUN_PHASES.RESOLVING && 'Resolving wave outcome'}
+              {run?.phase === RUN_PHASES.ENDED && 'Bastion fallen'}
+            </strong>
           </div>
 
           <button
             className="run-spawn-test"
-            onClick={() => setTestEnemy({ id: Date.now(), progress: 0 })}
-            disabled={!run || run.coreHp <= 0 || Boolean(testEnemy)}
+            onClick={() => {
+              onPhaseChange(RUN_PHASES.ACTIVE);
+              setTestEnemy({ id: Date.now(), progress: 0 });
+            }}
+            disabled={!run || run.coreHp <= 0 || Boolean(testEnemy) || run.phase !== RUN_PHASES.PREPARATION}
           >
-            SPAWN TEST ENEMY
-            <small>Follows the Single Gate path</small>
+            START TEST WAVE
+            <small>Preparation → Active</small>
+          </button>
+
+          <button
+            className="run-phase-test"
+            onClick={() => onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true })}
+            disabled={!run || run.phase !== RUN_PHASES.RESOLVING}
+          >
+            FINISH RESOLUTION
+            <small>Resolving → Preparation</small>
           </button>
 
           <button
@@ -386,8 +416,8 @@ function SoloRun({ run, onExit, onDamageBastion }) {
           </button>
 
           <button className="run-wave" disabled>
-            START WAVE 1
-            <small>Wave system comes next</small>
+            WAVE QUEUE LOCKED
+            <small>Spawn queue arrives in Batch 27</small>
           </button>
           </aside>
         </div>
@@ -644,6 +674,16 @@ function App() {
               bastionHitId: current.bastionHitId + 1,
               phase: nextHp === 0 ? RUN_PHASES.ENDED : current.phase,
               result: nextHp === 0 ? 'bastion-destroyed' : current.result
+            };
+          });
+        }}
+        onPhaseChange={(nextPhase, options = {}) => {
+          setRunState((current) => {
+            if (!current || !canTransitionWavePhase(current.phase, nextPhase)) return current;
+            return {
+              ...current,
+              phase: nextPhase,
+              wave: options.advanceWave ? current.wave + 1 : current.wave
             };
           });
         }}
