@@ -177,6 +177,35 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
     return res.status(400).json({ error: 'elapsed_time_exceeds_server_clock' });
   }
 
+  let persistedRecord = null;
+  if (mode === 'single-gate' || mode === 'tri-gate') {
+    const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
+    const { data: recordRows, error: recordError } = await req.db.rpc(
+      'persist_verified_standard_result',
+      {
+        p_server_secret: matchTokenSecret,
+        p_mode: mode,
+        p_result_reason: resultReason,
+        p_wave: wave,
+        p_elapsed_ms: Math.floor(elapsedMs),
+        p_score: Math.floor(score),
+        p_gold: gold,
+        p_core_hp: coreHp,
+        p_core_max_hp: coreMaxHp,
+        p_kills: kills,
+        p_started_at: identity.startedAt,
+        p_ended_at: endedAt
+      }
+    );
+
+    if (recordError) {
+      console.error('Standard record persistence failed:', recordError.message);
+      return res.status(500).json({ error: 'record_persist_failed' });
+    }
+
+    persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
+  }
+
   const { data: current, error: profileError } = await req.db
     .from('profiles')
     .select('*')
@@ -207,7 +236,8 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
     accepted: true,
     matchId: identity.matchId,
     profile: saved.data,
-    earnedShards: shards
+    earnedShards: shards,
+    record: persistedRecord
   });
 });
 
