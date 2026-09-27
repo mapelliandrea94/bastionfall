@@ -1116,7 +1116,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     setPlacedDefenses((current) => current.map((tower) => {
       if (tower.id !== selectedPlacedDefense.id) return tower;
-      return mergeTftCopyProgress(tower, copy).tower;
+      const merged = mergeTftCopyProgress(tower, copy).tower;
+      return {
+        ...merged,
+        investedGold: Number(tower.investedGold ?? 0) + Number(copy.cost ?? TFT_SHOP.copyCost)
+      };
     }));
     setTftBench((current) => removeCopyFromBench(current, benchIndex).bench);
     setSelectedTftBenchIndex(null);
@@ -1694,6 +1698,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                             const result = removeCopyFromBench(tftBench, index);
                             if (!result.ok) return;
                             setTftBench(result.bench);
+                            if (selectedTftBenchIndex === index) setSelectedTftBenchIndex(null);
                             onGainGold(TFT_BENCH.copySellRefund);
                             setTftFeedback('');
                           }}
