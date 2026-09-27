@@ -24,6 +24,7 @@ import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurv
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
+import { FACTION_COUNTER_ENGINE, getFactionCounterFixtures } from './game/combat/factionCounters.js';
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, getTriGateWaveScaling } from './game/balance/triGatePacing.js';
@@ -122,6 +123,7 @@ const TARGETING_VALIDATION_SNAPSHOT = Object.freeze(
 const ATTACK_FEEDBACK_FIXTURE = Object.freeze(getAttackFeedbackFixtures());
 
 const COUNTERPLAY_FIXTURE = Object.freeze(getCounterplayFixtures());
+const FACTION_COUNTER_FIXTURE = Object.freeze(getFactionCounterFixtures());
 
 const THREAT_MODEL_FIXTURE = Object.freeze(getThreatModelFixtures());
 
@@ -1064,6 +1066,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-attack-feedback-version={ATTACK_FEEDBACK.version}
             data-attack-feedback-pass={ATTACK_FEEDBACK_FIXTURE.travelMsExpected === ATTACK_FEEDBACK_FIXTURE.travelMsActual && ATTACK_FEEDBACK_FIXTURE.dpsExpected === ATTACK_FEEDBACK_FIXTURE.dpsActual}
             data-counterplay-version={COUNTERPLAY_MATRIX.version}
+            data-faction-counter-version={FACTION_COUNTER_ENGINE.version}
+            data-faction-counter-pass={FACTION_COUNTER_FIXTURE.humanVsInsectExpected === FACTION_COUNTER_FIXTURE.humanVsInsectActual && FACTION_COUNTER_FIXTURE.insectVsAlienExpected === FACTION_COUNTER_FIXTURE.insectVsAlienActual && FACTION_COUNTER_FIXTURE.alienVsHumanExpected === FACTION_COUNTER_FIXTURE.alienVsHumanActual && FACTION_COUNTER_FIXTURE.sameFactionExpected === FACTION_COUNTER_FIXTURE.sameFactionActual && FACTION_COUNTER_FIXTURE.neutralExpected === FACTION_COUNTER_FIXTURE.neutralActual && FACTION_COUNTER_FIXTURE.correctTypeExpected === FACTION_COUNTER_FIXTURE.correctTypeActual && FACTION_COUNTER_FIXTURE.wrongTypeExpected === FACTION_COUNTER_FIXTURE.wrongTypeActual && FACTION_COUNTER_FIXTURE.perfectExpected === FACTION_COUNTER_FIXTURE.perfectActual && FACTION_COUNTER_FIXTURE.fullyBadExpected === FACTION_COUNTER_FIXTURE.fullyBadActual}
             data-counterplay-pass={COUNTERPLAY_FIXTURE.physicalVsArmor.hpDamage === 60 && COUNTERPLAY_FIXTURE.piercingVsArmor.hpDamage === 86 && COUNTERPLAY_FIXTURE.arcaneVsShield.shieldDamage === 100 && COUNTERPLAY_FIXTURE.archerVsFlying === true && COUNTERPLAY_FIXTURE.cannonVsFlying === false && COUNTERPLAY_FIXTURE.barracksVsFlying === false}
             data-threat-model-version={WAVE_THREAT_MODEL.version}
             data-threat-model-pass={THREAT_MODEL_FIXTURE.wave1BudgetExpected === THREAT_MODEL_FIXTURE.wave1BudgetActual && THREAT_MODEL_FIXTURE.wave1OnlyNormal === true && THREAT_MODEL_FIXTURE.wave5HasTank === true && THREAT_MODEL_FIXTURE.wave11HasFlying === true && THREAT_MODEL_FIXTURE.wave11WithinBudget === true}
