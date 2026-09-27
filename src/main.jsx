@@ -425,6 +425,29 @@ async function lastBastionMatchmakingRequest(session, action, body = null) {
   return { ok: true, payload };
 }
 
+async function lastBastionMatchHeartbeat(session, run) {
+  if (!session?.access_token || !run?.matchToken || run?.mode !== MODES.LAST_BASTION) {
+    return { ok: false, error: 'heartbeat_not_ready' };
+  }
+
+  const response = await fetch('/api/last-bastion/match/heartbeat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({
+      matchToken: run.matchToken,
+      wave: run.wave ?? 0,
+      coreHp: run.coreHp ?? 0
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: payload?.error || 'heartbeat_failed' };
+  return { ok: true, payload };
+}
+
 async function fetchLeaderboardData(session, mode) {
   if (!session?.access_token) {
     return { ok: false, error: 'authentication_required' };
@@ -2551,6 +2574,47 @@ function App() {
       setScreen(SCREENS.RESULTS);
     }
   }, [screen, runState?.phase, runState?.endSnapshot, personalBestByMode]);
+
+  useEffect(() => {
+    if (
+      screen !== SCREENS.SINGLE_GATE_RUN ||
+      runState?.mode !== MODES.LAST_BASTION ||
+      !runState?.matchToken ||
+      runState?.phase === RUN_PHASES.ENDED
+    ) return undefined;
+
+    let cancelled = false;
+
+    const sendHeartbeat = async () => {
+      const result = await lastBastionMatchHeartbeat(session, runState);
+      if (cancelled || !result.ok || !result.payload?.match) return;
+
+      setRunState((current) => {
+        if (!current || current.matchId !== result.payload.match.id) return current;
+        return {
+          ...current,
+          lastBastionParticipants: result.payload.match.participants ?? current.lastBastionParticipants ?? []
+        };
+      });
+    };
+
+    sendHeartbeat();
+    const intervalId = window.setInterval(sendHeartbeat, 5000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    screen,
+    session,
+    runState?.mode,
+    runState?.matchId,
+    runState?.matchToken,
+    runState?.phase,
+    runState?.wave,
+    runState?.coreHp
+  ]);
 
   useEffect(() => {
     if (
