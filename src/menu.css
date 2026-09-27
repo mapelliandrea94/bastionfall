@@ -2409,8 +2409,14 @@ body { background:#1c3f61; }
 }
 
 .tower-visual--ghost {
-  opacity: .48;
+  opacity: 0;
   filter: saturate(.8);
+  transition: opacity .08s ease;
+}
+
+.battlefield-map__tower-slot:hover .tower-visual--ghost,
+.battlefield-map__tower-slot:focus-visible .tower-visual--ghost {
+  opacity: .48;
 }
 
 .tower-visual--archer .tower-visual__body { fill: #4d9f68; }
