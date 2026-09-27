@@ -1350,3 +1350,60 @@ button { font: inherit; }
     min-height: 140px;
   }
 }
+
+
+/* BATCH 21 — Single Gate battlefield rendering */
+.battlefield-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.battlefield-map__build-zone {
+  fill: rgba(72, 120, 82, .12);
+  stroke: rgba(126, 183, 136, .22);
+  stroke-width: 3;
+  stroke-dasharray: 14 10;
+}
+
+.battlefield-map__path {
+  fill: none;
+  stroke: rgba(142, 119, 79, .72);
+  stroke-width: 96;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.3));
+}
+
+.battlefield-map__spawn {
+  fill: rgba(91, 34, 29, .82);
+  stroke: rgba(207, 104, 87, .72);
+  stroke-width: 5;
+}
+
+.battlefield-map__bastion {
+  fill: rgba(101, 73, 22, .92);
+  stroke: rgba(232, 191, 98, .9);
+  stroke-width: 6;
+  filter: drop-shadow(0 10px 22px rgba(0,0,0,.34));
+}
+
+.battlefield-map__label {
+  fill: #f0c4bb;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 3px;
+}
+
+.battlefield-map__label--bastion {
+  fill: #f2dc9c;
+  font-size: 21px;
+}
+
+.battlefield > .run-hud,
+.battlefield > .run-sidebar {
+  z-index: 10;
+}
