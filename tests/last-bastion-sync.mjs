@@ -141,6 +141,72 @@ clearLastBastionMatchForUser(reconnectB);
 hydrateLastBastionActiveMatches([], []);
 hydrateLastBastionQueue([]);
 
+const finishedA = 'finished-restart-a';
+const finishedB = 'finished-restart-b';
+const finishedMatchId = 'finished-match-001';
+const finishedEndedAt = '2026-09-27T20:20:30.000Z';
+
+const hydratedFinished = hydrateLastBastionActiveMatches(
+  [{
+    id: finishedMatchId,
+    seed: 'last-bastion:finished-match-001',
+    status: 'finished',
+    created_at: '2026-09-27T20:20:00.000Z',
+    started_at: '2026-09-27T20:20:05.000Z',
+    wave_starts_at: '2026-09-27T20:20:05.000Z',
+    winner_user_id: finishedB,
+    ended_at: finishedEndedAt
+  }],
+  [
+    {
+      match_id: finishedMatchId,
+      user_id: finishedA,
+      slot: 1,
+      alive: false,
+      last_seen_at: finishedEndedAt,
+      wave: 14,
+      core_hp: 0,
+      placement: 2,
+      eliminated_at: finishedEndedAt
+    },
+    {
+      match_id: finishedMatchId,
+      user_id: finishedB,
+      slot: 2,
+      alive: true,
+      last_seen_at: finishedEndedAt,
+      wave: 14,
+      core_hp: 7,
+      placement: 1,
+      eliminated_at: null
+    }
+  ]
+);
+
+const finishedStatusA = getLastBastionMatchStatus(finishedA, finishedMatchId, Date.parse('2026-09-27T20:21:00.000Z'));
+const finishedStatusB = getLastBastionMatchStatus(finishedB, finishedMatchId, Date.parse('2026-09-27T20:21:00.000Z'));
+
+assert(hydratedFinished.hydratedMatches === 1, 'Finished restart hydration must restore the completed match');
+assert(hydratedFinished.hydratedParticipants === 2, 'Finished restart hydration must restore all final participants');
+assert(finishedStatusA.ok === true && finishedStatusA.match?.status === 'finished', 'Loser must recover final finished status after restart');
+assert(finishedStatusB.ok === true && finishedStatusB.match?.status === 'finished', 'Winner must recover final finished status after restart');
+assert(finishedStatusB.match?.selfWon === true && finishedStatusB.match?.selfPlacement === 1, 'Winner result must survive restart');
+assert(finishedStatusA.match?.selfWon === false && finishedStatusA.match?.selfPlacement === 2, 'Loser placement must survive restart');
+
+hydrateLastBastionQueue([{
+  ticketId: 'finished-player-new-ticket',
+  userId: finishedB,
+  joinedAt: '2026-09-27T20:22:00.000Z',
+  ready: false
+}]);
+const finishedPlayerQueue = getLastBastionQueueStatus(finishedB);
+assert(finishedPlayerQueue.queued === true && finishedPlayerQueue.matched === false, 'Recovered finished match must not block a new queue entry');
+
+clearLastBastionMatchForUser(finishedA);
+clearLastBastionMatchForUser(finishedB);
+hydrateLastBastionActiveMatches([], []);
+hydrateLastBastionQueue([]);
+
 const seed = 'last-bastion:sync-fixture';
 const playerA = generateWavePlan({ seed, waveNumber: 18, mode: 'last-bastion' });
 const playerB = generateWavePlan({ seed, waveNumber: 18, mode: 'last-bastion' });
