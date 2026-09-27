@@ -13,6 +13,7 @@ import { COMBAT_BALANCE_MODEL, COMBAT_BALANCE_SNAPSHOT } from './game/balance/co
 import { getPlacementValidationFixtures, validateSingleGatePlacement } from './game/placement/singleGatePlacement.js';
 import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
 import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
+import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -71,6 +72,14 @@ const PLACEMENT_VALIDATION_SNAPSHOT = Object.freeze(
     id: fixture.id,
     expected: fixture.expectValid,
     actual: validateSingleGatePlacement(fixture.point, fixture.placedStructures).valid
+  }))
+);
+
+const TARGETING_VALIDATION_SNAPSHOT = Object.freeze(
+  getTargetingFixtures().map((fixture) => ({
+    id: fixture.id,
+    expected: fixture.expectedTargetId,
+    actual: resolveTarget(fixture.defense, fixture.enemies)?.id ?? null
   }))
 );
 
@@ -279,6 +288,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? ARCHER_TOWER;
   const selectedSellPreview = getSellPreview(selectedDefense);
   const selectedUpgradePreview = getNextUpgradePreview(selectedDefense, 1);
+  const selectedTargetingValue = getTargetingValue(selectedDefense);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
@@ -505,6 +515,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-barracks-power={COMBAT_BALANCE_BY_ID.barracks?.powerIndex}
             data-placement-validations={PLACEMENT_VALIDATION_SNAPSHOT.length}
             data-placement-validation-pass={PLACEMENT_VALIDATION_SNAPSHOT.every((entry) => entry.expected === entry.actual)}
+            data-targeting-validations={TARGETING_VALIDATION_SNAPSHOT.length}
+            data-targeting-validation-pass={TARGETING_VALIDATION_SNAPSHOT.every((entry) => entry.expected === entry.actual)}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
@@ -568,6 +580,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
               <small>
                 {selectedUpgradePreview.efficiency.dpsPer100Gold} DPS/100g · max level {UPGRADE_CURVE.maxLevel}
               </small>
+            </div>
+            <div className="defense-inspector__targeting">
+              <span>TARGETING</span>
+              <strong>{selectedTargetingValue.rule}</strong>
+              <small>Targeting value ×{selectedTargetingValue.multiplier.toFixed(2)}</small>
             </div>
           </section>
 
