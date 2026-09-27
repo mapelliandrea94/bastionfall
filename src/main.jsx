@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from './lib/supabase.js';
 import { normalizeRunSeed } from './lib/runSeed.js';
+import { SINGLE_GATE_MAP } from './game/maps/singleGate.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -200,17 +201,56 @@ function SoloRun({ run, onExit }) {
             </div>
             <button className="run-exit" onClick={onExit}>EXIT RUN</button>
           </header>
-          <div className="battlefield__lane battlefield__lane--a" />
-          <div className="battlefield__lane battlefield__lane--b" />
-          <div className="battlefield__spawn">SPAWN</div>
-          <div className="battlefield__core">BASTION CORE</div>
-
-          <div className="build-slot build-slot--1">+</div>
-          <div className="build-slot build-slot--2">+</div>
-          <div className="build-slot build-slot--3">+</div>
-          <div className="build-slot build-slot--4">+</div>
-          <div className="build-slot build-slot--5">+</div>
-          <div className="build-slot build-slot--6">+</div>
+          <svg
+            className="battlefield-map"
+            viewBox={`0 0 ${SINGLE_GATE_MAP.size.width} ${SINGLE_GATE_MAP.size.height}`}
+            preserveAspectRatio="xMidYMid meet"
+            aria-label="Single Gate battlefield"
+          >
+            {SINGLE_GATE_MAP.buildZones.zones.map((zone) => (
+              <rect
+                key={zone.id}
+                className="battlefield-map__build-zone"
+                x={zone.x}
+                y={zone.y}
+                width={zone.width}
+                height={zone.height}
+                rx="20"
+              />
+            ))}
+            <polyline
+              className="battlefield-map__path"
+              points={SINGLE_GATE_MAP.path.waypoints.map((point) => `${point.x},${point.y}`).join(' ')}
+            />
+            <circle
+              className="battlefield-map__spawn"
+              cx={SINGLE_GATE_MAP.anchors.enemySpawn.x}
+              cy={SINGLE_GATE_MAP.anchors.enemySpawn.y}
+              r="42"
+            />
+            <circle
+              className="battlefield-map__bastion"
+              cx={SINGLE_GATE_MAP.anchors.bastion.x}
+              cy={SINGLE_GATE_MAP.anchors.bastion.y}
+              r="56"
+            />
+            <text
+              className="battlefield-map__label"
+              x={SINGLE_GATE_MAP.anchors.enemySpawn.x}
+              y={SINGLE_GATE_MAP.anchors.enemySpawn.y + 8}
+              textAnchor="middle"
+            >
+              SPAWN
+            </text>
+            <text
+              className="battlefield-map__label battlefield-map__label--bastion"
+              x={SINGLE_GATE_MAP.anchors.bastion.x}
+              y={SINGLE_GATE_MAP.anchors.bastion.y + 8}
+              textAnchor="middle"
+            >
+              BASTION
+            </text>
+          </svg>
 
           <aside className="run-sidebar">
           <p className="main-menu__kicker">DEFENSES</p>
