@@ -2720,3 +2720,34 @@ body { background:#1c3f61; }
     grid-template-columns: 1fr;
   }
 }
+
+
+/* BATCH 92 — Blessing rerolls */
+.blessing-choice__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: -.1rem 0 .65rem;
+}
+
+.blessing-reroll {
+  display: grid;
+  gap: .1rem;
+  padding: .5rem .7rem;
+  border: 1px solid rgba(230, 197, 111, .35);
+  background: rgba(115, 82, 31, .18);
+  color: #f2dda1;
+  font-weight: 900;
+  letter-spacing: .05em;
+  cursor: pointer;
+}
+
+.blessing-reroll small {
+  font-size: .62rem;
+  font-weight: 700;
+  color: #aeb8c5;
+}
+
+.blessing-reroll:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
