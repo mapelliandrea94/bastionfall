@@ -5,6 +5,7 @@ import { normalizeRunSeed } from './lib/runSeed.js';
 import { SINGLE_GATE_MAP } from './game/maps/singleGate.js';
 import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
+import { FROST_TOWER } from './game/towers/frost.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -475,7 +476,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             <span>{CANNON_TOWER.cost}g</span>
             <small>{CANNON_TOWER.damage} DMG · {CANNON_TOWER.splashRadius} SPLASH · {(1000 / CANNON_TOWER.attackIntervalMs).toFixed(1)}/s</small>
           </button>
-          <button disabled>FROST <span>90g</span></button>
+          <button className="tower-card tower-card--frost" disabled>
+            <strong>{FROST_TOWER.name}</strong>
+            <span>{FROST_TOWER.cost}g</span>
+            <small>{FROST_TOWER.damage} DMG · {FROST_TOWER.slowPercent}% SLOW · {(FROST_TOWER.slowDurationMs / 1000).toFixed(1)}s</small>
+          </button>
 
           <div className="run-sidebar__status">
             <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
