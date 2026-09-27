@@ -23,6 +23,9 @@ function App(){
   const [towers,setTowers]=useState([]),[enemies,setEnemies]=useState([]),[kind,setKind]=useState('ranger'),[selected,setSelected]=useState(null);
   const [running,setRunning]=useState(false),[paused,setPaused]=useState(false),[speed,setSpeed]=useState(1),[panel,setPanel]=useState('build');
   const [notice,setNotice]=useState('Raise your defenses before the first assault.');
+  const [authOpen,setAuthOpen]=useState(false),[authMode,setAuthMode]=useState('login');
+  const [authEmail,setAuthEmail]=useState(''),[authPassword,setAuthPassword]=useState(''),[authName,setAuthName]=useState('');
+  const [authBusy,setAuthBusy]=useState(false),[authError,setAuthError]=useState('');
   const ids=useRef(1),spawn=useRef([]),cooldown=useRef({});
   const selectedTower=towers.find(t=>t.id===selected)||null;
   const fortLevel=profile?.fortress_level||1,maxHp=20+(fortLevel-1)*2;
@@ -39,8 +42,30 @@ function App(){
     return j;
   }
   async function loadProfile(){try{setProfile((await authed('/api/profile')).profile)}catch{setNotice('Profile sync failed.')}}
-  async function login(){if(!supabase){setNotice('Supabase is not configured yet.');return}const {error}=await supabase.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});if(error)setNotice(error.message)}
-  async function logout(){await supabase?.auth.signOut()}
+  function openAuth(mode='login'){setAuthMode(mode);setAuthError('');setAuthOpen(true)}
+  async function submitAuth(e){
+    e.preventDefault();
+    if(!supabase)return;
+    setAuthBusy(true);setAuthError('');
+    try{
+      if(authMode==='register'){
+        const {data,error}=await supabase.functions.invoke('register-player',{body:{email:authEmail,password:authPassword,displayName:authName}});
+        if(error||data?.error)throw new Error(data?.error||error?.message||'signup_failed');
+        const signed=await supabase.auth.signInWithPassword({email:authEmail,password:authPassword});
+        if(signed.error)throw signed.error;
+        setNotice('Account created. Welcome to Bastionfall.');
+      }else{
+        const signed=await supabase.auth.signInWithPassword({email:authEmail,password:authPassword});
+        if(signed.error)throw signed.error;
+        setNotice('Welcome back, Defender.');
+      }
+      setAuthOpen(false);setAuthPassword('');
+    }catch(err){
+      const code=String(err?.message||'auth_failed');
+      setAuthError(code==='email_in_use'?'This email is already registered.':code==='password_length'?'Password must be 8–72 characters.':code==='invalid_email'?'Enter a valid email address.':code);
+    }finally{setAuthBusy(false)}
+  }
+  async function logout(){await supabase?.auth.signOut();setNotice('Signed out.')}
   async function finishRun(){if(!session)return;try{const j=await authed('/api/run/complete',{method:'POST',body:JSON.stringify({wave,kills})});setProfile(j.profile);setNotice('Run saved. +'+j.earnedShards+' shards.')}catch{setNotice('Run ended, but online save failed.')}}
   async function fortUpgrade(){try{const j=await authed('/api/fortress/upgrade',{method:'POST',body:'{}'});setProfile(j.profile);setHp(v=>Math.min(v+2,20+(j.profile.fortress_level-1)*2));setNotice('Fortress upgraded permanently.')}catch(e){setNotice(e.payload?.error==='not_enough_shards'?'Not enough shards.':'Upgrade failed.')}}
 
@@ -61,7 +86,7 @@ function App(){
     <header className="topbar">
       <div className="brand"><div className="crest"><Castle/></div><div><b>BASTIONFALL</b><span>Kingdom Defense Online</span></div></div>
       <div className="stats"><div><Coins/><b>{gold}</b><span>Gold</span></div><div><Heart/><b>{hp}/{maxHp}</b><span>Keep</span></div><div><Swords/><b>{wave}</b><span>Wave</span></div></div>
-      <div className="account">{session?<><button className="accountButton" onClick={()=>setPanel('legacy')}><Shield/><span><b>{profile?.display_name||session.user.email?.split('@')[0]}</b><small>Online defender</small></span></button><button className="iconButton" onClick={logout}><LogOut/></button></>:<button className="login" onClick={login}><LogIn/>Sign in / Create account</button>}</div>
+      <div className="account">{session?<><button className="accountButton" onClick={()=>setPanel('legacy')}><Shield/><span><b>{profile?.display_name||session.user.email?.split('@')[0]}</b><small>Online defender</small></span></button><button className="iconButton" onClick={logout}><LogOut/></button></>:<button className="login" onClick={()=>openAuth('login')}><LogIn/>Sign in / Create account</button>}</div>
     </header>
     <main className="layout">
       <section className="battle">
@@ -72,9 +97,23 @@ function App(){
       </section>
       <aside className="side">
         <nav><button className={panel==='build'?'active':''} onClick={()=>setPanel('build')}><Hammer/>Build</button><button className={panel==='legacy'?'active':''} onClick={()=>setPanel('legacy')}><Sparkles/>Legacy</button></nav>
-        {panel==='build'?<div className="panel"><div className="panelTitle"><b>DEFENSE ARSENAL</b><span>Choose a tower, then a grass tile.</span></div><div className="towerList">{Object.entries(SPECS).map(([k,s])=><button key={k} className={kind===k?'selected':''} onClick={()=>{setKind(k);setSelected(null)}}><span className={'towerBadge '+k}>{k==='ranger'?'R':k==='cannon'?'C':'F'}</span><span><b>{s.name}</b><small>{s.desc}</small></span><strong>{s.cost}g</strong></button>)}</div>{selectedTower&&<div className="inspect"><span className="eyebrow">SELECTED DEFENSE</span><h3>{SPECS[selectedTower.kind].name}<small>Lv {selectedTower.level}</small></h3><div className="inspectStats"><span>Damage<b>{Math.round(SPECS[selectedTower.kind].damage*(1+(selectedTower.level-1)*.48))}</b></span><span>Range<b>{SPECS[selectedTower.kind].range}</b></span></div><div className="actions"><button className="upgrade" onClick={upgrade}><ChevronUp/>Upgrade</button><button onClick={sell}><Trash2/>Sell</button></div></div>}</div>:<div className="panel legacy"><div className="panelTitle"><b>ACCOUNT LEGACY</b><span>Permanent progress across every defense.</span></div>{session?<><div className="legacyGrid"><div><span>Fortress</span><b>Lv {profile?.fortress_level||1}</b></div><div><span>Best Wave</span><b>{profile?.best_wave||0}</b></div><div><span>Shards</span><b>{profile?.shards||0}</b></div><div><span>Runs</span><b>{profile?.runs||0}</b></div></div><button className="fortUpgrade" onClick={fortUpgrade}><Shield/><span><b>Strengthen the Keep</b><small>+2 permanent max HP</small></span><strong>{(profile?.fortress_level||1)*40} shards</strong></button></>:<div className="offlineCard"><Shield/><h3>Your kingdom needs an account</h3><p>Sign in to keep shards, fortress upgrades and records across devices.</p><button className="login" onClick={login}><LogIn/>Create account</button></div>}</div>}
+        {panel==='build'?<div className="panel"><div className="panelTitle"><b>DEFENSE ARSENAL</b><span>Choose a tower, then a grass tile.</span></div><div className="towerList">{Object.entries(SPECS).map(([k,s])=><button key={k} className={kind===k?'selected':''} onClick={()=>{setKind(k);setSelected(null)}}><span className={'towerBadge '+k}>{k==='ranger'?'R':k==='cannon'?'C':'F'}</span><span><b>{s.name}</b><small>{s.desc}</small></span><strong>{s.cost}g</strong></button>)}</div>{selectedTower&&<div className="inspect"><span className="eyebrow">SELECTED DEFENSE</span><h3>{SPECS[selectedTower.kind].name}<small>Lv {selectedTower.level}</small></h3><div className="inspectStats"><span>Damage<b>{Math.round(SPECS[selectedTower.kind].damage*(1+(selectedTower.level-1)*.48))}</b></span><span>Range<b>{SPECS[selectedTower.kind].range}</b></span></div><div className="actions"><button className="upgrade" onClick={upgrade}><ChevronUp/>Upgrade</button><button onClick={sell}><Trash2/>Sell</button></div></div>}</div>:<div className="panel legacy"><div className="panelTitle"><b>ACCOUNT LEGACY</b><span>Permanent progress across every defense.</span></div>{session?<><div className="legacyGrid"><div><span>Fortress</span><b>Lv {profile?.fortress_level||1}</b></div><div><span>Best Wave</span><b>{profile?.best_wave||0}</b></div><div><span>Shards</span><b>{profile?.shards||0}</b></div><div><span>Runs</span><b>{profile?.runs||0}</b></div></div><button className="fortUpgrade" onClick={fortUpgrade}><Shield/><span><b>Strengthen the Keep</b><small>+2 permanent max HP</small></span><strong>{(profile?.fortress_level||1)*40} shards</strong></button></>:<div className="offlineCard"><Shield/><h3>Your kingdom needs an account</h3><p>Sign in to keep shards, fortress upgrades and records across devices.</p><button className="login" onClick={()=>openAuth('register')}><LogIn/>Create account</button></div>}</div>}
       </aside>
     </main>
+    {authOpen&&<div className="authBackdrop" onMouseDown={()=>!authBusy&&setAuthOpen(false)}>
+      <form className="authModal" onSubmit={submitAuth} onMouseDown={e=>e.stopPropagation()}>
+        <div className="authMark"><Shield/></div>
+        <span className="eyebrow">BASTIONFALL ACCOUNT</span>
+        <h2>{authMode==='register'?'Create your Defender':'Return to the Keep'}</h2>
+        <p>{authMode==='register'?'No email confirmation. Your account is ready immediately.':'Sign in with the same account on any device.'}</p>
+        {authMode==='register'&&<label>Defender name<input value={authName} onChange={e=>setAuthName(e.target.value)} maxLength="40" required placeholder="Joker"/></label>}
+        <label>Email<input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} required autoComplete="email" placeholder="you@example.com"/></label>
+        <label>Password<input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)} minLength="8" maxLength="72" required autoComplete={authMode==='register'?'new-password':'current-password'} placeholder="8+ characters"/></label>
+        {authError&&<div className="authError">{authError}</div>}
+        <button className="authSubmit" type="submit" disabled={authBusy}>{authBusy?'Connecting...':authMode==='register'?'Create account':'Sign in'}</button>
+        <button className="authSwitch" type="button" onClick={()=>{setAuthMode(v=>v==='login'?'register':'login');setAuthError('')}}>{authMode==='login'?'New here? Create an account':'Already have an account? Sign in'}</button>
+      </form>
+    </div>}
   </div>
 }
 createRoot(document.getElementById('root')).render(<App/>);
