@@ -45,7 +45,8 @@ import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } 
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, getTriGateWaveScaling } from './game/balance/triGatePacing.js';
 import { getLateGameSoakPass, getLateGameSoakQa } from './game/balance/lateGameSoakQa.js';
-import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/balance/performanceTelemetryQa.js';\nimport { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balance/endToEndRegressionQa.js';
+import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/balance/performanceTelemetryQa.js';
+import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balance/endToEndRegressionQa.js';
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
