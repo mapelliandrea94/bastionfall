@@ -376,6 +376,38 @@ async function startServerMatch(session, mode) {
   return { ok: true, match: payload.match };
 }
 
+async function reportStandardRunProgress(session, run) {
+  if (
+    !session?.access_token ||
+    !run?.matchToken ||
+    !run?.matchId ||
+    ![MODES.SINGLE_GATE, MODES.TRI_GATE].includes(run.mode)
+  ) {
+    return { ok: false, error: 'progress_not_ready' };
+  }
+
+  const response = await fetch('/api/run/progress', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({
+      matchToken: run.matchToken,
+      mode: run.mode,
+      wave: run.wave ?? 0,
+      coreHp: run.coreHp ?? 0,
+      coreMaxHp: run.coreMaxHp ?? 20,
+      kills: run.kills ?? 0,
+      gold: run.gold ?? 0
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: payload?.error || 'progress_failed' };
+  return { ok: true, payload };
+}
+
 async function completeServerRun(session, run) {
   if (!session?.access_token || !run?.matchToken || !run?.endSnapshot) {
     return { ok: false, error: 'completion_not_ready' };
@@ -3092,6 +3124,7 @@ function App() {
   const [completedMatchId, setCompletedMatchId] = useState(null);
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
+  const lastStandardProgressRef = useRef(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -3108,6 +3141,25 @@ function App() {
   async function logout() {
     await supabase?.auth.signOut();
   }
+
+  useEffect(() => {
+    if (
+      screen !== SCREENS.SINGLE_GATE_RUN ||
+      ![MODES.SINGLE_GATE, MODES.TRI_GATE].includes(runState?.mode) ||
+      !runState?.matchId ||
+      !runState?.matchToken
+    ) return;
+
+    const checkpointKey = `${runState.matchId}:${runState.wave}`;
+    if (lastStandardProgressRef.current === checkpointKey) return;
+    lastStandardProgressRef.current = checkpointKey;
+
+    reportStandardRunProgress(session, runState).then((result) => {
+      if (!result.ok) {
+        console.warn('Standard run progress checkpoint failed:', result.error);
+      }
+    });
+  }, [screen, session, runState?.mode, runState?.matchId, runState?.matchToken, runState?.wave]);
 
   useEffect(() => {
     if (
