@@ -22,6 +22,7 @@ import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/c
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
+import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { ENEMY_BASE_MODEL, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
@@ -104,6 +105,8 @@ const COUNTERPLAY_FIXTURE = Object.freeze(getCounterplayFixtures());
 
 const THREAT_MODEL_FIXTURE = Object.freeze(getThreatModelFixtures());
 
+const DIFFICULTY_BAND_FIXTURE = Object.freeze(getDifficultyBandFixtures());
+
 const ENEMY_BASE_FIXTURE = Object.freeze(getEnemyBaseFixtures());
 
 const NORMAL_ENEMY_BUDGET = Object.freeze(getNormalEnemyBudget());
@@ -174,17 +177,7 @@ function canTransitionWavePhase(from, to) {
 }
 
 function getWaveScaling(completedWaves) {
-  const waveNumber = Math.max(1, completedWaves + 1);
-  const travelDurationMs = Math.max(3000, 7000 - (waveNumber - 1) * 140);
-  const spawnIntervalMs = Math.max(350, 900 - (waveNumber - 1) * 20);
-  const bastionDamage = 1 + Math.floor((waveNumber - 1) / 10);
-
-  return {
-    waveNumber,
-    travelDurationMs,
-    spawnIntervalMs,
-    bastionDamage
-  };
+  return getBandWaveScaling(Math.max(1, completedWaves + 1));
 }
 
 const RUN_DEFAULTS = Object.freeze({
@@ -658,6 +651,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-counterplay-pass={COUNTERPLAY_FIXTURE.physicalVsArmor.hpDamage === 60 && COUNTERPLAY_FIXTURE.piercingVsArmor.hpDamage === 86 && COUNTERPLAY_FIXTURE.arcaneVsShield.shieldDamage === 100 && COUNTERPLAY_FIXTURE.archerVsFlying === true && COUNTERPLAY_FIXTURE.cannonVsFlying === false && COUNTERPLAY_FIXTURE.barracksVsFlying === false}
             data-threat-model-version={WAVE_THREAT_MODEL.version}
             data-threat-model-pass={THREAT_MODEL_FIXTURE.wave1BudgetExpected === THREAT_MODEL_FIXTURE.wave1BudgetActual && THREAT_MODEL_FIXTURE.wave1OnlyNormal === true && THREAT_MODEL_FIXTURE.wave5HasTank === true && THREAT_MODEL_FIXTURE.wave11HasFlying === true && THREAT_MODEL_FIXTURE.wave11WithinBudget === true}
+            data-difficulty-bands={DIFFICULTY_BANDS.length}
+            data-difficulty-band={waveScaling.bandId}
+            data-difficulty-pass={DIFFICULTY_BAND_FIXTURE.wave1BandExpected === DIFFICULTY_BAND_FIXTURE.wave1BandActual && DIFFICULTY_BAND_FIXTURE.wave6BandExpected === DIFFICULTY_BAND_FIXTURE.wave6BandActual && DIFFICULTY_BAND_FIXTURE.wave13BandExpected === DIFFICULTY_BAND_FIXTURE.wave13BandActual && DIFFICULTY_BAND_FIXTURE.wave21BandExpected === DIFFICULTY_BAND_FIXTURE.wave21BandActual && DIFFICULTY_BAND_FIXTURE.monotonicTravel === true && DIFFICULTY_BAND_FIXTURE.monotonicSpawn === true}
             data-wave-threat-budget={threatWave.budget}
             data-wave-threat-spent={threatWave.spentThreat}
             data-wave-threat-unused={threatWave.unusedThreat}
