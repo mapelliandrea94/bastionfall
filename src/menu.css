@@ -3046,3 +3046,16 @@ body { background:#1c3f61; }
   fill: rgba(91,79,59,.94);
   stroke: rgba(216,190,123,.92);
 }
+
+
+.last-bastion-lobby-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.last-bastion-lobby-actions .mode-screen__back {
+  position: static;
+}
