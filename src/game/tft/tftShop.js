@@ -7,6 +7,10 @@ export const TFT_SHOP = Object.freeze({
   rerollCost: 3,
   startingGold: 10,
   waveClearGold: 5,
+  perfectWaveBonus: 1,
+  bossWaveBonus: 3,
+  milestoneWaveBonus: 2,
+  milestoneInterval: 5,
   composition: Object.freeze({
     [TOWER_FACTIONS.HUMAN]: 2,
     [TOWER_FACTIONS.INSECT]: 2,
@@ -74,6 +78,14 @@ export function getTftShopFixtures() {
     startingGoldActual: TFT_SHOP.startingGold,
     waveClearGoldExpected: 5,
     waveClearGoldActual: TFT_SHOP.waveClearGold,
+    perfectWaveBonusExpected: 1,
+    perfectWaveBonusActual: TFT_SHOP.perfectWaveBonus,
+    bossWaveBonusExpected: 3,
+    bossWaveBonusActual: TFT_SHOP.bossWaveBonus,
+    milestoneWaveBonusExpected: 2,
+    milestoneWaveBonusActual: TFT_SHOP.milestoneWaveBonus,
+    milestoneIntervalExpected: 5,
+    milestoneIntervalActual: TFT_SHOP.milestoneInterval,
     deterministic: JSON.stringify(offers) === JSON.stringify(createTftShopOffers('fixture', 0)),
     rerollChangesSeededOffer: JSON.stringify(offers) !== JSON.stringify(rerolled)
   });
