@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { eliminateLastBastionParticipant, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -184,6 +184,21 @@ app.get('/api/last-bastion/match/status', requireUser, (req, res) => {
 
   const result = getLastBastionMatchStatus(req.user.id, identity.matchId);
   if (!result.ok) return res.status(404).json({ error: result.error || 'match_status_failed' });
+  return res.json(result);
+});
+
+app.post('/api/last-bastion/match/eliminate', requireUser, (req, res) => {
+  const matchToken = String(req.body?.matchToken || '');
+  const identity = verifyMatchIdentity(matchToken);
+  if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
+  if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
+  if (identity.mode !== 'last-bastion') return res.status(400).json({ error: 'match_mode_mismatch' });
+
+  const result = eliminateLastBastionParticipant(req.user.id, identity.matchId, {
+    wave: req.body?.wave
+  });
+
+  if (!result.ok) return res.status(404).json({ error: result.error || 'elimination_failed' });
   return res.json(result);
 });
 
