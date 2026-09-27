@@ -187,11 +187,11 @@ function Profile({ onBack }) {
       onBack={onBack}
       kicker="DEFENDER RECORD"
       title="PROFILE"
-      subtitle="Account progress is prestige only. Power resets every run."
+      subtitle="Account progress tracks records, achievements and prestige. Every run starts equal."
     >
       <div className="profile-grid">
-        <div className="stat-card"><span>ACCOUNT LEVEL</span><strong>1</strong><small>Prestige only</small></div>
-        <div className="stat-card"><span>BEST SOLO WAVE</span><strong>—</strong><small>No run recorded</small></div>
+        <div className="stat-card"><span>DEFENDER PRESTIGE</span><strong>1</strong><small>Cosmetic/status progression only</small></div>
+        <div className="stat-card"><span>BEST SURVIVAL WAVE</span><strong>—</strong><small>No verified run recorded</small></div>
         <div className="stat-card"><span>TOTAL RUNS</span><strong>0</strong><small>Across all modes</small></div>
         <div className="stat-card"><span>PLAYTIME</span><strong>0h</strong><small>Recorded online</small></div>
       </div>
