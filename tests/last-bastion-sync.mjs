@@ -22,6 +22,8 @@ assert(fixture.heartbeatAccepted, 'Last Bastion heartbeat must be accepted');
 assert(fixture.heartbeatUpdatesProgress, 'Heartbeat must update participant wave/core HP');
 assert(fixture.heartbeatMarksConnected, 'Fresh heartbeat must mark participant connected');
 assert(fixture.timeoutMarksDisconnectedWithoutElimination, 'Heartbeat timeout must mark disconnected without eliminating the participant');
+assert(fixture.eliminationMarksDead, 'Eliminated participant must be marked dead');
+assert(fixture.lastAliveWins, 'Last alive participant must resolve as winner');
 
 const seed = 'last-bastion:sync-fixture';
 const playerA = generateWavePlan({ seed, waveNumber: 18, mode: 'last-bastion' });
