@@ -2099,3 +2099,52 @@ button { font: inherit; }
   transform-box: fill-box;
   transform-origin: center;
 }
+
+
+/* BATCH 51 — enemy readability / status indicators */
+.enemy-status {
+  pointer-events: none;
+}
+
+.enemy-status__name {
+  fill: rgba(228, 232, 238, .86);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.enemy-status__hp-bg,
+.enemy-status__shield-bg {
+  fill: rgba(8, 10, 12, .78);
+  stroke: rgba(255, 255, 255, .08);
+  stroke-width: 1;
+}
+
+.enemy-status__hp-fill {
+  fill: rgba(186, 64, 64, .95);
+}
+
+.enemy-status__shield-fill {
+  fill: rgba(91, 160, 230, .95);
+}
+
+.enemy-status__badge {
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, .75);
+  stroke-width: 2px;
+}
+
+.enemy-status__badge--armor {
+  fill: rgba(209, 197, 170, .96);
+}
+
+.enemy-status__badge--air {
+  fill: rgba(157, 210, 244, .96);
+}
+
+.enemy-status__badge--slow {
+  fill: rgba(151, 226, 255, .96);
+}
