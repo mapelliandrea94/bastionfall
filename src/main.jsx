@@ -47,7 +47,7 @@ import { ARMORED_ENEMY, createArmoredEnemyState, getArmoredEnemyBudget } from '.
 import { SHIELDED_ENEMY, createShieldedEnemyState, getShieldedEnemyBudget } from './game/enemies/shielded.js';
 import { FLYING_ENEMY, createFlyingEnemyState, getFlyingEnemyBudget } from './game/enemies/flying.js';
 import { ELITE_MODIFIER_SYSTEM, applyEliteModifiers, attachEliteModifierFoundation, getEliteModifierFoundationFixtures } from './game/elites/eliteModifiers.js';
-import { WORLD_MODIFIER_SYSTEM, getActiveWorldModifiers, getWorldModifierFoundationFixtures } from './game/world/worldModifiers.js';
+import { WORLD_MODIFIER_SYSTEM, getActiveWorldModifiers, getWorldModifierEffects, getWorldModifierFoundationFixtures } from './game/world/worldModifiers.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -630,9 +630,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const blessingCanReroll = canRerollBlessings(run?.gold ?? 0, blessingRerollCount);
   const blessingChoiceVisible = run?.phase === RUN_PHASES.RESOLVING && isBossWave(waveScaling.waveNumber);
   const activeWorldModifiers = getActiveWorldModifiers(run?.seed ?? 'run', waveScaling.waveNumber);
+  const worldModifierEffects = getWorldModifierEffects(activeWorldModifiers);
   const threatWave = composeWaveByThreatBudget(
     waveScaling.waveNumber,
-    run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1
+    (run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1) * worldModifierEffects.threatMultiplier
   );
   const runScore = calculateRunScore(run ?? {});
   const defenseDefinitions = Object.freeze({
@@ -752,7 +753,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         setActiveEnemies((active) => [...active, applyEliteModifiers(baseEnemyState)]);
         return remaining;
       });
-    }, activeEnemies.length === 0 ? 150 : waveScaling.spawnIntervalMs);
+    }, activeEnemies.length === 0 ? 150 : waveScaling.spawnIntervalMs * worldModifierEffects.spawnIntervalMultiplier);
 
     return () => window.clearTimeout(timeoutId);
   }, [run?.phase, spawnQueue.length, activeEnemies.length]);
@@ -768,7 +769,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       setActiveEnemies((current) => current
         .map((enemy) => ({
           ...enemy,
-          progress: Math.min(1, ((now - enemy.spawnedAt) / durationMs) * (enemy.moveSpeed || 1) * blessingModifiers.enemyMoveSpeedMultiplier)
+          progress: Math.min(1, ((now - enemy.spawnedAt) / durationMs) * (enemy.moveSpeed || 1) * blessingModifiers.enemyMoveSpeedMultiplier * worldModifierEffects.enemyMoveSpeedMultiplier)
         }))
         .filter((enemy) => {
           if (enemy.progress >= 1) {
@@ -1154,7 +1155,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-elite-modifier-version={ELITE_MODIFIER_SYSTEM.version}
             data-world-modifier-version={WORLD_MODIFIER_SYSTEM.version}
             data-world-modifier-count={activeWorldModifiers.length}
-            data-world-modifier-pass={WORLD_MODIFIER_FIXTURE.inactiveBeforeMinWave === true && WORLD_MODIFIER_FIXTURE.activeAtMinWave === true && WORLD_MODIFIER_FIXTURE.inactiveBetweenCadence === true && WORLD_MODIFIER_FIXTURE.activeAtNextCadence === true && WORLD_MODIFIER_FIXTURE.maxActiveRespected === true && WORLD_MODIFIER_FIXTURE.deterministicSelection === true && WORLD_MODIFIER_FIXTURE.definitionsHaveNoLiveEffectsYet === true}
+            data-world-modifier-pass={WORLD_MODIFIER_FIXTURE.inactiveBeforeMinWave === true && WORLD_MODIFIER_FIXTURE.activeAtMinWave === true && WORLD_MODIFIER_FIXTURE.inactiveBetweenCadence === true && WORLD_MODIFIER_FIXTURE.activeAtNextCadence === true && WORLD_MODIFIER_FIXTURE.maxActiveRespected === true && WORLD_MODIFIER_FIXTURE.deterministicSelection === true && WORLD_MODIFIER_FIXTURE.definitionsHaveLiveEffects === true && WORLD_MODIFIER_FIXTURE.pressureRaisesThreat === true && WORLD_MODIFIER_FIXTURE.scarcityCutsGold === true && WORLD_MODIFIER_FIXTURE.unstableGroundAcceleratesPressure === true}
             data-elite-modifier-pass={ELITE_MODIFIER_FIXTURE.belowMinWaveNeverElite === true && ELITE_MODIFIER_FIXTURE.bossNeverElite === true && ELITE_MODIFIER_FIXTURE.normalEligible === true && ELITE_MODIFIER_FIXTURE.baseChanceExpected === ELITE_MODIFIER_FIXTURE.baseChanceActual && ELITE_MODIFIER_FIXTURE.chanceScales === true && ELITE_MODIFIER_FIXTURE.chanceCapped === true && ELITE_MODIFIER_FIXTURE.deterministicAssignment === true && ELITE_MODIFIER_FIXTURE.concreteModifierAssigned === true && ELITE_MODIFIER_FIXTURE.modifierSetCountExpected === ELITE_MODIFIER_FIXTURE.modifierSetCountActual && ELITE_MODIFIER_FIXTURE.brutalIncreasesHp === true && ELITE_MODIFIER_FIXTURE.swiftIncreasesSpeed === true && ELITE_MODIFIER_FIXTURE.fortifiedAddsArmor === true}
             data-blessing-power-budget-pass={BLESSING_EXPLOIT_FIXTURE.definitionsStayWithinDeclaredStacks === true && BLESSING_EXPLOIT_FIXTURE.damageCapRespected === true && BLESSING_EXPLOIT_FIXTURE.economyMultiplierCapRespected === true && BLESSING_EXPLOIT_FIXTURE.economyBonusCapRespected === true && BLESSING_EXPLOIT_FIXTURE.defenseFloorRespected === true && BLESSING_EXPLOIT_FIXTURE.maxHpCapRespected === true && BLESSING_EXPLOIT_FIXTURE.controlSlowCapRespected === true && BLESSING_EXPLOIT_FIXTURE.enemySpeedFloorRespected === true && BLESSING_EXPLOIT_FIXTURE.rerollSpendToCapExpected === BLESSING_EXPLOIT_FIXTURE.rerollSpendToCapActual && BLESSING_EXPLOIT_FIXTURE.rerollCannotBeFree === true && BLESSING_EXPLOIT_FIXTURE.economyDoesNotExplode === true}
             data-blessing-reroll-pass={BLESSING_REROLL_FIXTURE.baseCostExpected === BLESSING_REROLL_FIXTURE.baseCostActual && BLESSING_REROLL_FIXTURE.secondCostExpected === BLESSING_REROLL_FIXTURE.secondCostActual && BLESSING_REROLL_FIXTURE.affordableAtExactCost === true && BLESSING_REROLL_FIXTURE.blockedBelowCost === true && BLESSING_REROLL_FIXTURE.blockedAtCap === true && BLESSING_REROLL_FIXTURE.firstRerollChangesOffer === true && BLESSING_REROLL_FIXTURE.rerollsAdvanceDeterministically === true}
@@ -1272,7 +1273,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             <div className="world-modifier" aria-label="World modifier">
               <span>WORLD MODIFIER</span>
               <strong>{activeWorldModifiers[0].name}</strong>
-              <small>{activeWorldModifiers[0].description}</small>
+              <small>{activeWorldModifiers[0].description} · Threat ×{worldModifierEffects.threatMultiplier.toFixed(2)} · Gold ×{worldModifierEffects.waveGoldMultiplier.toFixed(2)} · Speed ×{worldModifierEffects.enemyMoveSpeedMultiplier.toFixed(2)}</small>
             </div>
           )}
 
@@ -1917,8 +1918,10 @@ function App() {
             const nextBlessings = options.blessingId
               ? addBlessingToLoadout(current.blessings ?? [], options.blessingId)
               : current.blessings ?? [];
+            const activeModifiersForClear = getActiveWorldModifiers(current.seed ?? 'run', completedWaveNumber);
+            const worldEffectsForClear = getWorldModifierEffects(activeModifiersForClear);
             const waveClearGold = advancingWave
-              ? applyBlessingWaveGold(baseWaveClearGold, nextBlessings)
+              ? Math.max(0, Math.round(applyBlessingWaveGold(baseWaveClearGold, nextBlessings) * worldEffectsForClear.waveGoldMultiplier))
               : 0;
             const nextMaxHp = getBlessingAdjustedMaxHp(RUN_DEFAULTS.coreHp, nextBlessings);
             const maxHpGain = Math.max(0, nextMaxHp - current.coreMaxHp);
