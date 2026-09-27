@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: production-gate-main
   cancel-in-progress: true
@@ -15,11 +18,13 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - name: Install dependencies
-        run: npm install
+        run: npm ci
       - name: Production build
         run: npm run build
       - name: End-to-End 24x24 Regression QA
@@ -47,3 +52,6 @@ jobs:
           done
           cat /tmp/bastionfall-production.log
           exit 1
+      - name: Promote verified commit to Railway production branch
+        run: |
+          git push origin HEAD:refs/heads/railway-production --force
