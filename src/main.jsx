@@ -6,7 +6,7 @@ import './menu.css';
 const SCREENS = Object.freeze({
   MENU: 'menu',
   PLAY: 'play',
-  SINGLE_GATE_PREP: 'single-gate-prep',
+  MODE_PREP: 'mode-prep',
   SINGLE_GATE_RUN: 'single-gate-run',
   LEADERBOARD: 'leaderboard',
   PROFILE: 'profile',
@@ -18,6 +18,36 @@ const MODES = Object.freeze({
   SINGLE_GATE: 'single-gate',
   TRI_GATE: 'tri-gate',
   LAST_BASTION: 'last-bastion'
+});
+
+const MODE_PRE_RUN = Object.freeze({
+  [MODES.SINGLE_GATE]: Object.freeze({
+    kicker: 'SINGLE GATE',
+    title: 'ONE FRONT. ONE BASTION.',
+    description: 'Classic endless survival on a single attack front.',
+    fronts: '1 FRONT',
+    objective: 'SURVIVE',
+    record: 'HIGHEST WAVE',
+    status: 'RUN FOUNDATION NEXT'
+  }),
+  [MODES.TRI_GATE]: Object.freeze({
+    kicker: 'TRI-GATE',
+    title: 'THREE FRONTS. TOTAL SIEGE.',
+    description: 'Defend three simultaneous attack fronts in one survival run.',
+    fronts: '3 FRONTS',
+    objective: 'SURVIVE',
+    record: 'HIGHEST WAVE',
+    status: 'MODE LOGIC LATER'
+  }),
+  [MODES.LAST_BASTION]: Object.freeze({
+    kicker: 'LAST BASTION',
+    title: 'LAST SURVIVOR WINS.',
+    description: 'Competitive survival: every player faces the same siege and the last defender standing wins.',
+    fronts: 'SHARED SIEGE',
+    objective: 'OUTLAST',
+    record: 'SURVIVAL RESULT',
+    status: 'MATCHMAKING LATER'
+  })
 });
 
 function Shell({ title, kicker, subtitle, onBack, children }) {
@@ -34,74 +64,78 @@ function Shell({ title, kicker, subtitle, onBack, children }) {
   );
 }
 
-function ModeSelect({ onBack }) {
+function ModeSelect({ onBack, onSelect }) {
   return (
     <Shell
       onBack={onBack}
       kicker="CHOOSE YOUR DEFENSE"
       title="SELECT MODE"
-      subtitle="Three ways to hold the line. Gameplay selection opens in later batches."
+      subtitle="Choose a survival format. Each mode has its own pre-run contract."
     >
       <div className="mode-grid">
-        <section className="mode-card" aria-label="Single Gate mode">
+        <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.SINGLE_GATE)}>
           <span className="mode-card__players">ONE FRONT</span>
           <strong>SINGLE GATE</strong>
           <small>One front. One Bastion. Survive.</small>
-          <em>MODE PREVIEW</em>
-        </section>
+          <em>SELECT MODE</em>
+        </button>
 
-        <section className="mode-card" aria-label="Tri-Gate mode">
+        <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.TRI_GATE)}>
           <span className="mode-card__players">THREE FRONTS</span>
           <strong>TRI-GATE</strong>
           <small>Three fronts. Total siege.</small>
-          <em>MODE PREVIEW</em>
-        </section>
+          <em>SELECT MODE</em>
+        </button>
 
-        <section className="mode-card" aria-label="Last Bastion mode">
+        <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.LAST_BASTION)}>
           <span className="mode-card__players">COMPETITIVE SURVIVAL</span>
           <strong>LAST BASTION</strong>
           <small>Same siege. Last survivor wins.</small>
-          <em>MODE PREVIEW</em>
-        </section>
+          <em>SELECT MODE</em>
+        </button>
       </div>
     </Shell>
   );
 }
 
 
-function SoloPreRun({ onBack, onStart }) {
+function ModePreRun({ mode, onBack }) {
+  const contract = MODE_PRE_RUN[mode];
+
+  if (!contract) return null;
+
   return (
     <Shell
       onBack={onBack}
-      kicker="SOLO ENDLESS"
-      title="PREPARE THE BASTION"
-      subtitle="No permanent power. No head start. Every defender begins equal."
+      kicker={contract.kicker}
+      title={contract.title}
+      subtitle={contract.description}
     >
       <div className="pre-run-grid">
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">MODE</span>
-          <strong>SOLO</strong>
-          <small>One defender. Endless waves.</small>
-        </section>
-
-        <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">STARTING RULES</span>
-          <strong>STANDARD</strong>
-          <small>Same gold, same towers, same conditions every run.</small>
+          <span className="pre-run-card__eyebrow">FORMAT</span>
+          <strong>{contract.fronts}</strong>
+          <small>The battlefield implementation is intentionally outside this batch.</small>
         </section>
 
         <section className="pre-run-card">
           <span className="pre-run-card__eyebrow">OBJECTIVE</span>
-          <strong>SURVIVE</strong>
-          <small>Your record is the highest wave reached.</small>
+          <strong>{contract.objective}</strong>
+          <small>Every defender begins from equal combat power.</small>
+        </section>
+
+        <section className="pre-run-card">
+          <span className="pre-run-card__eyebrow">RECORD</span>
+          <strong>{contract.record}</strong>
+          <small>Mode-specific persistence and validation arrive in later roadmap batches.</small>
         </section>
       </div>
 
       <div className="pre-run-footer">
-        <p>Map: <strong>First Bastion</strong></p>
-        <button className="pre-run-start" onClick={onStart}>
+        <p>Status: <strong>{contract.status}</strong></p>
+        <button className="pre-run-start" disabled>
           START RUN
-          <small>Enter First Bastion</small>
+          <small>Run state foundation arrives in Batch 16</small>
         </button>
       </div>
     </Shell>
@@ -361,6 +395,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
 
 function App() {
   const [screen, setScreen] = useState(SCREENS.MENU);
+  const [selectedMode, setSelectedMode] = useState(null);
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
 
@@ -375,9 +410,21 @@ function App() {
     await supabase?.auth.signOut();
   }
 
-  if (screen === SCREENS.PLAY) return <ModeSelect onBack={() => setScreen(SCREENS.MENU)} />;
-  if (screen === SCREENS.SINGLE_GATE_PREP) return <SoloPreRun onBack={() => setScreen(SCREENS.PLAY)} onStart={() => setScreen(SCREENS.SINGLE_GATE_RUN)} />;
-  if (screen === SCREENS.SINGLE_GATE_RUN) return <SoloRun onExit={() => setScreen(SCREENS.SINGLE_GATE_PREP)} />;
+  if (screen === SCREENS.PLAY) {
+    return (
+      <ModeSelect
+        onBack={() => setScreen(SCREENS.MENU)}
+        onSelect={(mode) => {
+          setSelectedMode(mode);
+          setScreen(SCREENS.MODE_PREP);
+        }}
+      />
+    );
+  }
+  if (screen === SCREENS.MODE_PREP) {
+    return <ModePreRun mode={selectedMode} onBack={() => setScreen(SCREENS.PLAY)} />;
+  }
+  if (screen === SCREENS.SINGLE_GATE_RUN) return <SoloRun onExit={() => setScreen(SCREENS.PLAY)} />;
   if (screen === SCREENS.LEADERBOARD) return <Leaderboard onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.PROFILE) return <Profile onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
