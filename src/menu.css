@@ -1669,3 +1669,31 @@ button { font: inherit; }
   color: #d7dde5;
   font-size: 11px;
 }
+
+
+/* BATCH 31 — Archer tower foundation */
+.tower-card--archer {
+  position: relative;
+  text-align: left;
+  align-items: start;
+  border-color: rgba(174, 145, 82, .28);
+  background:
+    linear-gradient(180deg, rgba(119, 91, 38, .12), rgba(33, 28, 20, .1));
+}
+
+.tower-card--archer strong {
+  color: #ead8a7;
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.tower-card--archer > span {
+  color: #d2b76c;
+  font-weight: 900;
+}
+
+.tower-card--archer small {
+  color: #8f8a7b;
+  font-size: 8px;
+  letter-spacing: .02em;
+}
