@@ -396,6 +396,22 @@ async function fetchProfileData(session) {
   return { ok: true, payload };
 }
 
+async function lastBastionMatchmakingRequest(session, action, body = null) {
+  if (!session?.access_token) return { ok: false, error: 'authentication_required' };
+  const method = action === 'status' ? 'GET' : 'POST';
+  const response = await fetch(`/api/last-bastion/matchmaking/${action}`, {
+    method,
+    headers: {
+      ...(body != null ? { 'Content-Type': 'application/json' } : {}),
+      Authorization: `Bearer ${session.access_token}`
+    },
+    ...(body != null ? { body: JSON.stringify(body) } : {})
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: payload?.error || 'matchmaking_request_failed' };
+  return { ok: true, payload };
+}
+
 async function fetchLeaderboardData(session, mode) {
   if (!session?.access_token) {
     return { ok: false, error: 'authentication_required' };
@@ -622,10 +638,107 @@ function TriGateBattlefieldPreview() {
   );
 }
 
-function ModePreRun({ mode, onBack, onStart }) {
+function LastBastionLobby({ session, onBack }) {
+  const [state, setState] = useState({ loading: true, queued: false, ticket: null, queuedPlayers: 0, error: '' });
+
+  const refresh = async () => {
+    const result = await lastBastionMatchmakingRequest(session, 'status');
+    if (!result.ok) {
+      setState((current) => ({ ...current, loading: false, error: result.error }));
+      return;
+    }
+    setState({ loading: false, queued: Boolean(result.payload?.queued), ticket: result.payload?.ticket ?? null, queuedPlayers: result.payload?.queuedPlayers ?? 0, error: '' });
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const result = await lastBastionMatchmakingRequest(session, 'status');
+      if (cancelled) return;
+      if (!result.ok) {
+        setState((current) => ({ ...current, loading: false, error: result.error }));
+        return;
+      }
+      setState({ loading: false, queued: Boolean(result.payload?.queued), ticket: result.payload?.ticket ?? null, queuedPlayers: result.payload?.queuedPlayers ?? 0, error: '' });
+    };
+    run();
+    const timer = window.setInterval(run, 2500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [session]);
+
+  const join = async () => {
+    setState((current) => ({ ...current, loading: true, error: '' }));
+    const result = await lastBastionMatchmakingRequest(session, 'join', {});
+    if (!result.ok) return setState((current) => ({ ...current, loading: false, error: result.error }));
+    await refresh();
+  };
+
+  const setReady = async (ready) => {
+    const result = await lastBastionMatchmakingRequest(session, 'ready', { ready });
+    if (!result.ok) return setState((current) => ({ ...current, error: result.error }));
+    await refresh();
+  };
+
+  const leave = async () => {
+    const result = await lastBastionMatchmakingRequest(session, 'leave', {});
+    if (!result.ok) return setState((current) => ({ ...current, error: result.error }));
+    await refresh();
+  };
+
+  return (
+    <Shell
+      onBack={async () => {
+        if (state.queued) await lastBastionMatchmakingRequest(session, 'leave', {});
+        onBack();
+      }}
+      kicker="LAST BASTION"
+      title="LAST SURVIVOR WINS."
+      subtitle="Join the shared queue, ready up, and wait for a synchronized match."
+    >
+      <div className="pre-run-grid">
+        <section className="pre-run-card">
+          <span className="pre-run-card__eyebrow">QUEUE</span>
+          <strong>{state.queued ? `#${state.ticket?.position ?? '-'}` : 'NOT QUEUED'}</strong>
+          <small>{state.queuedPlayers} defender{state.queuedPlayers === 1 ? '' : 's'} queued</small>
+        </section>
+        <section className="pre-run-card">
+          <span className="pre-run-card__eyebrow">STATUS</span>
+          <strong>{state.ticket?.ready ? 'READY' : state.queued ? 'WAITING' : 'IDLE'}</strong>
+          <small>{state.ticket?.ready ? 'Ready for matchmaking.' : 'Ready status can be changed any time before match start.'}</small>
+        </section>
+        <section className="pre-run-card">
+          <span className="pre-run-card__eyebrow">MATCH</span>
+          <strong>SHARED SIEGE</strong>
+          <small>Synchronized start arrives in the next roadmap batch.</small>
+        </section>
+      </div>
+
+      <div className="pre-run-footer">
+        <p>Status: <strong>{state.error || (state.loading ? 'SYNCING...' : state.ticket?.status?.toUpperCase() || 'READY TO QUEUE')}</strong></p>
+        {!state.queued ? (
+          <button className="pre-run-start" onClick={join} disabled={state.loading}>JOIN QUEUE<small>Enter Last Bastion matchmaking</small></button>
+        ) : (
+          <div className="last-bastion-lobby-actions">
+            <button className="pre-run-start" onClick={() => setReady(!state.ticket?.ready)}>
+              {state.ticket?.ready ? 'NOT READY' : 'READY'}
+              <small>{state.ticket?.ready ? 'Return to waiting' : 'Lock in for the match'}</small>
+            </button>
+            <button className="mode-screen__back" onClick={leave}>LEAVE QUEUE</button>
+          </div>
+        )}
+      </div>
+    </Shell>
+  );
+}
+
+function ModePreRun({ mode, onBack, onStart, session }) {
   const contract = MODE_PRE_RUN[mode];
 
   if (!contract) return null;
+  if (mode === MODES.LAST_BASTION) return <LastBastionLobby session={session} onBack={onBack} />;
 
   return (
     <Shell
@@ -2410,6 +2523,7 @@ function App() {
     return (
       <ModePreRun
         mode={selectedMode}
+        session={session}
         onBack={() => setScreen(SCREENS.PLAY)}
         onStart={async (mode) => {
           if (mode !== MODES.SINGLE_GATE && mode !== MODES.TFT_SHOP) return;
