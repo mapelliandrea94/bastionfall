@@ -1548,3 +1548,26 @@ button { font: inherit; }
   color: #8f8064;
   letter-spacing: .03em;
 }
+
+
+/* BATCH 25 — wave phase state machine */
+.run-phase-test {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 8px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  border: 1px solid rgba(112, 148, 190, .34);
+  background: rgba(41, 65, 94, .14);
+  color: #b9cce3;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.run-phase-test small {
+  font-size: 9px;
+  color: #7f8fa2;
+  letter-spacing: .03em;
+}
