@@ -2052,3 +2052,16 @@ button { font: inherit; }
   transform-box: fill-box;
   transform-origin: center;
 }
+
+
+/* BATCH 48 — Armored enemy archetype */
+.battlefield-map__enemy--armored circle {
+  stroke-width: 6;
+  stroke-dasharray: 3 3;
+}
+
+.battlefield-map__enemy--armored path {
+  transform: scale(1.04);
+  transform-box: fill-box;
+  transform-origin: center;
+}
