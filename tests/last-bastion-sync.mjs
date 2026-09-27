@@ -121,7 +121,16 @@ assert(restoredA.queued === true, 'Persisted queue hydration must restore queued
 assert(restoredA.ticket?.ready === true, 'Persisted queue hydration must restore ready state');
 assert(restoredA.ticket?.position === 1, 'Persisted queue hydration must preserve queue order');
 
-const restoredMatch = setLastBastionReady(persistedB, true);
+const restoredReadyB = setLastBastionReady(persistedB, true);
+assert(restoredReadyB.matched === false, 'Hydrated second ready player must enter the fill window before matching');
+const restoredReadyAtMs = Date.parse(restoredReadyB.ticket?.readyAt);
+assert(Number.isFinite(restoredReadyAtMs), 'Hydrated second ready player must expose a stable ready timestamp');
+
+const restoredAdvance = advanceLastBastionMatchmaking(
+  restoredReadyAtMs + LAST_BASTION_MATCHMAKING.fillWindowMs
+);
+assert(restoredAdvance.matched === true, 'Hydrated ready players must match after the fill window');
+const restoredMatch = getLastBastionQueueStatus(persistedB, restoredReadyAtMs + LAST_BASTION_MATCHMAKING.fillWindowMs);
 assert(restoredMatch.matched === true, 'Hydrated ready player must participate in matchmaking after restart');
 assert(restoredMatch.match?.participantCount === 2, 'Hydrated queue must restore enough state to create a match');
 
