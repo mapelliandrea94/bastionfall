@@ -167,6 +167,84 @@ function tryCreateReadyMatch() {
   return match;
 }
 
+export function hydrateLastBastionActiveMatches(matchRows = [], participantRows = []) {
+  activeMatchByUserId.clear();
+  matchesById.clear();
+
+  const participantsByMatch = new Map();
+  for (const row of participantRows) {
+    const matchId = String(row?.matchId || row?.match_id || '').trim();
+    const userId = String(row?.userId || row?.user_id || '').trim();
+    const slot = Number(row?.slot);
+    if (!matchId || !userId || !Number.isInteger(slot) || slot < 1 || slot > LAST_BASTION_MATCHMAKING.maxPlayers) continue;
+    if (!participantsByMatch.has(matchId)) participantsByMatch.set(matchId, []);
+    participantsByMatch.get(matchId).push({ ...row, matchId, userId, slot });
+  }
+
+  let hydratedMatches = 0;
+  let hydratedParticipants = 0;
+
+  for (const row of matchRows) {
+    const id = String(row?.id || '').trim();
+    const seed = String(row?.seed || '').trim();
+    const createdAt = String(row?.createdAt || row?.created_at || '');
+    const startedAt = String(row?.startedAt || row?.started_at || '');
+    const waveStartsAt = String(row?.waveStartsAt || row?.wave_starts_at || '');
+    const status = String(row?.status || 'active');
+    if (!id || !seed || !createdAt || !startedAt || !waveStartsAt || status !== 'active') continue;
+
+    const participantRowsForMatch = (participantsByMatch.get(id) || [])
+      .sort((a, b) => a.slot - b.slot);
+
+    if (
+      participantRowsForMatch.length < LAST_BASTION_MATCHMAKING.minPlayers ||
+      participantRowsForMatch.length > LAST_BASTION_MATCHMAKING.maxPlayers
+    ) continue;
+
+    const participantIds = Object.freeze(participantRowsForMatch.map((entry) => entry.userId));
+    const participants = new Map();
+
+    for (const entry of participantRowsForMatch) {
+      const lastSeenAt = String(entry.lastSeenAt || entry.last_seen_at || createdAt);
+      const eliminatedAt = entry.eliminatedAt || entry.eliminated_at || null;
+      participants.set(entry.userId, {
+        alive: entry.alive !== false,
+        lastSeenAtMs: Number.isFinite(Date.parse(lastSeenAt)) ? Date.parse(lastSeenAt) : Date.parse(createdAt),
+        wave: Math.max(0, Math.floor(Number(entry.wave) || 0)),
+        coreHp: Math.max(0, Math.floor(Number(entry.coreHp ?? entry.core_hp) || 0)),
+        lastHeartbeatAcceptedAtMs: 0,
+        rejectedHeartbeatCount: 0,
+        placement: Number.isInteger(Number(entry.placement)) ? Number(entry.placement) : null,
+        eliminatedAtMs: eliminatedAt && Number.isFinite(Date.parse(String(eliminatedAt)))
+          ? Date.parse(String(eliminatedAt))
+          : null
+      });
+    }
+
+    const match = {
+      id,
+      seed,
+      createdAt,
+      startedAt,
+      waveStartsAt,
+      participantIds,
+      participants,
+      status: 'active',
+      winnerUserId: row?.winnerUserId || row?.winner_user_id || null,
+      endedAt: row?.endedAt || row?.ended_at || null
+    };
+
+    matchesById.set(id, match);
+    for (const participantId of participantIds) {
+      activeMatchByUserId.set(participantId, match);
+      hydratedParticipants += 1;
+    }
+    hydratedMatches += 1;
+  }
+
+  return Object.freeze({ hydratedMatches, hydratedParticipants });
+}
+
 export function hydrateLastBastionQueue(entries = []) {
   queue.length = 0;
   byUserId.clear();
