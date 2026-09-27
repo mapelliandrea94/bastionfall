@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { getLastBastionMatchmakingFixtures, getLastBastionQueueStatus, joinLastBastionQueue, leaveLastBastionQueue } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -84,6 +85,7 @@ app.get('/api/health', (_req, res) => res.json({
 app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35 }));
 
 const STARTABLE_MODES = new Set(['single-gate', 'tri-gate', 'last-bastion']);
+const LAST_BASTION_MATCHMAKING_FIXTURE = Object.freeze(getLastBastionMatchmakingFixtures());
 
 app.post('/api/match/start', requireUser, (req, res) => {
   if (!matchTokenSecret) {
@@ -116,6 +118,27 @@ app.post('/api/match/start', requireUser, (req, res) => {
       seed,
       token: matchToken
     }
+  });
+});
+
+app.post('/api/last-bastion/matchmaking/join', requireUser, (req, res) => {
+  const result = joinLastBastionQueue(req.user.id);
+  if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_join_failed' });
+  return res.status(result.created ? 201 : 200).json(result);
+});
+
+app.post('/api/last-bastion/matchmaking/leave', requireUser, (req, res) => {
+  return res.json(leaveLastBastionQueue(req.user.id));
+});
+
+app.get('/api/last-bastion/matchmaking/status', requireUser, (req, res) => {
+  return res.json(getLastBastionQueueStatus(req.user.id));
+});
+
+app.get('/api/last-bastion/matchmaking/health', (_req, res) => {
+  res.json({
+    ok: Object.values(LAST_BASTION_MATCHMAKING_FIXTURE).every(Boolean),
+    fixture: LAST_BASTION_MATCHMAKING_FIXTURE
   });
 });
 
