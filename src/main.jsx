@@ -641,7 +641,7 @@ function ModePreRun({ mode, onBack, onStart }) {
 }
 
 
-function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold }) {
+function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold }) {
   const [spawnQueue, setSpawnQueue] = useState([]);
   const [activeEnemies, setActiveEnemies] = useState([]);
   const [preparationRemaining, setPreparationRemaining] = useState(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
@@ -655,6 +655,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [tftShopLocked, setTftShopLocked] = useState(false);
   const [tftBench, setTftBench] = useState(() => createEmptyBench());
   const [tftFeedback, setTftFeedback] = useState('');
+  const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(null);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
@@ -1042,6 +1043,37 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     if (!run || run.phase === RUN_PHASES.ENDED) return;
 
+    if (run.mode === MODES.TFT_SHOP) {
+      if (selectedTftBenchIndex == null) return;
+      const copy = tftBench[selectedTftBenchIndex];
+      if (!copy) return;
+      const defense = defenseDefinitions[copy.towerId];
+      if (!defense) return;
+
+      const attempt = tryPurchaseDefenseOnSlot({
+        slotId,
+        defense: { ...defense, cost: 0 },
+        gold: availableGoldRef.current,
+        placedStructures: placedDefenses
+      });
+      if (!attempt.ok) return;
+
+      const placedTower = {
+        ...attempt.structure,
+        defenseId: copy.towerId,
+        level: 1,
+        copyProgress: 1,
+        investedGold: Number(copy.cost ?? TFT_SHOP.copyCost),
+        sourceCopyId: copy.copyId
+      };
+      setPlacedDefenses((current) => [...current, placedTower]);
+      setSelectedPlacedDefenseId(placedTower.id);
+      setTftBench((current) => removeCopyFromBench(current, selectedTftBenchIndex).bench);
+      setSelectedTftBenchIndex(null);
+      setTftFeedback('');
+      return;
+    }
+
     const attempt = tryPurchaseDefenseOnSlot({
       slotId,
       defense: selectedDefense,
@@ -1370,6 +1402,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
             data-tft-bench-version={TFT_BENCH.version}
+            data-tft-bench-selected={selectedTftBenchIndex ?? ''}
             data-tft-bench-pass={TFT_BENCH_FIXTURE.slotCountExpected === TFT_BENCH_FIXTURE.slotCountActual && TFT_BENCH_FIXTURE.buyToBenchWorks === true && TFT_BENCH_FIXTURE.fullBlocksPurchase === true && TFT_BENCH_FIXTURE.sellRemovesCopy === true && TFT_BENCH_FIXTURE.noAutoMerge === true}
             data-tft-shop-version={TFT_SHOP.version}
             data-tft-shop-mode={run?.mode === MODES.TFT_SHOP}
@@ -1487,7 +1520,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 {tftBench.map((copy, index) => (
                   <div
                     key={index}
-                    className={`tft-bench-slot ${copy ? 'tft-bench-slot--occupied' : ''}`}
+                    className={`tft-bench-slot ${copy ? 'tft-bench-slot--occupied' : ''} ${selectedTftBenchIndex === index ? 'tft-bench-slot--selected' : ''}`}
+                    onClick={() => copy && setSelectedTftBenchIndex(index)}
                     data-bench-slot={index + 1}
                     data-bench-tower-id={copy?.towerId ?? ''}
                   >
@@ -1501,7 +1535,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                             const result = removeCopyFromBench(tftBench, index);
                             if (!result.ok) return;
                             setTftBench(result.bench);
-                            onSpendGold(-TFT_BENCH.copySellRefund);
+                            onGainGold(TFT_BENCH.copySellRefund);
                             setTftFeedback('');
                           }}
                         >
@@ -2230,6 +2264,13 @@ function App() {
             const spend = Math.max(0, Number(amount) || 0);
             if (current.gold < spend) return current;
             return { ...current, gold: current.gold - spend };
+          });
+        }}
+        onGainGold={(amount) => {
+          setRunState((current) => {
+            if (!current || current.phase === RUN_PHASES.ENDED) return current;
+            const gain = Math.max(0, Number(amount) || 0);
+            return { ...current, gold: current.gold + gain };
           });
         }}
         onDamageBastion={(damage) => {
