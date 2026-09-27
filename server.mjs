@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const app = express();
@@ -32,6 +33,29 @@ async function requireUser(req, res, next) {
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, game: 'Bastionfall', version: '0.1.1' }));
 app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35, towerCap: 32 }));
+
+const STARTABLE_MODES = new Set(['single-gate', 'tri-gate', 'last-bastion']);
+
+app.post('/api/match/start', requireUser, (req, res) => {
+  const mode = String(req.body?.mode || '').trim();
+  if (!STARTABLE_MODES.has(mode)) {
+    return res.status(400).json({ error: 'invalid_mode' });
+  }
+
+  const matchId = randomUUID();
+  const startedAt = new Date().toISOString();
+  const seed = `${mode}:${matchId}`;
+
+  return res.status(201).json({
+    match: {
+      id: matchId,
+      userId: req.user.id,
+      mode,
+      startedAt,
+      seed
+    }
+  });
+});
 
 app.get('/api/profile', requireUser, async (req, res) => {
   const { data, error } = await req.db.from('profiles').select('*').eq('user_id', req.user.id).maybeSingle();
