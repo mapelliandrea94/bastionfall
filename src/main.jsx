@@ -228,12 +228,20 @@ function SoloRun({ run, onExit }) {
               cy={SINGLE_GATE_MAP.anchors.enemySpawn.y}
               r="42"
             />
-            <circle
+            <g
               className="battlefield-map__bastion"
-              cx={SINGLE_GATE_MAP.anchors.bastion.x}
-              cy={SINGLE_GATE_MAP.anchors.bastion.y}
-              r="56"
-            />
+              transform={`translate(${SINGLE_GATE_MAP.anchors.bastion.x} ${SINGLE_GATE_MAP.anchors.bastion.y})`}
+              aria-label="Bastion structure"
+            >
+              <ellipse className="battlefield-map__bastion-shadow" cx="0" cy="42" rx="88" ry="26" />
+              <rect className="battlefield-map__bastion-base" x="-74" y="-30" width="148" height="78" rx="14" />
+              <rect className="battlefield-map__bastion-keep" x="-42" y="-78" width="84" height="84" rx="10" />
+              <rect className="battlefield-map__bastion-tower" x="-78" y="-70" width="34" height="70" rx="7" />
+              <rect className="battlefield-map__bastion-tower" x="44" y="-70" width="34" height="70" rx="7" />
+              <path className="battlefield-map__bastion-roof" d="M -48 -80 L 0 -116 L 48 -80 Z" />
+              <circle className="battlefield-map__bastion-core" cx="0" cy="-20" r="18" />
+              <path className="battlefield-map__bastion-gate" d="M -18 48 V 18 Q 0 2 18 18 V 48 Z" />
+            </g>
             <text
               className="battlefield-map__label"
               x={SINGLE_GATE_MAP.anchors.enemySpawn.x}
@@ -245,7 +253,7 @@ function SoloRun({ run, onExit }) {
             <text
               className="battlefield-map__label battlefield-map__label--bastion"
               x={SINGLE_GATE_MAP.anchors.bastion.x}
-              y={SINGLE_GATE_MAP.anchors.bastion.y + 8}
+              y={SINGLE_GATE_MAP.anchors.bastion.y + 102}
               textAnchor="middle"
             >
               BASTION
