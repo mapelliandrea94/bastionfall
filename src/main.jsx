@@ -525,17 +525,44 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
               cy={SINGLE_GATE_MAP.anchors.enemySpawn.y}
               r="42"
             />
-            {positionedEnemies.map((enemy) => (
-              <g
-                key={enemy.id}
-                className={`battlefield-map__enemy battlefield-map__enemy--${enemy.archetype}`}
-                transform={`translate(${enemy.position.x} ${enemy.position.y})`}
-                aria-label="Queued enemy"
-              >
-                <circle r="24" />
-                <path d="M -10 -5 L 0 -18 L 10 -5 L 8 14 L -8 14 Z" />
-              </g>
-            ))}
+            {positionedEnemies.map((enemy) => {
+              const hpRatio = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0;
+              const shieldRatio = enemy.maxShield > 0 ? Math.max(0, Math.min(1, enemy.shield / enemy.maxShield)) : 0;
+              const slowActive = (enemy.statusEffects?.slowUntilMs ?? 0) > performance.now();
+
+              return (
+                <g
+                  key={enemy.id}
+                  className={`battlefield-map__enemy battlefield-map__enemy--${enemy.archetype}`}
+                  transform={`translate(${enemy.position.x} ${enemy.position.y})`}
+                  aria-label={`${enemy.archetype} enemy`}
+                  data-airborne={enemy.airborne}
+                  data-armored={enemy.armor > 0}
+                  data-shielded={enemy.maxShield > 0}
+                  data-slowed={slowActive}
+                >
+                  <circle r="24" />
+                  <path d="M -10 -5 L 0 -18 L 10 -5 L 8 14 L -8 14 Z" />
+
+                  <g className="enemy-status">
+                    <rect className="enemy-status__hp-bg" x="-28" y="-42" width="56" height="6" rx="3" />
+                    <rect className="enemy-status__hp-fill" x="-28" y="-42" width={56 * hpRatio} height="6" rx="3" />
+                    {enemy.maxShield > 0 && (
+                      <>
+                        <rect className="enemy-status__shield-bg" x="-28" y="-50" width="56" height="5" rx="2.5" />
+                        <rect className="enemy-status__shield-fill" x="-28" y="-50" width={56 * shieldRatio} height="5" rx="2.5" />
+                      </>
+                    )}
+                    <text className="enemy-status__name" x="0" y="-56" textAnchor="middle">
+                      {enemy.archetype.toUpperCase()}
+                    </text>
+                    {enemy.armor > 0 && <text className="enemy-status__badge enemy-status__badge--armor" x="-24" y="39">ARM</text>}
+                    {enemy.airborne && <text className="enemy-status__badge enemy-status__badge--air" x="0" y="39" textAnchor="middle">AIR</text>}
+                    {slowActive && <text className="enemy-status__badge enemy-status__badge--slow" x="24" y="39" textAnchor="end">SLOW</text>}
+                  </g>
+                </g>
+              );
+            })}
             <g
               className={`battlefield-map__bastion ${bastionStateClass}`}
               transform={`translate(${SINGLE_GATE_MAP.anchors.bastion.x} ${SINGLE_GATE_MAP.anchors.bastion.y})`}
