@@ -30,7 +30,8 @@ returns table (
   best_score bigint,
   lifetime_kills bigint,
   total_survival_ms bigint,
-  already_recorded boolean
+  already_recorded boolean,
+  earned_shards integer
 )
 language plpgsql
 security invoker
@@ -47,6 +48,7 @@ declare
   v_expected_reason text;
   v_completed_match_id uuid;
   v_inserted boolean := false;
+  v_shards integer := greatest(1, floor(p_wave::numeric / 2)::integer);
 begin
   if v_user_id is null then raise exception 'authentication_required'; end if;
   if not public.bastionfall_server_write_allowed() then raise exception 'server_authorization_required'; end if;
@@ -101,12 +103,25 @@ begin
       total_survival_ms=public.last_bastion_stats.total_survival_ms+excluded.total_survival_ms,
       updated_at=now();
 
+    update public.profiles
+    set best_wave = greatest(coalesce(best_wave,0), p_wave),
+        shards = coalesce(shards,0) + v_shards,
+        runs = coalesce(runs,0) + 1,
+        lifetime_kills = coalesce(lifetime_kills,0) + p_kills,
+        updated_at = now()
+    where user_id = v_user_id;
+
+    if not found then
+      raise exception 'profile_missing';
+    end if;
+
     v_inserted := true;
   end if;
 
   return query
   select v_completed_match_id,lbs.runs,lbs.wins,lbs.top3,lbs.best_placement,lbs.best_wave,lbs.best_survival_ms,
-         lbs.best_score,lbs.lifetime_kills,lbs.total_survival_ms,not v_inserted
+         lbs.best_score,lbs.lifetime_kills,lbs.total_survival_ms,not v_inserted,
+         case when v_inserted then v_shards else 0 end
   from public.last_bastion_stats lbs where lbs.user_id=v_user_id;
 end;
 $$;
