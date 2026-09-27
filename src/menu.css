@@ -1781,3 +1781,31 @@ button { font: inherit; }
   font-size: 8px;
   letter-spacing: .02em;
 }
+
+
+/* BATCH 35 — Ballista tower foundation */
+.tower-card--ballista {
+  position: relative;
+  text-align: left;
+  align-items: start;
+  border-color: rgba(130, 118, 92, .34);
+  background:
+    linear-gradient(180deg, rgba(74, 67, 49, .16), rgba(26, 24, 20, .1));
+}
+
+.tower-card--ballista strong {
+  color: #e0d5ba;
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.tower-card--ballista > span {
+  color: #c2b28c;
+  font-weight: 900;
+}
+
+.tower-card--ballista small {
+  color: #8f897a;
+  font-size: 8px;
+  letter-spacing: .02em;
+}
