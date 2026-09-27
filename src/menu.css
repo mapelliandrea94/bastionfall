@@ -1809,3 +1809,31 @@ button { font: inherit; }
   font-size: 8px;
   letter-spacing: .02em;
 }
+
+
+/* BATCH 36 — Barracks foundation */
+.tower-card--barracks {
+  position: relative;
+  text-align: left;
+  align-items: start;
+  border-color: rgba(122, 144, 92, .34);
+  background:
+    linear-gradient(180deg, rgba(62, 79, 45, .16), rgba(23, 27, 20, .1));
+}
+
+.tower-card--barracks strong {
+  color: #d7e3bd;
+  font-size: 11px;
+  letter-spacing: .05em;
+}
+
+.tower-card--barracks > span {
+  color: #afc48b;
+  font-weight: 900;
+}
+
+.tower-card--barracks small {
+  color: #87927a;
+  font-size: 8px;
+  letter-spacing: .02em;
+}
