@@ -1148,20 +1148,26 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }, [run?.phase, run?.wave, run?.mode, run?.syncWaveStartsAtMs, tftSetupConfirmed]);
 
   useEffect(() => {
-    if (run?.phase !== RUN_PHASES.ACTIVE || queuedWaveRef.current === run?.wave) return;
+    if (run?.phase !== RUN_PHASES.ACTIVE) return;
 
-    queuedWaveRef.current = run?.wave;
+    const spawnWaveNumber = waveScaling.waveNumber;
+    if (queuedWaveRef.current === spawnWaveNumber) return;
+
+    const waveComposition = threatWave.composition;
+    if (!waveComposition.length) return;
+
+    queuedWaveRef.current = spawnWaveNumber;
     setSpawnQueue(
-      threatWave.composition.map((enemy, index) => attachEliteModifierFoundation({
+      waveComposition.map((enemy, index) => attachEliteModifierFoundation({
         ...enemy,
-        id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`
+        id: `wave-${spawnWaveNumber}-enemy-${index + 1}`
       }, {
         seed: run?.seed ?? 'run',
-        waveNumber: waveScaling.waveNumber,
+        waveNumber: spawnWaveNumber,
         enemyIndex: index
       }))
     );
-  }, [run?.phase, run?.wave]);
+  }, [run?.phase, run?.wave, waveScaling.waveNumber]);
 
   useEffect(() => {
     bossSummonTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
@@ -1458,7 +1464,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }, [run?.phase, activeEnemies.length]);
 
   useEffect(() => {
-    const queueInitialized = queuedWaveRef.current === run?.wave;
+    const queueInitialized = queuedWaveRef.current === waveScaling.waveNumber;
 
     if (
       run?.phase === RUN_PHASES.ACTIVE &&
@@ -1468,7 +1474,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     ) {
       onPhaseChange(RUN_PHASES.RESOLVING);
     }
-  }, [run?.phase, run?.wave, spawnQueue.length, activeEnemies.length]);
+  }, [run?.phase, run?.wave, waveScaling.waveNumber, spawnQueue.length, activeEnemies.length]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.RESOLVING) return undefined;
