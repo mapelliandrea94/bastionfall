@@ -30,6 +30,7 @@ import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.j
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
+import { BLESSING_SYSTEM, getBlessingOffer, getBlessingSystemFixtures } from './game/blessings/blessings.js';
 import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } from './game/boss/bossSummonAdds.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
@@ -165,6 +166,8 @@ const BOSS_SCHEDULE_FIXTURE = Object.freeze(getBossScheduleFixtures());
 const BOSS_SUMMON_ADDS_FIXTURE = Object.freeze(getBossSummonAddsFixtures());
 const BOSS_ARMOR_ENRAGE_FIXTURE = Object.freeze(getBossArmorEnrageFixtures());
 const BOSS_TUNING_FIXTURE = Object.freeze(getBossTuningFixtures());
+const BLESSING_SYSTEM_FIXTURE = Object.freeze(getBlessingSystemFixtures());
+const OPENING_BLESSING_OFFER = Object.freeze(getBlessingOffer('prototype-run', [], BLESSING_SYSTEM.choiceCount));
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
   ARCHER_TOWER,
@@ -1143,6 +1146,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-boss-summon-adds-version={BOSS_SUMMON_ADDS.version}
             data-boss-armor-enrage-version={BOSS_ARMOR_ENRAGE.version}
             data-boss-tuning-version={BOSS_TUNING.version}
+            data-blessing-system-version={BLESSING_SYSTEM.version}
+            data-blessing-choice-count={OPENING_BLESSING_OFFER.length}
+            data-blessing-system-pass={BLESSING_SYSTEM_FIXTURE.choiceCountExpected === BLESSING_SYSTEM_FIXTURE.choiceCountActual && BLESSING_SYSTEM_FIXTURE.deterministicOffer === true && BLESSING_SYSTEM_FIXTURE.uniqueChoices === true && BLESSING_SYSTEM_FIXTURE.validDefinitions === true && BLESSING_SYSTEM_FIXTURE.maxStackRespected === true && BLESSING_SYSTEM_FIXTURE.stackAddedWhenAllowed === true}
             data-boss-tuning-pass={BOSS_TUNING_FIXTURE.nonBossNull === true && BOSS_TUNING_FIXTURE.wave10HpExpected === BOSS_TUNING_FIXTURE.wave10HpActual && BOSS_TUNING_FIXTURE.hpScalesUp === true && BOSS_TUNING_FIXTURE.armorScalesUp === true && BOSS_TUNING_FIXTURE.moveSpeedCapped === true && BOSS_TUNING_FIXTURE.rewardScalesUp === true && BOSS_TUNING_FIXTURE.summonsIncluded === true}
             data-boss-enrage-preview={bossEnragePreview.enraged}
             data-boss-armor-enrage-pass={BOSS_ARMOR_ENRAGE_FIXTURE.armorBoss1Expected === BOSS_ARMOR_ENRAGE_FIXTURE.armorBoss1Actual && BOSS_ARMOR_ENRAGE_FIXTURE.armorBoss3Expected === BOSS_ARMOR_ENRAGE_FIXTURE.armorBoss3Actual && BOSS_ARMOR_ENRAGE_FIXTURE.armorCaps === true && BOSS_ARMOR_ENRAGE_FIXTURE.aboveThresholdNotEnraged === true && BOSS_ARMOR_ENRAGE_FIXTURE.atThresholdEnraged === true && BOSS_ARMOR_ENRAGE_FIXTURE.enrageBoostsMovement === true && BOSS_ARMOR_ENRAGE_FIXTURE.nonBossUnaffected === true}
