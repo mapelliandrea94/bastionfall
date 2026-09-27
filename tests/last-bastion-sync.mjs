@@ -1,5 +1,9 @@
 import {
-  getLastBastionMatchmakingFixtures
+  clearLastBastionMatchForUser,
+  getLastBastionMatchmakingFixtures,
+  getLastBastionQueueStatus,
+  hydrateLastBastionQueue,
+  setLastBastionReady
 } from '../server/lastBastionMatchmaking.js';
 import { generateWavePlan } from '../src/game/spawning/waveDirector.js';
 
@@ -29,6 +33,36 @@ assert(fixture.desyncDetected, 'Wave spread beyond tolerance must flag desync');
 assert(fixture.eliminationMarksDead, 'Eliminated participant must be marked dead');
 assert(fixture.lastAliveWins, 'Last alive participant must resolve as winner');
 assert(fixture.placementsResolve, 'Last Bastion winner/loser placements must resolve deterministically');
+
+const persistedA = 'persisted-fixture-a';
+const persistedB = 'persisted-fixture-b';
+hydrateLastBastionQueue([
+  {
+    ticketId: 'persisted-ticket-a',
+    userId: persistedA,
+    joinedAt: '2026-09-27T20:00:00.000Z',
+    ready: true
+  },
+  {
+    ticketId: 'persisted-ticket-b',
+    userId: persistedB,
+    joinedAt: '2026-09-27T20:00:01.000Z',
+    ready: false
+  }
+]);
+
+const restoredA = getLastBastionQueueStatus(persistedA);
+assert(restoredA.queued === true, 'Persisted queue hydration must restore queued users');
+assert(restoredA.ticket?.ready === true, 'Persisted queue hydration must restore ready state');
+assert(restoredA.ticket?.position === 1, 'Persisted queue hydration must preserve queue order');
+
+const restoredMatch = setLastBastionReady(persistedB, true);
+assert(restoredMatch.matched === true, 'Hydrated ready player must participate in matchmaking after restart');
+assert(restoredMatch.match?.participantCount === 2, 'Hydrated queue must restore enough state to create a match');
+
+clearLastBastionMatchForUser(persistedA);
+clearLastBastionMatchForUser(persistedB);
+hydrateLastBastionQueue([]);
 
 const seed = 'last-bastion:sync-fixture';
 const playerA = generateWavePlan({ seed, waveNumber: 18, mode: 'last-bastion' });
