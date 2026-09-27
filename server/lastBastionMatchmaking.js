@@ -167,6 +167,33 @@ function tryCreateReadyMatch() {
   return match;
 }
 
+export function hydrateLastBastionQueue(entries = []) {
+  queue.length = 0;
+  byUserId.clear();
+
+  const normalized = [...entries]
+    .map((entry) => ({
+      ticketId: String(entry?.ticketId || entry?.ticket_id || '').trim(),
+      userId: String(entry?.userId || entry?.user_id || '').trim(),
+      joinedAt: String(entry?.joinedAt || entry?.joined_at || ''),
+      ready: Boolean(entry?.ready)
+    }))
+    .filter((entry) => entry.ticketId && entry.userId && entry.joinedAt)
+    .sort((a, b) => Date.parse(a.joinedAt) - Date.parse(b.joinedAt));
+
+  for (const entry of normalized) {
+    if (activeMatchByUserId.has(entry.userId)) continue;
+    const frozen = Object.freeze(entry);
+    queue.push(frozen);
+    byUserId.set(entry.userId, frozen);
+  }
+
+  return Object.freeze({
+    queuedPlayers: queue.length,
+    readyPlayers: queue.filter((entry) => entry.ready).length
+  });
+}
+
 export function joinLastBastionQueue(userId) {
   const id = String(userId || '').trim();
   if (!id) return Object.freeze({ ok: false, error: 'invalid_user' });
