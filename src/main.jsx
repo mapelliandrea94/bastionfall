@@ -262,9 +262,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   const [spawnQueue, setSpawnQueue] = useState([]);
   const [activeEnemies, setActiveEnemies] = useState([]);
   const [preparationRemaining, setPreparationRemaining] = useState(RUN_DEFAULTS.preparationSeconds);
+  const [selectedDefenseId, setSelectedDefenseId] = useState('archer');
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
   const waveScaling = getWaveScaling(run?.wave ?? 0);
+  const defenseDefinitions = Object.freeze({
+    archer: ARCHER_TOWER,
+    cannon: CANNON_TOWER,
+    frost: FROST_TOWER,
+    mage: MAGE_TOWER,
+    ballista: BALLISTA_TOWER,
+    barracks: BARRACKS
+  });
+  const selectedDefense = defenseDefinitions[selectedDefenseId] ?? ARCHER_TOWER;
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
@@ -494,36 +504,56 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
-          <button className="tower-card tower-card--archer" disabled>
+          <button className={`tower-card tower-card--archer ${selectedDefenseId === 'archer' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('archer')}>
             <strong>{ARCHER_TOWER.name}</strong>
             <span>{ARCHER_TOWER.cost}g</span>
             <small>{ARCHER_TOWER.damage} DMG · {ARCHER_TOWER.range} RANGE · {(1000 / ARCHER_TOWER.attackIntervalMs).toFixed(1)}/s</small>
           </button>
-          <button className="tower-card tower-card--cannon" disabled>
+          <button className={`tower-card tower-card--cannon ${selectedDefenseId === 'cannon' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('cannon')}>
             <strong>{CANNON_TOWER.name}</strong>
             <span>{CANNON_TOWER.cost}g</span>
             <small>{CANNON_TOWER.damage} DMG · {CANNON_TOWER.splashRadius} SPLASH · {(1000 / CANNON_TOWER.attackIntervalMs).toFixed(1)}/s</small>
           </button>
-          <button className="tower-card tower-card--frost" disabled>
+          <button className={`tower-card tower-card--frost ${selectedDefenseId === 'frost' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('frost')}>
             <strong>{FROST_TOWER.name}</strong>
             <span>{FROST_TOWER.cost}g</span>
             <small>{FROST_TOWER.damage} DMG · {FROST_TOWER.slowPercent}% SLOW · {(FROST_TOWER.slowDurationMs / 1000).toFixed(1)}s</small>
           </button>
-          <button className="tower-card tower-card--mage" disabled>
+          <button className={`tower-card tower-card--mage ${selectedDefenseId === 'mage' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('mage')}>
             <strong>{MAGE_TOWER.name}</strong>
             <span>{MAGE_TOWER.cost}g</span>
             <small>{MAGE_TOWER.damage} DMG · {MAGE_TOWER.range} RANGE · {MAGE_TOWER.damageType.toUpperCase()}</small>
           </button>
-          <button className="tower-card tower-card--ballista" disabled>
+          <button className={`tower-card tower-card--ballista ${selectedDefenseId === 'ballista' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('ballista')}>
             <strong>{BALLISTA_TOWER.name}</strong>
             <span>{BALLISTA_TOWER.cost}g</span>
             <small>{BALLISTA_TOWER.damage} DMG · {BALLISTA_TOWER.range} RANGE · {BALLISTA_TOWER.damageType.toUpperCase()}</small>
           </button>
-          <button className="tower-card tower-card--barracks" disabled>
+          <button className={`tower-card tower-card--barracks ${selectedDefenseId === 'barracks' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('barracks')}>
             <strong>{BARRACKS.name}</strong>
             <span>{BARRACKS.cost}g</span>
             <small>{BARRACKS.squadSize} UNITS · {BARRACKS.engageRadius} ENGAGE · {(BARRACKS.respawnIntervalMs / 1000).toFixed(1)}s RESPAWN</small>
           </button>
+
+          <section className="defense-inspector" aria-label="Selected defense inspection">
+            <div className="defense-inspector__header">
+              <span>SELECTED DEFENSE</span>
+              <strong>{selectedDefense.name}</strong>
+            </div>
+            <div className="defense-inspector__grid">
+              <div><span>ROLE</span><strong>{selectedDefense.role}</strong></div>
+              <div><span>COST</span><strong>{selectedDefense.cost}g</strong></div>
+              {'damage' in selectedDefense && <div><span>DAMAGE</span><strong>{selectedDefense.damage}</strong></div>}
+              {'range' in selectedDefense && <div><span>RANGE</span><strong>{selectedDefense.range}</strong></div>}
+              {'attackIntervalMs' in selectedDefense && <div><span>RATE</span><strong>{(1000 / selectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
+              {'damageType' in selectedDefense && <div><span>TYPE</span><strong>{selectedDefense.damageType}</strong></div>}
+              {'splashRadius' in selectedDefense && <div><span>SPLASH</span><strong>{selectedDefense.splashRadius}</strong></div>}
+              {'slowPercent' in selectedDefense && <div><span>SLOW</span><strong>{selectedDefense.slowPercent}%</strong></div>}
+              {'squadSize' in selectedDefense && <div><span>SQUAD</span><strong>{selectedDefense.squadSize}</strong></div>}
+              {'unitHp' in selectedDefense && <div><span>UNIT HP</span><strong>{selectedDefense.unitHp}</strong></div>}
+            </div>
+            <p>{selectedDefense.description}</p>
+          </section>
 
           <div className="run-sidebar__status">
             <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
