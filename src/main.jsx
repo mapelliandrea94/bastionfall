@@ -319,7 +319,12 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
     coreMaxHp: RUN_DEFAULTS.coreHp,
     bastionHitId: 0,
     kills: 0,
-    startedAtMs: Date.now(),
+    startedAtMs: Number.isFinite(Date.parse(serverMatch?.startedAt))
+      ? Date.parse(serverMatch.startedAt)
+      : Date.now(),
+    syncWaveStartsAtMs: Number.isFinite(Date.parse(serverMatch?.waveStartsAt))
+      ? Date.parse(serverMatch.waveStartsAt)
+      : null,
     elapsedMs: 0,
     endedAtMs: null,
     result: null,
@@ -646,8 +651,9 @@ function TriGateBattlefieldPreview() {
   );
 }
 
-function LastBastionLobby({ session, onBack }) {
-  const [state, setState] = useState({ loading: true, queued: false, ticket: null, queuedPlayers: 0, error: '' });
+function LastBastionLobby({ session, onBack, onStart }) {
+  const startedMatchIdRef = useRef(null);
+  const [state, setState] = useState({ loading: true, queued: false, matched: false, match: null, ticket: null, queuedPlayers: 0, error: '' });
 
   const refresh = async () => {
     const result = await lastBastionMatchmakingRequest(session, 'status');
@@ -655,7 +661,15 @@ function LastBastionLobby({ session, onBack }) {
       setState((current) => ({ ...current, loading: false, error: result.error }));
       return;
     }
-    setState({ loading: false, queued: Boolean(result.payload?.queued), ticket: result.payload?.ticket ?? null, queuedPlayers: result.payload?.queuedPlayers ?? 0, error: '' });
+    setState({
+      loading: false,
+      queued: Boolean(result.payload?.queued),
+      matched: Boolean(result.payload?.matched),
+      match: result.payload?.match ?? null,
+      ticket: result.payload?.ticket ?? null,
+      queuedPlayers: result.payload?.queuedPlayers ?? 0,
+      error: ''
+    });
   };
 
   useEffect(() => {
@@ -667,7 +681,15 @@ function LastBastionLobby({ session, onBack }) {
         setState((current) => ({ ...current, loading: false, error: result.error }));
         return;
       }
-      setState({ loading: false, queued: Boolean(result.payload?.queued), ticket: result.payload?.ticket ?? null, queuedPlayers: result.payload?.queuedPlayers ?? 0, error: '' });
+      setState({
+        loading: false,
+        queued: Boolean(result.payload?.queued),
+        matched: Boolean(result.payload?.matched),
+        match: result.payload?.match ?? null,
+        ticket: result.payload?.ticket ?? null,
+        queuedPlayers: result.payload?.queuedPlayers ?? 0,
+        error: ''
+      });
     };
     run();
     const timer = window.setInterval(run, 2500);
@@ -676,6 +698,13 @@ function LastBastionLobby({ session, onBack }) {
       window.clearInterval(timer);
     };
   }, [session]);
+
+  useEffect(() => {
+    if (!state.matched || !state.match?.id || startedMatchIdRef.current === state.match.id) return;
+    if (!state.match?.seed || !state.match?.token || !state.match?.startedAt) return;
+    startedMatchIdRef.current = state.match.id;
+    onStart(MODES.LAST_BASTION, state.match);
+  }, [state.matched, state.match?.id, state.match?.seed, state.match?.token, state.match?.startedAt, onStart]);
 
   const join = async () => {
     setState((current) => ({ ...current, loading: true, error: '' }));
@@ -719,8 +748,8 @@ function LastBastionLobby({ session, onBack }) {
         </section>
         <section className="pre-run-card">
           <span className="pre-run-card__eyebrow">MATCH</span>
-          <strong>SHARED SIEGE</strong>
-          <small>Synchronized start arrives in the next roadmap batch.</small>
+          <strong>{state.matched ? 'MATCH FOUND' : 'SHARED SIEGE'}</strong>
+          <small>{state.matched ? 'Shared seed locked. Synchronizing start...' : 'All matched defenders receive the same seed and start time.'}</small>
         </section>
       </div>
 
@@ -746,7 +775,7 @@ function ModePreRun({ mode, onBack, onStart, session }) {
   const contract = MODE_PRE_RUN[mode];
 
   if (!contract) return null;
-  if (mode === MODES.LAST_BASTION) return <LastBastionLobby session={session} onBack={onBack} />;
+  if (mode === MODES.LAST_BASTION) return <LastBastionLobby session={session} onBack={onBack} onStart={onStart} />;
 
   return (
     <Shell
@@ -904,6 +933,24 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
 
+    if (run?.syncWaveStartsAtMs && run.wave === 0) {
+      const sync = () => {
+        const remainingMs = run.syncWaveStartsAtMs - Date.now();
+        setPreparationRemaining(Math.max(0, Math.ceil(remainingMs / 1000)));
+        if (remainingMs <= 0) {
+          onPhaseChange(RUN_PHASES.ACTIVE);
+          return true;
+        }
+        return false;
+      };
+
+      if (sync()) return undefined;
+      const intervalId = window.setInterval(() => {
+        if (sync()) window.clearInterval(intervalId);
+      }, 100);
+      return () => window.clearInterval(intervalId);
+    }
+
     setPreparationRemaining(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
 
     const intervalId = window.setInterval(() => {
@@ -918,7 +965,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [run?.phase, run?.wave]);
+  }, [run?.phase, run?.wave, run?.syncWaveStartsAtMs]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || queuedWaveRef.current === run?.wave) return;
@@ -2542,11 +2589,13 @@ function App() {
         mode={selectedMode}
         session={session}
         onBack={() => setScreen(SCREENS.PLAY)}
-        onStart={async (mode) => {
-          if (mode !== MODES.SINGLE_GATE && mode !== MODES.TFT_SHOP) return;
-          const started = mode === MODES.TFT_SHOP
-            ? { ok: true, match: { id: null, token: null, startedAt: null, seed: `${MODES.TFT_SHOP}:${Date.now()}` } }
-            : await startServerMatch(session, mode);
+        onStart={async (mode, preparedMatch = null) => {
+          if (mode !== MODES.SINGLE_GATE && mode !== MODES.TFT_SHOP && mode !== MODES.LAST_BASTION) return;
+          const started = preparedMatch
+            ? { ok: true, match: preparedMatch }
+            : mode === MODES.TFT_SHOP
+              ? { ok: true, match: { id: null, token: null, startedAt: null, seed: `${MODES.TFT_SHOP}:${Date.now()}` } }
+              : await startServerMatch(session, mode);
           if (!started.ok) return;
           const nextRun = createInitialRunState(mode, started.match.seed, started.match);
           if (!nextRun) return;
