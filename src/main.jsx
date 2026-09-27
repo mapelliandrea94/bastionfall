@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase.js';
 import { normalizeRunSeed } from './lib/runSeed.js';
 import { SINGLE_GATE_MAP } from './game/maps/singleGate.js';
 import { ARCHER_TOWER } from './game/towers/archer.js';
+import { CANNON_TOWER } from './game/towers/cannon.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -469,7 +470,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             <span>{ARCHER_TOWER.cost}g</span>
             <small>{ARCHER_TOWER.damage} DMG · {ARCHER_TOWER.range} RANGE · {(1000 / ARCHER_TOWER.attackIntervalMs).toFixed(1)}/s</small>
           </button>
-          <button disabled>CANNON <span>110g</span></button>
+          <button className="tower-card tower-card--cannon" disabled>
+            <strong>{CANNON_TOWER.name}</strong>
+            <span>{CANNON_TOWER.cost}g</span>
+            <small>{CANNON_TOWER.damage} DMG · {CANNON_TOWER.splashRadius} SPLASH · {(1000 / CANNON_TOWER.attackIntervalMs).toFixed(1)}/s</small>
+          </button>
           <button disabled>FROST <span>90g</span></button>
 
           <div className="run-sidebar__status">
