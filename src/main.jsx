@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from './lib/supabase.js';
 import { normalizeRunSeed } from './lib/runSeed.js';
-import { SINGLE_GATE_MAP } from './game/maps/singleGate.js';
+import { SINGLE_GATE_MAP, getSingleGatePathForWalls } from './game/maps/singleGate.js';
 import { TRI_GATE_MAP, getTriGateMapFixtures } from './game/maps/triGate.js';
 import { TRI_GATE_SPAWN, getTriGateSpawnFixtures } from './game/spawning/triGateSpawn.js';
 import { ARCHER_TOWER } from './game/towers/archer.js';
@@ -27,6 +27,7 @@ import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getWaveClearReward } from
 import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOpportunityCost } from './game/structures/goldMine.js';
 import { WAR_FORGE, applyWarForgePreview, getWarForgeFixtures } from './game/structures/warForge.js';
 import { GUARDIAN_SHRINE, applyGuardianShrineRangePreview, applyGuardianShrineToBastionDamage, getGuardianShrineFixtures } from './game/structures/guardianShrine.js';
+import { WALL_SYSTEM, getWallSystemFixtures, purchaseWall } from './game/structures/walls.js';
 import { ECONOMY_SPEND_CURVE, getEconomyRiskProfile, getSpendCurveFixtures, getStrategicSpendProfile } from './game/balance/economySpendCurve.js';
 import { UPGRADE_CURVE, getNextUpgradePreview, getUpgradeCost } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
@@ -178,6 +179,7 @@ const BASE_TOWER_COMBAT_FIXTURE = Object.freeze(getBaseTowerCombatFixtures(BASE_
 const SUPPORT_STACKING_FIXTURE = Object.freeze(getSupportStackingFixtures());
 const EVOLUTION_FIXTURE = Object.freeze(getEvolutionFixtures());
 const TOWER_ART_FIXTURE = Object.freeze(getTowerArtFixtures());
+const WALL_SYSTEM_FIXTURE = Object.freeze(getWallSystemFixtures());
 const TFT_SHOP_FIXTURE = Object.freeze(getTftShopFixtures());
 const TFT_BENCH_FIXTURE = Object.freeze(getTftBenchFixtures());
 const TFT_COPY_PROGRESSION_FIXTURE = Object.freeze(getTftCopyProgressionFixtures());
@@ -397,6 +399,17 @@ async function fetchLeaderboardData(session, mode) {
   }
 
   return { ok: true, payload };
+}
+
+function getPathLength(waypoints) {
+  let total = 0;
+  for (let index = 0; index < waypoints.length - 1; index += 1) {
+    total += Math.hypot(
+      waypoints[index + 1].x - waypoints[index].x,
+      waypoints[index + 1].y - waypoints[index].y
+    );
+  }
+  return total;
 }
 
 function getPathPosition(waypoints, progress) {
@@ -653,6 +666,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [preparationRemaining, setPreparationRemaining] = useState(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
   const [selectedDefenseId, setSelectedDefenseId] = useState('human-aa');
   const [placedDefenses, setPlacedDefenses] = useState(() => matchingTftSnapshot?.placedDefenses ?? []);
+  const [activeWallIds, setActiveWallIds] = useState(() => matchingTftSnapshot?.activeWallIds ?? []);
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
@@ -692,6 +706,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     (run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1) * worldModifierEffects.threatMultiplier
   );
   const runScore = calculateRunScore(run ?? {});
+  const activePath = getSingleGatePathForWalls(activeWallIds);
+  const basePathLength = getPathLength(SINGLE_GATE_MAP.path.waypoints);
+  const activePathLength = getPathLength(activePath);
+  const wallTravelMultiplier = basePathLength > 0 ? activePathLength / basePathLength : 1;
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? NORMAL_MODE_TOWERS[0];
   const selectedPlacedDefense = placedDefenses.find((entry) => entry.id === selectedPlacedDefenseId) ?? null;
@@ -723,13 +741,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     const snapshot = createTftRunSnapshot({
       run,
       placedDefenses,
+      activeWallIds,
       tftBench,
       selectedTftBenchIndex,
       tftRollIndex,
       tftShopLocked
     });
     saveTftRunSnapshot(snapshot);
-  }, [run, placedDefenses, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked]);
+  }, [run, placedDefenses, activeWallIds, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked]);
 
   useEffect(() => {
     if (!run || run.phase === RUN_PHASES.ENDED) return undefined;
@@ -827,7 +846,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   useEffect(() => {
     if (activeEnemies.length === 0 || run?.phase === RUN_PHASES.ENDED) return undefined;
 
-    const durationMs = waveScaling.travelDurationMs;
+    const durationMs = waveScaling.travelDurationMs * wallTravelMultiplier;
 
     const tick = (now) => {
       let reachedBastion = 0;
@@ -868,7 +887,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       setActiveEnemies((currentEnemies) => {
         let working = currentEnemies.map((enemy) => ({
           ...enemy,
-          position: getPathPosition(SINGLE_GATE_MAP.path.waypoints, enemy.progress)
+          position: getPathPosition(activePath, enemy.progress)
         }));
 
         for (const placed of placedDefenses) {
@@ -1021,8 +1040,24 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const positionedEnemies = activeEnemies.map((enemy) => ({
     ...enemy,
-    position: getPathPosition(SINGLE_GATE_MAP.path.waypoints, enemy.progress)
+    position: getPathPosition(activePath, enemy.progress)
   }));
+
+  const handleWallPurchase = (wallId) => {
+    if (!run || run.phase !== RUN_PHASES.PREPARATION) return;
+    if (!SINGLE_GATE_MAP.compatibleModes.includes(run.mode)) return;
+
+    const attempt = purchaseWall({
+      wallId,
+      gold: availableGoldRef.current,
+      activeWallIds
+    });
+    if (!attempt.ok) return;
+
+    availableGoldRef.current = attempt.goldAfter;
+    setActiveWallIds([...attempt.activeWallIds]);
+    onSpendGold(WALL_SYSTEM.cost);
+  };
 
   const handleDefenseSelection = (defenseId) => {
     setSelectedDefenseId(defenseId);
@@ -1142,7 +1177,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           <header className="run-hud">
             <div>
               <span className="run-hud__label">MODE</span>
-              <strong>{run?.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : 'UNKNOWN'}</strong>
+              <strong>{run?.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : run?.mode === MODES.TFT_SHOP ? 'TFT SHOP' : 'UNKNOWN'}</strong>
             </div>
             <div>
               <span className="run-hud__label">WAVE</span>
@@ -1255,8 +1290,48 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </g>
             <polyline
               className="battlefield-map__path"
-              points={SINGLE_GATE_MAP.path.waypoints.map((point) => `${point.x},${point.y}`).join(' ')}
+              points={activePath.map((point) => `${point.x},${point.y}`).join(' ')}
+              strokeWidth={SINGLE_GATE_MAP.path.width}
             />
+            <g className="battlefield-map__wall-slots" aria-label="Purchasable wall sockets">
+              {SINGLE_GATE_MAP.wallSlots.sockets.map((wall) => {
+                const built = activeWallIds.includes(wall.id);
+                const affordable = (run?.gold ?? 0) >= WALL_SYSTEM.cost;
+                const canBuildNow = run?.phase === RUN_PHASES.PREPARATION && !built && affordable;
+                return (
+                  <g
+                    key={wall.id}
+                    className={`battlefield-map__wall-slot ${built ? 'battlefield-map__wall-slot--built' : 'battlefield-map__wall-slot--empty'} ${canBuildNow ? 'battlefield-map__wall-slot--ready' : ''}`}
+                    transform={`translate(${wall.x} ${wall.y})`}
+                    role="button"
+                    tabIndex={built ? -1 : 0}
+                    aria-label={built ? 'Wall built' : `Build wall for ${WALL_SYSTEM.cost} gold`}
+                    data-wall-id={wall.id}
+                    data-built={built}
+                    onClick={() => handleWallPurchase(wall.id)}
+                    onKeyDown={(event) => {
+                      if (!built && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault();
+                        handleWallPurchase(wall.id);
+                      }
+                    }}
+                  >
+                    <rect className="wall-slot__base" x="-34" y="-18" width="68" height="36" rx="8" />
+                    {built ? (
+                      <>
+                        <rect className="wall-slot__wall" x="-28" y="-30" width="56" height="42" rx="5" />
+                        <path className="wall-slot__battlement" d="M-28-30h12v10h10v-10H6v10h10v-10h12" />
+                      </>
+                    ) : (
+                      <>
+                        <path className="wall-slot__socket" d="M-24 0H24M-18-8V8M18-8V8" />
+                        <text className="wall-slot__cost" x="0" y="-25" textAnchor="middle">{WALL_SYSTEM.cost}G WALL</text>
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
             <circle
               className="battlefield-map__spawn"
               cx={SINGLE_GATE_MAP.anchors.enemySpawn.x}
@@ -1443,6 +1518,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-flying-enemy-speed={FLYING_ENEMY_BUDGET.speedIndex}
             data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
+            data-gauntlet-map-version={SINGLE_GATE_MAP.version}
+            data-gauntlet-wall-count={SINGLE_GATE_MAP.wallSlots.sockets.length}
+            data-gauntlet-wall-pass={WALL_SYSTEM_FIXTURE.socketCount === 4 && WALL_SYSTEM_FIXTURE.maximumActive === 4 && WALL_SYSTEM_FIXTURE.allSocketIdsUnique === true && WALL_SYSTEM_FIXTURE.allWallsKeepPathOpen === true && WALL_SYSTEM_FIXTURE.compatibleWithSingleGate === true && WALL_SYSTEM_FIXTURE.compatibleWithTftShop === true}
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
