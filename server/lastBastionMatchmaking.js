@@ -279,6 +279,21 @@ export function setLastBastionReady(userId, ready = true) {
   return Object.freeze({ ok: true, matched: false, ticket: snapshot(next) });
 }
 
+export function getLastBastionActiveMatchPersistenceSnapshot(userId) {
+  const id = String(userId || '').trim();
+  const match = activeMatchByUserId.get(id);
+  if (!match) return null;
+
+  return Object.freeze({
+    id: match.id,
+    seed: match.seed,
+    createdAt: match.createdAt,
+    startedAt: match.startedAt,
+    waveStartsAt: match.waveStartsAt,
+    participantIds: Object.freeze([...match.participantIds])
+  });
+}
+
 export function getLastBastionActiveMatchUserIds(userId) {
   const id = String(userId || '').trim();
   const match = activeMatchByUserId.get(id);
