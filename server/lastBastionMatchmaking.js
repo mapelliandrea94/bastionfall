@@ -671,14 +671,28 @@ export function getLastBastionMatchmakingFixtures() {
     if (queue[index].userId === a || queue[index].userId === b) queue.splice(index, 1);
   }
 
+  const fixtureBaseMs = Date.now();
   const joinA = joinLastBastionQueue(a);
   const joinAAgain = joinLastBastionQueue(a);
   const joinB = joinLastBastionQueue(b);
-  const readyA = setLastBastionReady(a, true);
-  const beforeReadyB = getLastBastionQueueStatus(a);
-  const readyB = setLastBastionReady(b, true);
-  const statusA = getLastBastionQueueStatus(a);
-  const statusB = getLastBastionQueueStatus(b);
+  const readyA = setLastBastionReady(a, true, fixtureBaseMs);
+  const beforeReadyB = getLastBastionQueueStatus(a, fixtureBaseMs);
+  const readyB = setLastBastionReady(b, true, fixtureBaseMs + 1000);
+  const duringFill = getLastBastionQueueStatus(a, fixtureBaseMs + 1000);
+  const beforeDeadline = advanceLastBastionMatchmaking(
+    fixtureBaseMs + 1000 + LAST_BASTION_MATCHMAKING.fillWindowMs - 1
+  );
+  const atDeadline = advanceLastBastionMatchmaking(
+    fixtureBaseMs + 1000 + LAST_BASTION_MATCHMAKING.fillWindowMs
+  );
+  const statusA = getLastBastionQueueStatus(
+    a,
+    fixtureBaseMs + 1000 + LAST_BASTION_MATCHMAKING.fillWindowMs
+  );
+  const statusB = getLastBastionQueueStatus(
+    b,
+    fixtureBaseMs + 1000 + LAST_BASTION_MATCHMAKING.fillWindowMs
+  );
 
   const sharedSeed =
     statusA.match?.seed &&
@@ -718,7 +732,10 @@ export function getLastBastionMatchmakingFixtures() {
     duplicateJoinIsIdempotent: joinAAgain.ok === true && joinAAgain.created === false && joinAAgain.ticket?.ticketId === joinA.ticket?.ticketId,
     queuePositionTracksOrder: joinB.ticket?.position === 2,
     firstReadyWaitsForMinimum: readyA.ok === true && beforeReadyB.matched === false,
-    secondReadyCreatesMatch: readyB.ok === true && statusA.matched === true && statusB.matched === true,
+    secondReadyCreatesMatch: readyB.ok === true && atDeadline.matched === true && statusA.matched === true && statusB.matched === true,
+    fillWindowWaitsBeforeStarting: duringFill.matched === false && duringFill.readyPlayers === 2 && Number(duringFill.fillWindowRemainingMs) > 0,
+    fillWindowDoesNotStartEarly: beforeDeadline.matched === false,
+    fillWindowStartsAtDeadline: atDeadline.matched === true,
     sharedSeed,
     sharedStart,
     participantCountCorrect: statusA.match?.participantCount === 2 && statusB.match?.participantCount === 2,
