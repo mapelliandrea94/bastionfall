@@ -20,6 +20,7 @@ import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './ga
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
 import { ARMORED_ENEMY, createArmoredEnemyState, getArmoredEnemyBudget } from './game/enemies/armored.js';
+import { SHIELDED_ENEMY, createShieldedEnemyState, getShieldedEnemyBudget } from './game/enemies/shielded.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -100,6 +101,8 @@ const RUNNER_ENEMY_BUDGET = Object.freeze(getRunnerEnemyBudget());
 const TANK_ENEMY_BUDGET = Object.freeze(getTankEnemyBudget());
 
 const ARMORED_ENEMY_BUDGET = Object.freeze(getArmoredEnemyBudget());
+
+const SHIELDED_ENEMY_BUDGET = Object.freeze(getShieldedEnemyBudget());
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -340,18 +343,21 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
     queuedWaveRef.current = run?.wave;
     setSpawnQueue(
       Array.from({ length: waveScaling.enemyCount }, (_, index) => {
-        const isArmored = waveScaling.waveNumber >= 7 && (index + 1) % 8 === 0;
-        const isTank = !isArmored && waveScaling.waveNumber >= 5 && (index + 1) % 6 === 0;
-        const isRunner = !isArmored && !isTank && waveScaling.waveNumber >= 3 && (index + 1) % 4 === 0;
+        const isShielded = waveScaling.waveNumber >= 9 && (index + 1) % 10 === 0;
+        const isArmored = !isShielded && waveScaling.waveNumber >= 7 && (index + 1) % 8 === 0;
+        const isTank = !isShielded && !isArmored && waveScaling.waveNumber >= 5 && (index + 1) % 6 === 0;
+        const isRunner = !isShielded && !isArmored && !isTank && waveScaling.waveNumber >= 3 && (index + 1) % 4 === 0;
         return {
           id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`,
-          archetype: isArmored
-            ? ARMORED_ENEMY.archetype
-            : isTank
-              ? TANK_ENEMY.archetype
-              : isRunner
-                ? RUNNER_ENEMY.archetype
-                : NORMAL_ENEMY.archetype
+          archetype: isShielded
+            ? SHIELDED_ENEMY.archetype
+            : isArmored
+              ? ARMORED_ENEMY.archetype
+              : isTank
+                ? TANK_ENEMY.archetype
+                : isRunner
+                  ? RUNNER_ENEMY.archetype
+                  : NORMAL_ENEMY.archetype
         };
       })
     );
@@ -366,29 +372,35 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
         const [nextEnemy, ...remaining] = current;
         setActiveEnemies((active) => [
           ...active,
-          (nextEnemy.archetype === ARMORED_ENEMY.archetype
-          ? createArmoredEnemyState({
+          (nextEnemy.archetype === SHIELDED_ENEMY.archetype
+          ? createShieldedEnemyState({
               ...nextEnemy,
               progress: 0,
               spawnedAt: performance.now()
             })
-          : nextEnemy.archetype === TANK_ENEMY.archetype
-            ? createTankEnemyState({
+          : nextEnemy.archetype === ARMORED_ENEMY.archetype
+            ? createArmoredEnemyState({
                 ...nextEnemy,
                 progress: 0,
                 spawnedAt: performance.now()
               })
-            : nextEnemy.archetype === RUNNER_ENEMY.archetype
-              ? createRunnerEnemyState({
+            : nextEnemy.archetype === TANK_ENEMY.archetype
+              ? createTankEnemyState({
                   ...nextEnemy,
                   progress: 0,
                   spawnedAt: performance.now()
                 })
-              : createNormalEnemyState({
-                  ...nextEnemy,
-                  progress: 0,
-                  spawnedAt: performance.now()
-                }))
+              : nextEnemy.archetype === RUNNER_ENEMY.archetype
+                ? createRunnerEnemyState({
+                    ...nextEnemy,
+                    progress: 0,
+                    spawnedAt: performance.now()
+                  })
+                : createNormalEnemyState({
+                    ...nextEnemy,
+                    progress: 0,
+                    spawnedAt: performance.now()
+                  }))
         ]);
         return remaining;
       });
@@ -589,6 +601,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-armored-enemy-threat={ARMORED_ENEMY.threatValue}
             data-armored-enemy-effective-hp={ARMORED_ENEMY_BUDGET.effectiveHp}
             data-armored-enemy-effective-hp-per-threat={ARMORED_ENEMY_BUDGET.effectiveHpPerThreat}
+            data-shielded-enemy={SHIELDED_ENEMY.name}
+            data-shielded-enemy-threat={SHIELDED_ENEMY.threatValue}
+            data-shielded-enemy-durability={SHIELDED_ENEMY_BUDGET.totalDurability}
+            data-shielded-enemy-durability-per-threat={SHIELDED_ENEMY_BUDGET.durabilityPerThreat}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
