@@ -15,6 +15,7 @@ import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutio
 import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyleForTower } from './game/towers/towerArt.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
 import { TFT_BENCH, addCopyToBench, createEmptyBench, getTftBenchFixtures, removeCopyFromBench } from './game/tft/tftBench.js';
+import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftCopyProgressionFixtures, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -178,6 +179,7 @@ const EVOLUTION_FIXTURE = Object.freeze(getEvolutionFixtures());
 const TOWER_ART_FIXTURE = Object.freeze(getTowerArtFixtures());
 const TFT_SHOP_FIXTURE = Object.freeze(getTftShopFixtures());
 const TFT_BENCH_FIXTURE = Object.freeze(getTftBenchFixtures());
+const TFT_COPY_PROGRESSION_FIXTURE = Object.freeze(getTftCopyProgressionFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -1029,9 +1031,35 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const handleEvolutionChoice = (evolutionId) => {
     if (!selectedPlacedDefense || !canChooseEvolution(selectedPlacedDefense)) return;
+    if (run?.mode === MODES.TFT_SHOP && Number(selectedPlacedDefense.copyProgress ?? 1) < TFT_COPY_PROGRESSION.maxCopies) return;
     setPlacedDefenses((current) => current.map((tower) =>
       tower.id === selectedPlacedDefense.id ? chooseTowerEvolution(tower, evolutionId) : tower
     ));
+  };
+
+  const handleMergeTftCopy = (benchIndex) => {
+    if (run?.mode !== MODES.TFT_SHOP || !selectedPlacedDefense) return;
+    const copy = tftBench[benchIndex];
+    const validation = canMergeTftCopy(selectedPlacedDefense, copy);
+
+    if (!validation.ok) {
+      setTftFeedback(validation.error === 'wrong_tower_type' ? 'WRONG TOWER TYPE' : 'COPY PROGRESS MAXED');
+      return;
+    }
+
+    const nextProgress = Number(selectedPlacedDefense.copyProgress ?? 1) + 1;
+    const confirmed = window.confirm(
+      `Merge this ${copy.name ?? copy.towerId} copy into the selected tower? Progress ${selectedPlacedDefense.copyProgress ?? 1}/${TFT_COPY_PROGRESSION.maxCopies} → ${nextProgress}/${TFT_COPY_PROGRESSION.maxCopies}. Cost: 0 Gold.`
+    );
+    if (!confirmed) return;
+
+    setPlacedDefenses((current) => current.map((tower) => {
+      if (tower.id !== selectedPlacedDefense.id) return tower;
+      return mergeTftCopyProgress(tower, copy).tower;
+    }));
+    setTftBench((current) => removeCopyFromBench(current, benchIndex).bench);
+    setSelectedTftBenchIndex(null);
+    setTftFeedback(nextProgress === TFT_COPY_PROGRESSION.maxCopies ? '7/7 — CHOOSE EVOLUTION A OR B' : `MERGED — ${nextProgress}/7`);
   };
 
   const handleBuildSlot = (slotId) => {
@@ -1402,6 +1430,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
             data-tft-bench-version={TFT_BENCH.version}
+            data-tft-copy-progression-version={TFT_COPY_PROGRESSION.version}
+            data-tft-copy-progression-pass={TFT_COPY_PROGRESSION_FIXTURE.oneCopyLevelOne === true && TFT_COPY_PROGRESSION_FIXTURE.twoAndThreeLevelTwo === true && TFT_COPY_PROGRESSION_FIXTURE.fourToSixLevelThree === true && TFT_COPY_PROGRESSION_FIXTURE.sevenLevelFour === true && TFT_COPY_PROGRESSION_FIXTURE.wrongTypeBlocked === true && TFT_COPY_PROGRESSION_FIXTURE.independentProgress === true && TFT_COPY_PROGRESSION_FIXTURE.reachesSevenExactly === true && TFT_COPY_PROGRESSION_FIXTURE.maxBlocksExtra === true}
             data-tft-bench-selected={selectedTftBenchIndex ?? ''}
             data-tft-bench-pass={TFT_BENCH_FIXTURE.slotCountExpected === TFT_BENCH_FIXTURE.slotCountActual && TFT_BENCH_FIXTURE.buyToBenchWorks === true && TFT_BENCH_FIXTURE.fullBlocksPurchase === true && TFT_BENCH_FIXTURE.sellRemovesCopy === true && TFT_BENCH_FIXTURE.noAutoMerge === true}
             data-tft-shop-version={TFT_SHOP.version}
@@ -1529,9 +1559,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       <>
                         <strong>{copy.name}</strong>
                         <small>{copy.faction.toUpperCase()}</small>
+                        {selectedPlacedDefense && (
+                          <button
+                            type="button"
+                            disabled={!canMergeTftCopy(selectedPlacedDefense, copy).ok}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleMergeTftCopy(index);
+                            }}
+                          >
+                            {selectedPlacedDefense.defenseId === copy.towerId ? 'MERGE · 0G' : 'WRONG TYPE'}
+                          </button>
+                        )}
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.stopPropagation();
                             const result = removeCopyFromBench(tftBench, index);
                             if (!result.ok) return;
                             setTftBench(result.bench);
@@ -1611,12 +1654,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               {!selectedPlacedDefense && !selectedUpgradePreview.maxed && (
                 <strong>LV.{selectedUpgradePreview.nextLevel} · {selectedUpgradePreview.upgradeCost}g</strong>
               )}
-              {selectedPlacedDefense && selectedPlacedDefense.level < UPGRADE_CURVE.maxLevel && (
+              {selectedPlacedDefense && run?.mode === MODES.TFT_SHOP && (
+                <strong>COPIES {selectedPlacedDefense.copyProgress ?? 1}/{TFT_COPY_PROGRESSION.maxCopies}</strong>
+              )}
+              {selectedPlacedDefense && run?.mode !== MODES.TFT_SHOP && selectedPlacedDefense.level < UPGRADE_CURVE.maxLevel && (
                 <button type="button" onClick={handleUpgradeSelectedTower}>
                   UPGRADE TO LV.{selectedPlacedDefense.level + 1} · {getUpgradeCost(inspectedDefenseBase, selectedPlacedDefense.level + 1)}g
                 </button>
               )}
-              {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && !selectedPlacedDefense.evolution && (
+              {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && (!run || run.mode !== MODES.TFT_SHOP || Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) && !selectedPlacedDefense.evolution && (
                 <div className="tower-evolution-choice">
                   {selectedEvolutionChoices.map((choice) => (
                     <button key={choice.id} type="button" onClick={() => handleEvolutionChoice(choice.id)}>
@@ -1628,7 +1674,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               {selectedPlacedDefense?.evolution && (
                 <strong>{TOWER_EVOLUTIONS.find((entry) => entry.id === selectedPlacedDefense.evolution)?.name ?? selectedPlacedDefense.evolution}</strong>
               )}
-              <small>Max level {UPGRADE_CURVE.maxLevel} · evolution at Lv.4</small>
+              <small>{run?.mode === MODES.TFT_SHOP ? 'TFT progression: 1/7 Lv.1 · 2–3/7 Lv.2 · 4–6/7 Lv.3 · 7/7 Lv.4 + evolution' : `Max level ${UPGRADE_CURVE.maxLevel} · evolution at Lv.4`}</small>
             </div>
             <div className="defense-inspector__targeting">
               <span>TARGETING</span>
