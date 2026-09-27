@@ -25,6 +25,7 @@ const abuseBuckets = new Map();
 const consumedMatchCompletions = new Map();
 const ABUSE_BUCKET_TTL_MS = 10 * 60 * 1000;
 const COMPLETION_REPLAY_TTL_MS = 25 * 60 * 60 * 1000;
+const LAST_BASTION_ABANDON_TIMEOUT_SECONDS = 60;
 
 function pruneTimedMap(map, nowMs, ttlMs) {
   for (const [key, value] of map) {
@@ -156,6 +157,15 @@ async function hydratePersistentLastBastionState(req) {
   const serverDb = clientForToken(req.accessToken, {
     'x-bastionfall-server-secret': matchTokenSecret
   });
+
+  const abandonSweep = await serverDb.rpc('resolve_stale_last_bastion_participants', {
+    p_now: new Date().toISOString(),
+    p_timeout_seconds: LAST_BASTION_ABANDON_TIMEOUT_SECONDS
+  });
+  if (abandonSweep.error) {
+    console.error('Last Bastion abandon sweep failed:', abandonSweep.error.message);
+    return { ok: false, error: 'last_bastion_abandon_resolution_failed', serverDb };
+  }
 
   const finishedRetentionCutoff = new Date(Date.now() - COMPLETION_REPLAY_TTL_MS).toISOString();
   const [activeMatchesRead, recentFinishedMatchesRead, queueRead] = await Promise.all([
