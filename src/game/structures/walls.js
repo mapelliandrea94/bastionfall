@@ -3,6 +3,10 @@ import { SINGLE_GATE_MAP, getSingleGatePathForWalls } from '../maps/singleGate.j
 export const WALL_SYSTEM = Object.freeze({
   maxActive: SINGLE_GATE_MAP.wallSlots.maximumActive,
   cost: SINGLE_GATE_MAP.wallSlots.defaultCost,
+  maxHp: 1000,
+  damageTickMs: 500,
+  infantryDamagePerTick: 24,
+  armoredDamagePerTick: 48,
   refundRate: 0,
   compatibleModes: SINGLE_GATE_MAP.compatibleModes
 });
