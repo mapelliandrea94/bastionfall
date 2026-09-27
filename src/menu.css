@@ -3380,3 +3380,16 @@ button:focus-visible,
     color: #ffd982;
   }
 }
+
+
+/* BATCH 115 — keep every battlefield pad clear of the desktop management sidebar */
+@media (min-width: 901px) {
+  .battlefield-map {
+    width: calc(100% - 330px);
+    right: 330px;
+  }
+
+  .last-bastion-status {
+    right: 344px;
+  }
+}
