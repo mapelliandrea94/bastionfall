@@ -7,6 +7,7 @@ import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
+import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -486,6 +487,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             <strong>{MAGE_TOWER.name}</strong>
             <span>{MAGE_TOWER.cost}g</span>
             <small>{MAGE_TOWER.damage} DMG · {MAGE_TOWER.range} RANGE · {MAGE_TOWER.damageType.toUpperCase()}</small>
+          </button>
+          <button className="tower-card tower-card--ballista" disabled>
+            <strong>{BALLISTA_TOWER.name}</strong>
+            <span>{BALLISTA_TOWER.cost}g</span>
+            <small>{BALLISTA_TOWER.damage} DMG · {BALLISTA_TOWER.range} RANGE · {BALLISTA_TOWER.damageType.toUpperCase()}</small>
           </button>
 
           <div className="run-sidebar__status">
