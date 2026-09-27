@@ -25,6 +25,7 @@ import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } 
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
+import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
 import { ENEMY_BASE_MODEL, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
@@ -112,6 +113,8 @@ const DIFFICULTY_BAND_FIXTURE = Object.freeze(getDifficultyBandFixtures());
 const RUN_TIMER_FIXTURE = Object.freeze(getRunTimerFixtures());
 
 const RUN_SCORE_FIXTURE = Object.freeze(getRunScoreFixtures());
+
+const RUN_END_FIXTURE = Object.freeze(getRunEndFixtures());
 
 const ENEMY_BASE_FIXTURE = Object.freeze(getEnemyBaseFixtures());
 
@@ -208,7 +211,8 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`) {
     startedAtMs: Date.now(),
     elapsedMs: 0,
     endedAtMs: null,
-    result: null
+    result: null,
+    endSnapshot: null
   };
 }
 
@@ -694,6 +698,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
             data-run-score-kills={runScore.killScore}
             data-run-score-core={runScore.coreScore}
             data-run-score-pass={RUN_SCORE_FIXTURE.baselineExpected === RUN_SCORE_FIXTURE.baselineActual && RUN_SCORE_FIXTURE.flawlessExpected === RUN_SCORE_FIXTURE.flawlessActual && RUN_SCORE_FIXTURE.baselineNotFlawless === true && RUN_SCORE_FIXTURE.flawlessDetected === true}
+            data-run-end-pass={RUN_END_FIXTURE.reasonExpected === RUN_END_FIXTURE.reasonActual && RUN_END_FIXTURE.modeExpected === RUN_END_FIXTURE.modeActual && RUN_END_FIXTURE.waveExpected === RUN_END_FIXTURE.waveActual && RUN_END_FIXTURE.elapsedExpected === RUN_END_FIXTURE.elapsedActual && RUN_END_FIXTURE.scorePositive === true && RUN_END_FIXTURE.frozen === true}
+            data-run-end-reason={run?.endSnapshot?.reason ?? ''}
+            data-run-end-score={run?.endSnapshot?.score ?? ''}
             data-wave-threat-budget={threatWave.budget}
             data-wave-threat-spent={threatWave.spentThreat}
             data-wave-threat-unused={threatWave.unusedThreat}
@@ -1143,14 +1150,28 @@ function App() {
           setRunState((current) => {
             if (!current) return current;
             const nextHp = Math.max(0, current.coreHp - Math.max(0, damage));
-            return {
+            if (nextHp !== 0) {
+              return {
+                ...current,
+                coreHp: nextHp,
+                bastionHitId: current.bastionHitId + 1
+              };
+            }
+
+            const endedAtMs = Date.now();
+            const endedRun = {
               ...current,
-              coreHp: nextHp,
+              coreHp: 0,
               bastionHitId: current.bastionHitId + 1,
-              phase: nextHp === 0 ? RUN_PHASES.ENDED : current.phase,
-              elapsedMs: nextHp === 0 ? getElapsedRunMs(current.startedAtMs, Date.now()) : current.elapsedMs,
-              endedAtMs: nextHp === 0 ? Date.now() : current.endedAtMs,
-              result: nextHp === 0 ? 'bastion-destroyed' : current.result
+              phase: RUN_PHASES.ENDED,
+              elapsedMs: getElapsedRunMs(current.startedAtMs, endedAtMs),
+              endedAtMs,
+              result: RUN_END_REASONS.BASTION_DESTROYED
+            };
+
+            return {
+              ...endedRun,
+              endSnapshot: createRunEndSnapshot(endedRun, RUN_END_REASONS.BASTION_DESTROYED)
             };
           });
         }}
