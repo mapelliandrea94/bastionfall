@@ -3,6 +3,8 @@ import { createEnemyBaseState } from './enemyBase.js';
 export const ARMORED_ENEMY = Object.freeze({
   id: 'armored',
   name: 'Ironclad',
+  faction: 'human',
+  unitType: 'armored',
   archetype: 'armored',
   maxHp: 180,
   moveSpeed: 0.88,
