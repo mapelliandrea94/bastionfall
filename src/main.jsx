@@ -14,6 +14,7 @@ import { getPlacementValidationFixtures, validateSingleGatePlacement } from './g
 import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
 import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getWaveClearReward } from './game/economy/economyBaseline.js';
 import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOpportunityCost } from './game/structures/goldMine.js';
+import { WAR_FORGE, applyWarForgePreview, getWarForgeFixtures } from './game/structures/warForge.js';
 import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
@@ -140,6 +141,9 @@ const GOLD_MINE_FIXTURE = Object.freeze(getGoldMineFixtures([
   BALLISTA_TOWER,
   BARRACKS
 ]));
+
+const WAR_FORGE_FIXTURE = Object.freeze(getWarForgeFixtures(ARCHER_TOWER));
+const WAR_FORGE_ARCHER_PREVIEW = Object.freeze(applyWarForgePreview(ARCHER_TOWER, WAR_FORGE.auraRadius));
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -655,6 +659,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-gold-mine-break-even={getGoldMineBreakEvenWave()}
             data-gold-mine-opportunity-count={GOLD_MINE_OPPORTUNITY.affordableAlternatives.length}
             data-gold-mine-pass={GOLD_MINE_FIXTURE.breakEvenWaveExpected === GOLD_MINE_FIXTURE.breakEvenWaveActual && GOLD_MINE_FIXTURE.beforeBreakEvenNegative === true && GOLD_MINE_FIXTURE.atBreakEvenNonNegative === true && GOLD_MINE_FIXTURE.includesArcherAlternative === true && GOLD_MINE_FIXTURE.includesFrostAlternative === true && GOLD_MINE_FIXTURE.excludesCannonAlternative === true}
+            data-war-forge-cost={WAR_FORGE.cost}
+            data-war-forge-radius={WAR_FORGE.auraRadius}
+            data-war-forge-damage-multiplier={WAR_FORGE.damageMultiplier}
+            data-war-forge-speed-multiplier={WAR_FORGE.attackSpeedMultiplier}
+            data-war-forge-archer-dps={WAR_FORGE_ARCHER_PREVIEW.modifiedDps}
+            data-war-forge-pass={WAR_FORGE_FIXTURE.activeExpected === WAR_FORGE_FIXTURE.activeActual && WAR_FORGE_FIXTURE.inactiveExpected === WAR_FORGE_FIXTURE.inactiveActual && WAR_FORGE_FIXTURE.damageBoosted === true && WAR_FORGE_FIXTURE.intervalReduced === true}
             data-enemy-base-version={ENEMY_BASE_MODEL.version}
             data-enemy-base-pass={ENEMY_BASE_FIXTURE.shieldExpected === ENEMY_BASE_FIXTURE.shieldActual && ENEMY_BASE_FIXTURE.hpExpected === ENEMY_BASE_FIXTURE.hpActual && ENEMY_BASE_FIXTURE.slowedSpeedExpected === ENEMY_BASE_FIXTURE.slowedSpeedActual && ENEMY_BASE_FIXTURE.expiredSlowSpeedExpected === ENEMY_BASE_FIXTURE.expiredSlowSpeedActual}
             data-normal-enemy={NORMAL_ENEMY.name}
