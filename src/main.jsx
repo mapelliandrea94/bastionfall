@@ -305,6 +305,25 @@ async function fetchProfileData(session) {
   return { ok: true, payload };
 }
 
+async function fetchLeaderboardData(session, mode) {
+  if (!session?.access_token) {
+    return { ok: false, error: 'authentication_required' };
+  }
+
+  const response = await fetch(`/api/leaderboards/${encodeURIComponent(mode)}?limit=50`, {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`
+    }
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    return { ok: false, error: payload?.error || 'leaderboard_load_failed' };
+  }
+
+  return { ok: true, payload };
+}
+
 function getPathPosition(waypoints, progress) {
   if (!waypoints.length) return { x: 0, y: 0 };
   if (waypoints.length === 1) return waypoints[0];
@@ -1142,19 +1161,89 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
   );
 }
 
-function Leaderboard({ onBack }) {
+function Leaderboard({ session, onBack }) {
+  const [mode, setMode] = useState(MODES.SINGLE_GATE);
+  const [leaderboardData, setLeaderboardData] = useState(null);
+  const [leaderboardStatus, setLeaderboardStatus] = useState('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLeaderboardStatus('loading');
+
+    fetchLeaderboardData(session, mode).then((result) => {
+      if (cancelled) return;
+
+      if (!result.ok) {
+        setLeaderboardData(null);
+        setLeaderboardStatus(result.error);
+        return;
+      }
+
+      setLeaderboardData(result.payload);
+      setLeaderboardStatus('ready');
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.access_token, mode]);
+
+  const entries = leaderboardData?.entries ?? [];
+
   return (
     <Shell
       onBack={onBack}
       kicker="GLOBAL RECORDS"
       title="LEADERBOARD"
-      subtitle="Fair runs only. No permanent power advantages."
+      subtitle="Verified records only. Switch between Single Gate and Tri-Gate."
     >
-      <div className="table-card">
-        <div className="table-row table-row--head">
-          <span>#</span><span>DEFENDER</span><span>MODE</span><span>WAVE</span>
+      <div className="leaderboard-tabs">
+        <button
+          className={mode === MODES.SINGLE_GATE ? 'leaderboard-tab leaderboard-tab--active' : 'leaderboard-tab'}
+          onClick={() => setMode(MODES.SINGLE_GATE)}
+        >
+          SINGLE GATE
+        </button>
+        <button
+          className={mode === MODES.TRI_GATE ? 'leaderboard-tab leaderboard-tab--active' : 'leaderboard-tab'}
+          onClick={() => setMode(MODES.TRI_GATE)}
+        >
+          TRI-GATE
+        </button>
+      </div>
+
+      <div className="table-card leaderboard-table">
+        <div className="table-row table-row--head leaderboard-row">
+          <span>#</span>
+          <span>DEFENDER</span>
+          <span>WAVE</span>
+          <span>SURVIVAL</span>
+          <span>SCORE</span>
+          <span>KILLS</span>
         </div>
-        <div className="empty-state">No recorded runs yet.</div>
+
+        {leaderboardStatus === 'loading' && (
+          <div className="empty-state">Loading verified records…</div>
+        )}
+
+        {leaderboardStatus !== 'loading' && leaderboardStatus !== 'ready' && (
+          <div className="empty-state">Leaderboard unavailable: {leaderboardStatus}</div>
+        )}
+
+        {leaderboardStatus === 'ready' && entries.length === 0 && (
+          <div className="empty-state">No verified runs recorded for this mode yet.</div>
+        )}
+
+        {leaderboardStatus === 'ready' && entries.map((entry, index) => (
+          <div className="table-row leaderboard-row" key={`${entry.displayName}-${entry.updatedAt}-${index}`}>
+            <span>{index + 1}</span>
+            <span>{entry.displayName}</span>
+            <span>{entry.bestWave}</span>
+            <span>{formatSurvivalTime(entry.bestSurvivalMs)}</span>
+            <span>{Number(entry.bestScore || 0).toLocaleString()}</span>
+            <span>{Number(entry.bestKills || 0).toLocaleString()}</span>
+          </div>
+        ))}
       </div>
     </Shell>
   );
@@ -1580,7 +1669,7 @@ function App() {
       />
     );
   }
-  if (screen === SCREENS.LEADERBOARD) return <Leaderboard onBack={() => setScreen(SCREENS.MENU)} />;
+  if (screen === SCREENS.LEADERBOARD) return <Leaderboard session={session} onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.PROFILE) return <Profile session={session} onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.HOW_TO_PLAY) return <HowToPlay onBack={() => setScreen(SCREENS.MENU)} />;
