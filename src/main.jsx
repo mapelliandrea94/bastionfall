@@ -21,6 +21,7 @@ import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './ga
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
 import { ARMORED_ENEMY, createArmoredEnemyState, getArmoredEnemyBudget } from './game/enemies/armored.js';
 import { SHIELDED_ENEMY, createShieldedEnemyState, getShieldedEnemyBudget } from './game/enemies/shielded.js';
+import { FLYING_ENEMY, createFlyingEnemyState, getFlyingEnemyBudget } from './game/enemies/flying.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -103,6 +104,8 @@ const TANK_ENEMY_BUDGET = Object.freeze(getTankEnemyBudget());
 const ARMORED_ENEMY_BUDGET = Object.freeze(getArmoredEnemyBudget());
 
 const SHIELDED_ENEMY_BUDGET = Object.freeze(getShieldedEnemyBudget());
+
+const FLYING_ENEMY_BUDGET = Object.freeze(getFlyingEnemyBudget());
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -343,21 +346,24 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
     queuedWaveRef.current = run?.wave;
     setSpawnQueue(
       Array.from({ length: waveScaling.enemyCount }, (_, index) => {
-        const isShielded = waveScaling.waveNumber >= 9 && (index + 1) % 10 === 0;
-        const isArmored = !isShielded && waveScaling.waveNumber >= 7 && (index + 1) % 8 === 0;
-        const isTank = !isShielded && !isArmored && waveScaling.waveNumber >= 5 && (index + 1) % 6 === 0;
-        const isRunner = !isShielded && !isArmored && !isTank && waveScaling.waveNumber >= 3 && (index + 1) % 4 === 0;
+        const isFlying = waveScaling.waveNumber >= 11 && (index + 1) % 12 === 0;
+        const isShielded = !isFlying && waveScaling.waveNumber >= 9 && (index + 1) % 10 === 0;
+        const isArmored = !isFlying && !isShielded && waveScaling.waveNumber >= 7 && (index + 1) % 8 === 0;
+        const isTank = !isFlying && !isShielded && !isArmored && waveScaling.waveNumber >= 5 && (index + 1) % 6 === 0;
+        const isRunner = !isFlying && !isShielded && !isArmored && !isTank && waveScaling.waveNumber >= 3 && (index + 1) % 4 === 0;
         return {
           id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`,
-          archetype: isShielded
-            ? SHIELDED_ENEMY.archetype
-            : isArmored
-              ? ARMORED_ENEMY.archetype
-              : isTank
-                ? TANK_ENEMY.archetype
-                : isRunner
-                  ? RUNNER_ENEMY.archetype
-                  : NORMAL_ENEMY.archetype
+          archetype: isFlying
+            ? FLYING_ENEMY.archetype
+            : isShielded
+              ? SHIELDED_ENEMY.archetype
+              : isArmored
+                ? ARMORED_ENEMY.archetype
+                : isTank
+                  ? TANK_ENEMY.archetype
+                  : isRunner
+                    ? RUNNER_ENEMY.archetype
+                    : NORMAL_ENEMY.archetype
         };
       })
     );
@@ -372,35 +378,41 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
         const [nextEnemy, ...remaining] = current;
         setActiveEnemies((active) => [
           ...active,
-          (nextEnemy.archetype === SHIELDED_ENEMY.archetype
-          ? createShieldedEnemyState({
+          (nextEnemy.archetype === FLYING_ENEMY.archetype
+          ? createFlyingEnemyState({
               ...nextEnemy,
               progress: 0,
               spawnedAt: performance.now()
             })
-          : nextEnemy.archetype === ARMORED_ENEMY.archetype
-            ? createArmoredEnemyState({
+          : nextEnemy.archetype === SHIELDED_ENEMY.archetype
+            ? createShieldedEnemyState({
                 ...nextEnemy,
                 progress: 0,
                 spawnedAt: performance.now()
               })
-            : nextEnemy.archetype === TANK_ENEMY.archetype
-              ? createTankEnemyState({
+            : nextEnemy.archetype === ARMORED_ENEMY.archetype
+              ? createArmoredEnemyState({
                   ...nextEnemy,
                   progress: 0,
                   spawnedAt: performance.now()
                 })
-              : nextEnemy.archetype === RUNNER_ENEMY.archetype
-                ? createRunnerEnemyState({
+              : nextEnemy.archetype === TANK_ENEMY.archetype
+                ? createTankEnemyState({
                     ...nextEnemy,
                     progress: 0,
                     spawnedAt: performance.now()
                   })
-                : createNormalEnemyState({
-                    ...nextEnemy,
-                    progress: 0,
-                    spawnedAt: performance.now()
-                  }))
+                : nextEnemy.archetype === RUNNER_ENEMY.archetype
+                  ? createRunnerEnemyState({
+                      ...nextEnemy,
+                      progress: 0,
+                      spawnedAt: performance.now()
+                    })
+                  : createNormalEnemyState({
+                      ...nextEnemy,
+                      progress: 0,
+                      spawnedAt: performance.now()
+                    }))
         ]);
         return remaining;
       });
@@ -605,6 +617,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-shielded-enemy-threat={SHIELDED_ENEMY.threatValue}
             data-shielded-enemy-durability={SHIELDED_ENEMY_BUDGET.totalDurability}
             data-shielded-enemy-durability-per-threat={SHIELDED_ENEMY_BUDGET.durabilityPerThreat}
+            data-flying-enemy={FLYING_ENEMY.name}
+            data-flying-enemy-threat={FLYING_ENEMY.threatValue}
+            data-flying-enemy-speed={FLYING_ENEMY_BUDGET.speedIndex}
+            data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
