@@ -7,9 +7,12 @@ on:
       - "src/game/maps/singleGate.js"
       - "src/game/placement/singleGatePlacement.js"
       - "src/main.jsx"
+      - "src/game/spawning/waveDirector.js"
+      - "src/game/enemies/enemyRoster.js"
       - "src/menu.css"
       - "server.mjs"
       - "tests/tower-placement-mouse.mjs"
+      - "tests/wave-director.mjs"
       - ".github/workflows/tower-placement-hotfix-qa.yml"
 
 jobs:
@@ -23,6 +26,8 @@ jobs:
           node-version: 22
       - run: npm install
       - run: npm run build
+      - name: Wave Director QA
+        run: node tests/wave-director.mjs
       - run: npm install --no-save playwright@1.55.0
       - run: npx playwright install --with-deps chromium
       - name: Start production preview
