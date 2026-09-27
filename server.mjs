@@ -930,6 +930,30 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     const serverDb = clientForToken(req.accessToken, {
       'x-bastionfall-server-secret': matchTokenSecret
     });
+
+    if (coreMaxHp > 28) {
+      return res.status(400).json({ error: 'invalid_last_bastion_core_max_hp' });
+    }
+
+    const liveBounds = getStandardRunValidationBounds('last-bastion', identity.matchId, wave);
+    if (kills > liveBounds.maxKills) {
+      return res.status(400).json({ error: 'kills_exceed_wave_capacity' });
+    }
+    if (elapsedMs + 1500 < liveBounds.minElapsedMs) {
+      return res.status(400).json({ error: 'elapsed_time_below_wave_minimum' });
+    }
+
+    const expectedScore = calculateRunScore({
+      wave,
+      elapsedMs,
+      kills,
+      coreHp,
+      coreMaxHp
+    }).totalScore;
+    if (Math.floor(score) !== expectedScore) {
+      return res.status(400).json({ error: 'score_mismatch' });
+    }
+
     const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
 
     const { data: statRows, error: statError } = await serverDb.rpc(
@@ -939,7 +963,7 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
         p_result_reason: resultReason,
         p_wave: wave,
         p_elapsed_ms: Math.floor(elapsedMs),
-        p_score: Math.floor(score),
+        p_score: expectedScore,
         p_gold: gold,
         p_core_hp: coreHp,
         p_core_max_hp: coreMaxHp,
@@ -960,7 +984,13 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
       if (message.includes('last_bastion_placement_missing')) {
         return res.status(409).json({ error: 'last_bastion_placement_missing' });
       }
-      if (message.includes('last_bastion_result_mismatch') || message.includes('win_placement_mismatch')) {
+      if (
+        message.includes('last_bastion_result_mismatch') ||
+        message.includes('win_placement_mismatch') ||
+        message.includes('last_bastion_wave_mismatch') ||
+        message.includes('last_bastion_core_hp_mismatch') ||
+        message.includes('last_bastion_core_max_hp_invalid')
+      ) {
         return res.status(400).json({ error: 'last_bastion_result_mismatch' });
       }
       console.error('Last Bastion persistence failed:', statError.message);
