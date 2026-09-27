@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { eliminateLastBastionParticipant, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { eliminateLastBastionParticipant, getLastBastionActiveMatchPersistenceSnapshot, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -261,14 +261,28 @@ app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-r
   if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_ready_failed' });
 
   if (result.matched && result.match) {
-    const participantIds = getLastBastionActiveMatchUserIds(req.user.id);
-    const { error } = await hydrated.serverDb
-      .from('last_bastion_queue')
-      .delete()
-      .in('user_id', participantIds.length ? participantIds : [req.user.id]);
+    const snapshot = getLastBastionActiveMatchPersistenceSnapshot(req.user.id);
+    const participantIds = snapshot?.participantIds || getLastBastionActiveMatchUserIds(req.user.id);
+
+    if (!snapshot || participantIds.length < 2) {
+      return res.status(500).json({ error: 'match_persistence_snapshot_missing' });
+    }
+
+    const { error } = await hydrated.serverDb.rpc(
+      'persist_last_bastion_match_foundation',
+      {
+        p_match_id: snapshot.id,
+        p_seed: snapshot.seed,
+        p_created_at: snapshot.createdAt,
+        p_started_at: snapshot.startedAt,
+        p_wave_starts_at: snapshot.waveStartsAt,
+        p_participant_ids: participantIds
+      }
+    );
+
     if (error) {
-      console.error('Last Bastion matched queue cleanup failed:', error.message);
-      return res.status(500).json({ error: 'queue_persistence_cleanup_failed' });
+      console.error('Last Bastion match persistence failed:', error.message);
+      return res.status(500).json({ error: 'match_persistence_write_failed' });
     }
   } else {
     const persisted = await persistLastBastionQueueTicket(hydrated.serverDb, result.ticket);
