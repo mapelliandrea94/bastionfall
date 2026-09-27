@@ -324,6 +324,7 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
           : RUN_DEFAULTS.startingGold,
     coreHp: RUN_DEFAULTS.coreHp,
     coreMaxHp: RUN_DEFAULTS.coreHp,
+    waveStartCoreHp: RUN_DEFAULTS.coreHp,
     bastionHitId: 0,
     kills: 0,
     startedAtMs: Number.isFinite(Date.parse(serverMatch?.startedAt))
@@ -2222,6 +2223,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     ? TFT_SHOP.waveClearGold
                     : getWaveClearReward(waveScaling.waveNumber)
               }</strong></div>
+              {run?.mode === MODES.TFT_SHOP && (
+                <div><span>BONUSES</span><strong>+1 PERFECT · +3 BOSS · +2 / 5 WAVES</strong></div>
+              )}
             </div>
           </div>
 
@@ -3089,13 +3093,33 @@ function App() {
                   ? TFT_SHOP.waveClearGold
                   : getWaveClearReward(completedWaveNumber)
               : 0;
+            const tftPerfectWave =
+              current.mode === MODES.TFT_SHOP &&
+              advancingWave &&
+              Number(current.coreHp ?? 0) >= Number(current.waveStartCoreHp ?? current.coreHp ?? 0);
+            const tftBossWave =
+              current.mode === MODES.TFT_SHOP &&
+              advancingWave &&
+              isBossWave(completedWaveNumber);
+            const tftMilestoneWave =
+              current.mode === MODES.TFT_SHOP &&
+              advancingWave &&
+              completedWaveNumber % TFT_SHOP.milestoneInterval === 0;
+            const tftWaveBonus =
+              current.mode === MODES.TFT_SHOP && advancingWave
+                ? (tftPerfectWave ? TFT_SHOP.perfectWaveBonus : 0) +
+                  (tftBossWave ? TFT_SHOP.bossWaveBonus : 0) +
+                  (tftMilestoneWave ? TFT_SHOP.milestoneWaveBonus : 0)
+                : 0;
             const nextBlessings = options.blessingId
               ? addBlessingToLoadout(current.blessings ?? [], options.blessingId)
               : current.blessings ?? [];
             const activeModifiersForClear = getActiveWorldModifiers(current.seed ?? 'run', completedWaveNumber);
             const worldEffectsForClear = getWorldModifierEffects(activeModifiersForClear);
             const waveClearGold = advancingWave
-              ? Math.max(0, Math.round(applyBlessingWaveGold(baseWaveClearGold, nextBlessings) * worldEffectsForClear.waveGoldMultiplier))
+              ? current.mode === MODES.TFT_SHOP
+                ? baseWaveClearGold + tftWaveBonus
+                : Math.max(0, Math.round(applyBlessingWaveGold(baseWaveClearGold, nextBlessings) * worldEffectsForClear.waveGoldMultiplier))
               : 0;
             const nextMaxHp = getBlessingAdjustedMaxHp(RUN_DEFAULTS.coreHp, nextBlessings);
             const maxHpGain = Math.max(0, nextMaxHp - current.coreMaxHp);
@@ -3105,6 +3129,7 @@ function App() {
               phase: nextPhase,
               wave: advancingWave ? current.wave + 1 : current.wave,
               gold: current.gold + waveClearGold,
+              waveStartCoreHp: nextPhase === RUN_PHASES.ACTIVE ? current.coreHp : current.waveStartCoreHp,
               blessings: nextBlessings,
               coreMaxHp: nextMaxHp,
               coreHp: Math.min(nextMaxHp, current.coreHp + maxHpGain)
