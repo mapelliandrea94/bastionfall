@@ -30,7 +30,8 @@ import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.j
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
-import { BLESSING_SYSTEM, getBlessingOffer, getBlessingSystemFixtures } from './game/blessings/blessings.js';
+import { BLESSING_SYSTEM, addBlessingToLoadout, getBlessingOffer, getBlessingSystemFixtures } from './game/blessings/blessings.js';
+import { BLESSING_ENGINE, applyBlessingBastionDamage, applyBlessingWaveGold, getBlessingAdjustedMaxHp, getBlessingEngineFixtures, getBlessingModifiers } from './game/blessings/blessingEngine.js';
 import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } from './game/boss/bossSummonAdds.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
@@ -167,6 +168,7 @@ const BOSS_SUMMON_ADDS_FIXTURE = Object.freeze(getBossSummonAddsFixtures());
 const BOSS_ARMOR_ENRAGE_FIXTURE = Object.freeze(getBossArmorEnrageFixtures());
 const BOSS_TUNING_FIXTURE = Object.freeze(getBossTuningFixtures());
 const BLESSING_SYSTEM_FIXTURE = Object.freeze(getBlessingSystemFixtures());
+const BLESSING_ENGINE_FIXTURE = Object.freeze(getBlessingEngineFixtures());
 const OPENING_BLESSING_OFFER = Object.freeze(getBlessingOffer('prototype-run', [], BLESSING_SYSTEM.choiceCount));
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
@@ -250,7 +252,8 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
     endedAtMs: null,
     result: null,
     endSnapshot: null,
-    personalBestResult: null
+    personalBestResult: null,
+    blessings: []
   };
 }
 
@@ -609,7 +612,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const bossArmor = bossIndex ? getBossArmorForIndex(bossIndex) : 0;
   const bossTuning = bossWaveIncoming ? getBossTuningForWave(waveScaling.waveNumber) : null;
   const bossEnragePreview = applyBossEnrageStats({ isBoss: bossWaveIncoming, hp: 35, maxHp: 100, moveSpeed: 1 });
-  const blessingOffer = getBlessingOffer(`${run?.seed ?? 'run'}:boss:${waveScaling.waveNumber}`, [], BLESSING_SYSTEM.choiceCount);
+  const blessingModifiers = getBlessingModifiers(run?.blessings ?? []);
+  const blessingOffer = getBlessingOffer(`${run?.seed ?? 'run'}:boss:${waveScaling.waveNumber}`, run?.blessings ?? [], BLESSING_SYSTEM.choiceCount);
   const blessingChoiceVisible = run?.phase === RUN_PHASES.RESOLVING && isBossWave(waveScaling.waveNumber);
   const threatWave = composeWaveByThreatBudget(
     waveScaling.waveNumber,
@@ -770,7 +774,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       setActiveEnemies((current) => current
         .map((enemy) => ({
           ...enemy,
-          progress: Math.min(1, ((now - enemy.spawnedAt) / durationMs) * (enemy.moveSpeed || 1))
+          progress: Math.min(1, ((now - enemy.spawnedAt) / durationMs) * (enemy.moveSpeed || 1) * blessingModifiers.enemyMoveSpeedMultiplier)
         }))
         .filter((enemy) => {
           if (enemy.progress >= 1) {
@@ -1150,6 +1154,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-boss-armor-enrage-version={BOSS_ARMOR_ENRAGE.version}
             data-boss-tuning-version={BOSS_TUNING.version}
             data-blessing-system-version={BLESSING_SYSTEM.version}
+            data-blessing-engine-version={BLESSING_ENGINE.version}
+            data-blessing-engine-pass={BLESSING_ENGINE_FIXTURE.stackedDamageAboveBase === true && BLESSING_ENGINE_FIXTURE.mixedGoldExpected === BLESSING_ENGINE_FIXTURE.mixedGoldActual && BLESSING_ENGINE_FIXTURE.emergencyDamageExpected === BLESSING_ENGINE_FIXTURE.emergencyDamageActual && BLESSING_ENGINE_FIXTURE.boostedHpExpected === BLESSING_ENGINE_FIXTURE.boostedHpActual && BLESSING_ENGINE_FIXTURE.timeLockSlows === true && BLESSING_ENGINE_FIXTURE.frostboundAddsControl === true}
+            data-blessing-count={(run?.blessings ?? []).length}
+            data-blessing-tower-damage={blessingModifiers.towerDamageMultiplier}
+            data-blessing-attack-speed={blessingModifiers.attackSpeedMultiplier}
+            data-blessing-boss-damage={blessingModifiers.bossDamageMultiplier}
             data-blessing-choice-count={OPENING_BLESSING_OFFER.length}
             data-blessing-system-pass={BLESSING_SYSTEM_FIXTURE.choiceCountExpected === BLESSING_SYSTEM_FIXTURE.choiceCountActual && BLESSING_SYSTEM_FIXTURE.deterministicOffer === true && BLESSING_SYSTEM_FIXTURE.uniqueChoices === true && BLESSING_SYSTEM_FIXTURE.validDefinitions === true && BLESSING_SYSTEM_FIXTURE.setSizeExpected === BLESSING_SYSTEM_FIXTURE.setSizeActual && BLESSING_SYSTEM_FIXTURE.categoryCoverage === true && BLESSING_SYSTEM_FIXTURE.rarityCoverage === true && BLESSING_SYSTEM_FIXTURE.hasTradeoffBlessing === true && BLESSING_SYSTEM_FIXTURE.maxStackRespected === true && BLESSING_SYSTEM_FIXTURE.stackAddedWhenAllowed === true}
             data-boss-tuning-pass={BOSS_TUNING_FIXTURE.nonBossNull === true && BOSS_TUNING_FIXTURE.wave10HpExpected === BOSS_TUNING_FIXTURE.wave10HpActual && BOSS_TUNING_FIXTURE.hpScalesUp === true && BOSS_TUNING_FIXTURE.armorScalesUp === true && BOSS_TUNING_FIXTURE.moveSpeedCapped === true && BOSS_TUNING_FIXTURE.rewardScalesUp === true && BOSS_TUNING_FIXTURE.summonsIncluded === true}
@@ -1290,7 +1300,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <div className="blessing-choice__header">
                 <span>BOSS DEFEATED</span>
                 <strong>CHOOSE A BLESSING</strong>
-                <small>Pick one reward for the next stage of the run. Effects activate in Batch 91.</small>
+                <small>Pick one reward for the next stage of the run. The selected effect applies immediately.</small>
               </div>
               <div className="blessing-choice__grid">
                 {blessingOffer.map((blessing) => {
@@ -1334,7 +1344,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             className="run-phase-test"
             onClick={() => {
               setSelectedBlessingPreviewId(null);
-              onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true });
+              onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true, blessingId: selectedBlessingPreviewId });
             }}
             disabled={!run || run.phase !== RUN_PHASES.RESOLVING || (blessingChoiceVisible && !selectedBlessingPreviewId)}
           >
@@ -1839,7 +1849,8 @@ function App() {
         onDamageBastion={(damage) => {
           setRunState((current) => {
             if (!current) return current;
-            const nextHp = Math.max(0, current.coreHp - Math.max(0, damage));
+            const adjustedDamage = applyBlessingBastionDamage(damage, current.coreHp, current.coreMaxHp, current.blessings ?? []);
+            const nextHp = Math.max(0, current.coreHp - adjustedDamage);
             if (nextHp !== 0) {
               return {
                 ...current,
@@ -1870,17 +1881,28 @@ function App() {
             if (!current || !canTransitionWavePhase(current.phase, nextPhase)) return current;
             const advancingWave = Boolean(options.advanceWave);
             const completedWaveNumber = Math.max(1, current.wave + 1);
-            const waveClearGold = advancingWave
+            const baseWaveClearGold = advancingWave
               ? current.mode === MODES.TRI_GATE
                 ? getTriGateWaveClearReward(completedWaveNumber)
                 : getWaveClearReward(completedWaveNumber)
               : 0;
+            const nextBlessings = options.blessingId
+              ? addBlessingToLoadout(current.blessings ?? [], options.blessingId)
+              : current.blessings ?? [];
+            const waveClearGold = advancingWave
+              ? applyBlessingWaveGold(baseWaveClearGold, nextBlessings)
+              : 0;
+            const nextMaxHp = getBlessingAdjustedMaxHp(RUN_DEFAULTS.coreHp, nextBlessings);
+            const maxHpGain = Math.max(0, nextMaxHp - current.coreMaxHp);
 
             return {
               ...current,
               phase: nextPhase,
               wave: advancingWave ? current.wave + 1 : current.wave,
-              gold: current.gold + waveClearGold
+              gold: current.gold + waveClearGold,
+              blessings: nextBlessings,
+              coreMaxHp: nextMaxHp,
+              coreHp: Math.min(nextMaxHp, current.coreHp + maxHpGain)
             };
           });
         }}
