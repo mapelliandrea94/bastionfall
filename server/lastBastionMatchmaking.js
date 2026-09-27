@@ -7,7 +7,11 @@ export const LAST_BASTION_MATCHMAKING = Object.freeze({
   maxPlayers: 8,
   synchronizedStartDelayMs: 5000,
   heartbeatIntervalMs: 5000,
-  heartbeatTimeoutMs: 15000
+  heartbeatTimeoutMs: 15000,
+  heartbeatMinIntervalMs: 750,
+  maxWave: 9999,
+  maxCoreHp: 100000,
+  desyncWaveSpreadTolerance: 1
 });
 
 const queue = [];
@@ -17,6 +21,39 @@ const matchesById = new Map();
 
 function nowIso(nowMs = Date.now()) {
   return new Date(nowMs).toISOString();
+}
+
+function getFairnessSnapshot(match, nowMs = Date.now()) {
+  if (!match) {
+    return Object.freeze({
+      connectedAliveCount: 0,
+      minWave: 0,
+      maxWave: 0,
+      waveSpread: 0,
+      desynced: false
+    });
+  }
+
+  const connectedAlive = match.participantIds
+    .map((participantId) => match.participants.get(participantId))
+    .filter((state) => {
+      if (!state || state.alive === false) return false;
+      const lastSeenAtMs = Number(state.lastSeenAtMs ?? 0);
+      return lastSeenAtMs > 0 && nowMs - lastSeenAtMs <= LAST_BASTION_MATCHMAKING.heartbeatTimeoutMs;
+    });
+
+  const waves = connectedAlive.map((state) => Math.max(0, Math.floor(Number(state.wave) || 0)));
+  const minWave = waves.length ? Math.min(...waves) : 0;
+  const maxWave = waves.length ? Math.max(...waves) : 0;
+  const waveSpread = maxWave - minWave;
+
+  return Object.freeze({
+    connectedAliveCount: connectedAlive.length,
+    minWave,
+    maxWave,
+    waveSpread,
+    desynced: connectedAlive.length > 1 && waveSpread > LAST_BASTION_MATCHMAKING.desyncWaveSpreadTolerance
+  });
 }
 
 function participantSnapshot(match, userId, nowMs = Date.now()) {
@@ -54,6 +91,7 @@ function publicMatch(match, userId, nowMs = Date.now()) {
     winnerSlot: match.winnerUserId ? match.participantIds.indexOf(match.winnerUserId) + 1 : null,
     heartbeatIntervalMs: LAST_BASTION_MATCHMAKING.heartbeatIntervalMs,
     heartbeatTimeoutMs: LAST_BASTION_MATCHMAKING.heartbeatTimeoutMs,
+    fairness: getFairnessSnapshot(match, nowMs),
     participants: Object.freeze(participantSnapshot(match, userId, nowMs))
   });
 }
@@ -79,7 +117,9 @@ function createParticipantState(createdAtMs) {
     alive: true,
     lastSeenAtMs: createdAtMs,
     wave: 0,
-    coreHp: 20
+    coreHp: 20,
+    lastHeartbeatAcceptedAtMs: 0,
+    rejectedHeartbeatCount: 0
   };
 }
 
@@ -233,9 +273,36 @@ export function recordLastBastionHeartbeat(userId, matchId, payload = {}, nowMs 
   const state = match.participants.get(id);
   if (!state) return Object.freeze({ ok: false, error: 'participant_not_found' });
 
+  const wave = Number(payload.wave ?? state.wave);
+  const coreHp = Number(payload.coreHp ?? state.coreHp);
+
+  if (!Number.isInteger(wave) || wave < 0 || wave > LAST_BASTION_MATCHMAKING.maxWave) {
+    state.rejectedHeartbeatCount += 1;
+    return Object.freeze({ ok: false, error: 'invalid_wave' });
+  }
+
+  if (!Number.isInteger(coreHp) || coreHp < 0 || coreHp > LAST_BASTION_MATCHMAKING.maxCoreHp) {
+    state.rejectedHeartbeatCount += 1;
+    return Object.freeze({ ok: false, error: 'invalid_core_hp' });
+  }
+
+  if (wave < state.wave) {
+    state.rejectedHeartbeatCount += 1;
+    return Object.freeze({ ok: false, error: 'wave_regression' });
+  }
+
+  if (
+    state.lastHeartbeatAcceptedAtMs > 0 &&
+    nowMs - state.lastHeartbeatAcceptedAtMs < LAST_BASTION_MATCHMAKING.heartbeatMinIntervalMs
+  ) {
+    state.rejectedHeartbeatCount += 1;
+    return Object.freeze({ ok: false, error: 'heartbeat_rate_limited' });
+  }
+
   state.lastSeenAtMs = nowMs;
-  state.wave = Math.max(0, Math.floor(Number(payload.wave ?? state.wave) || 0));
-  state.coreHp = Math.max(0, Math.floor(Number(payload.coreHp ?? state.coreHp) || 0));
+  state.lastHeartbeatAcceptedAtMs = nowMs;
+  state.wave = wave;
+  state.coreHp = state.alive === false ? 0 : coreHp;
 
   return Object.freeze({
     ok: true,
@@ -254,6 +321,15 @@ export function eliminateLastBastionParticipant(userId, matchId, payload = {}, n
 
   const state = match.participants.get(id);
   if (!state) return Object.freeze({ ok: false, error: 'participant_not_found' });
+
+  if (state.alive === false) {
+    return Object.freeze({
+      ok: true,
+      eliminated: true,
+      duplicate: true,
+      match: publicMatch(match, id, nowMs)
+    });
+  }
 
   state.lastSeenAtMs = nowMs;
   state.wave = Math.max(0, Math.floor(Number(payload.wave ?? state.wave) || 0));
@@ -339,7 +415,12 @@ export function getLastBastionMatchmakingFixtures() {
     statusA.match.waveStartsAt === statusB.match?.waveStartsAt;
 
   const heartbeatAt = Date.now();
+  const invalidWaveHeartbeat = recordLastBastionHeartbeat(a, statusA.match?.id, { wave: -1, coreHp: 14 }, heartbeatAt - 3000);
   const heartbeatA = recordLastBastionHeartbeat(a, statusA.match?.id, { wave: 7, coreHp: 14 }, heartbeatAt);
+  const rateLimitedHeartbeat = recordLastBastionHeartbeat(a, statusA.match?.id, { wave: 7, coreHp: 14 }, heartbeatAt + 100);
+  const regressingHeartbeat = recordLastBastionHeartbeat(a, statusA.match?.id, { wave: 6, coreHp: 14 }, heartbeatAt + 1000);
+  const heartbeatB = recordLastBastionHeartbeat(b, statusB.match?.id, { wave: 5, coreHp: 20 }, heartbeatAt + 1000);
+  const fairnessAfterSpread = getLastBastionMatchStatus(a, statusA.match?.id, heartbeatAt + 1100);
   const afterHeartbeatA = getLastBastionMatchStatus(a, statusA.match?.id, heartbeatAt + 1000);
   const afterTimeoutA = getLastBastionMatchStatus(a, statusA.match?.id, heartbeatAt + LAST_BASTION_MATCHMAKING.heartbeatTimeoutMs + 1);
 
@@ -370,6 +451,10 @@ export function getLastBastionMatchmakingFixtures() {
     heartbeatUpdatesProgress: selfA?.wave === 7 && selfA?.coreHp === 14,
     heartbeatMarksConnected: selfA?.connected === true,
     timeoutMarksDisconnectedWithoutElimination: selfAAfterTimeout?.connected === false && selfAAfterTimeout?.alive === true,
+    invalidHeartbeatRejected: invalidWaveHeartbeat.ok === false && invalidWaveHeartbeat.error === 'invalid_wave',
+    rateLimitWorks: rateLimitedHeartbeat.ok === false && rateLimitedHeartbeat.error === 'heartbeat_rate_limited',
+    waveRegressionRejected: regressingHeartbeat.ok === false && regressingHeartbeat.error === 'wave_regression',
+    desyncDetected: heartbeatB.ok === true && fairnessAfterSpread.match?.fairness?.desynced === true && fairnessAfterSpread.match?.fairness?.waveSpread === 2,
     eliminationMarksDead: eliminationA.ok === true && selfAfterElimination?.alive === false,
     lastAliveWins: winnerStatusB.match?.status === 'finished' && winnerStatusB.match?.winnerSlot === 2 && winnerParticipant?.alive === true
   });
