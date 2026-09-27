@@ -9,6 +9,7 @@ import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
 import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.js';
+import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -156,6 +157,8 @@ const ENEMY_TAG_FIXTURE = Object.freeze({
   bossTagsPresent: BOSS_TUNING_FIXTURE.bossTagsPresent === true
 });
 const TOWER_ROSTER_FIXTURE = Object.freeze(getTowerRosterFixtures());
+const NORMAL_BUILD_ROSTER_FIXTURE = Object.freeze(getNormalBuildRosterFixtures());
+const NORMAL_BUILD_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures(NORMAL_MODE_TOWERS, 10000));
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -611,7 +614,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [spawnQueue, setSpawnQueue] = useState([]);
   const [activeEnemies, setActiveEnemies] = useState([]);
   const [preparationRemaining, setPreparationRemaining] = useState(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
-  const [selectedDefenseId, setSelectedDefenseId] = useState('archer');
+  const [selectedDefenseId, setSelectedDefenseId] = useState('human-aa');
   const [placedDefenses, setPlacedDefenses] = useState([]);
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
@@ -645,15 +648,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     (run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1) * worldModifierEffects.threatMultiplier
   );
   const runScore = calculateRunScore(run ?? {});
-  const defenseDefinitions = Object.freeze({
-    archer: ARCHER_TOWER,
-    cannon: CANNON_TOWER,
-    frost: FROST_TOWER,
-    mage: MAGE_TOWER,
-    ballista: BALLISTA_TOWER,
-    barracks: BARRACKS
-  });
-  const selectedDefense = defenseDefinitions[selectedDefenseId] ?? ARCHER_TOWER;
+  const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
+  const selectedDefense = defenseDefinitions[selectedDefenseId] ?? NORMAL_MODE_TOWERS[0];
   const selectedPlacedDefense = placedDefenses.find((entry) => entry.id === selectedPlacedDefenseId) ?? null;
   const inspectedDefense = selectedPlacedDefense
     ? defenseDefinitions[selectedPlacedDefense.defenseId] ?? selectedDefense
@@ -1153,6 +1149,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
             data-tower-roster-version={TOWER_ROSTER.version}
+            data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-tower-roster-count={TOWER_ROSTER.towers.length}
             data-tower-roster-pass={TOWER_ROSTER_FIXTURE.towerCountExpected === TOWER_ROSTER_FIXTURE.towerCountActual && TOWER_ROSTER_FIXTURE.humanCount === 3 && TOWER_ROSTER_FIXTURE.insectCount === 3 && TOWER_ROSTER_FIXTURE.alienCount === 3 && TOWER_ROSTER_FIXTURE.neutralCount === 3 && TOWER_ROSTER_FIXTURE.airCounterCount === 3 && TOWER_ROSTER_FIXTURE.armoredCounterCount === 3 && TOWER_ROSTER_FIXTURE.infantryCounterCount === 3 && TOWER_ROSTER_FIXTURE.supportCounterCount === 3 && TOWER_ROSTER_FIXTURE.neutralFlagsValid === true && TOWER_ROSTER_FIXTURE.legacyArcherResolves === true && TOWER_ROSTER_FIXTURE.legacySaveNormalizes === true}
             data-tri-gate-map-version={TRI_GATE_MAP.version}
@@ -1195,36 +1192,29 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
-          <button className={`tower-card tower-card--archer ${selectedDefenseId === 'archer' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('archer')}>
-            <strong>{ARCHER_TOWER.name}</strong>
-            <span>{ARCHER_TOWER.cost}g</span>
-            <small>{ARCHER_TOWER.damage} DMG · {ARCHER_TOWER.range} RANGE · {(1000 / ARCHER_TOWER.attackIntervalMs).toFixed(1)}/s</small>
-          </button>
-          <button className={`tower-card tower-card--cannon ${selectedDefenseId === 'cannon' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('cannon')}>
-            <strong>{CANNON_TOWER.name}</strong>
-            <span>{CANNON_TOWER.cost}g</span>
-            <small>{CANNON_TOWER.damage} DMG · {CANNON_TOWER.splashRadius} SPLASH · {(1000 / CANNON_TOWER.attackIntervalMs).toFixed(1)}/s</small>
-          </button>
-          <button className={`tower-card tower-card--frost ${selectedDefenseId === 'frost' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('frost')}>
-            <strong>{FROST_TOWER.name}</strong>
-            <span>{FROST_TOWER.cost}g</span>
-            <small>{FROST_TOWER.damage} DMG · {FROST_TOWER.slowPercent}% SLOW · {(FROST_TOWER.slowDurationMs / 1000).toFixed(1)}s</small>
-          </button>
-          <button className={`tower-card tower-card--mage ${selectedDefenseId === 'mage' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('mage')}>
-            <strong>{MAGE_TOWER.name}</strong>
-            <span>{MAGE_TOWER.cost}g</span>
-            <small>{MAGE_TOWER.damage} DMG · {MAGE_TOWER.range} RANGE · {MAGE_TOWER.damageType.toUpperCase()}</small>
-          </button>
-          <button className={`tower-card tower-card--ballista ${selectedDefenseId === 'ballista' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('ballista')}>
-            <strong>{BALLISTA_TOWER.name}</strong>
-            <span>{BALLISTA_TOWER.cost}g</span>
-            <small>{BALLISTA_TOWER.damage} DMG · {BALLISTA_TOWER.range} RANGE · {BALLISTA_TOWER.damageType.toUpperCase()}</small>
-          </button>
-          <button className={`tower-card tower-card--barracks ${selectedDefenseId === 'barracks' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('barracks')}>
-            <strong>{BARRACKS.name}</strong>
-            <span>{BARRACKS.cost}g</span>
-            <small>{BARRACKS.squadSize} UNITS · {BARRACKS.engageRadius} ENGAGE · {(BARRACKS.respawnIntervalMs / 1000).toFixed(1)}s RESPAWN</small>
-          </button>
+          <div className="normal-build-roster" data-normal-build-count={NORMAL_MODE_TOWERS.length}>
+            {['human', 'insect', 'alien', 'neutral'].map((faction) => (
+              <section className={`normal-build-group normal-build-group--${faction}`} key={faction}>
+                <span className="normal-build-group__title">{faction.toUpperCase()}</span>
+                <div className="normal-build-group__grid">
+                  {NORMAL_MODE_TOWERS.filter((tower) => tower.faction === faction).map((tower) => (
+                    <button
+                      key={tower.id}
+                      className={`tower-card tower-card--compact tower-card--${tower.faction} ${selectedDefenseId === tower.id ? 'tower-card--selected' : ''}`}
+                      onClick={() => handleDefenseSelection(tower.id)}
+                      data-tower-id={tower.id}
+                      data-faction={tower.faction}
+                      data-counter-type={tower.counterType}
+                    >
+                      <strong>{tower.name}</strong>
+                      <span>{tower.cost}g</span>
+                      <small>{tower.faction.toUpperCase()} · {tower.role.replaceAll('-', ' ').toUpperCase()}</small>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
 
           <section className="defense-inspector" aria-label="Selected defense inspection">
             <div className="defense-inspector__header">
