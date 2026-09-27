@@ -39,6 +39,13 @@ assert(antiCheatMigration.includes('completed_matches_standard_run_match_uidx'),
 assert(antiCheatMigration.includes('already_recorded boolean'), 'Standard result RPC must expose idempotent replay state');
 assert(antiCheatMigration.includes('update public.profiles'), 'Standard record and profile rewards must commit atomically');
 
+
+assert(server.includes("last_reported_at,status"), 'Completion must read the server checkpoint timestamp');
+assert(server.includes("const officialElapsedMs = Math.max(0, checkpointReportedAtMs - startedAtMs)"), 'Standard elapsed time must come from server checkpoint time');
+assert(server.includes("elapsedMs: officialElapsedMs"), 'Standard score must use server-authoritative elapsed time');
+assert(server.includes("p_elapsed_ms: Math.floor(officialElapsedMs)"), 'Persisted standard elapsed time must be server-authoritative');
+assert(server.includes("canonicalRun = Object.freeze"), 'Completion response must expose canonical server timing');
+
 console.log('Standard run validation foundation QA PASS', {
   persistedSessions: true,
   waveCheckpoints: true,
