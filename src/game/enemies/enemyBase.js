@@ -11,7 +11,9 @@ export const ENEMY_BASE_MODEL = Object.freeze({
     goldReward: 1,
     threatValue: 1,
     bastionDamage: 1,
-    airborne: false
+    airborne: false,
+    faction: 'human',
+    unitType: 'infantry'
   })
 });
 
@@ -29,6 +31,8 @@ export function createEnemyBaseState(overrides = {}) {
     threatValue: Math.max(0, Number(overrides.threatValue ?? ENEMY_BASE_MODEL.defaults.threatValue)),
     bastionDamage: Math.max(0, Number(overrides.bastionDamage ?? ENEMY_BASE_MODEL.defaults.bastionDamage)),
     airborne: Boolean(overrides.airborne ?? ENEMY_BASE_MODEL.defaults.airborne),
+    faction: String(overrides.faction ?? ENEMY_BASE_MODEL.defaults.faction),
+    unitType: String(overrides.unitType ?? ENEMY_BASE_MODEL.defaults.unitType),
     progress: Math.max(0, Math.min(1, Number(overrides.progress ?? 0))),
     spawnedAt: Number(overrides.spawnedAt ?? 0),
     statusEffects: Object.freeze({
@@ -82,6 +86,7 @@ export function getEnemyBaseFixtures() {
     slowedSpeedExpected: 0.9,
     slowedSpeedActual: getEnemyEffectiveSpeed(slowed, 1000),
     expiredSlowSpeedExpected: 1.2,
-    expiredSlowSpeedActual: getEnemyEffectiveSpeed(slowed, 2500)
+    expiredSlowSpeedActual: getEnemyEffectiveSpeed(slowed, 2500),
+    tagsPersist: createEnemyBaseState({ faction: 'alien', unitType: 'air' }).faction === 'alien' && createEnemyBaseState({ faction: 'alien', unitType: 'air' }).unitType === 'air'
   });
 }
