@@ -15,6 +15,7 @@ on:
       - "tests/wave-director.mjs"
       - "tests/last-bastion-sync.mjs"
       - "tests/last-bastion-spectate.mjs"
+      - "tests/game-feedback.mjs"
       - ".github/workflows/tower-placement-hotfix-qa.yml"
 
 jobs:
@@ -34,6 +35,8 @@ jobs:
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Spectate QA
         run: node tests/last-bastion-spectate.mjs
+      - name: Gameplay Feedback QA
+        run: node tests/game-feedback.mjs
       - run: npm install --no-save playwright@1.55.0
       - run: npx playwright install --with-deps chromium
       - name: Start production preview
