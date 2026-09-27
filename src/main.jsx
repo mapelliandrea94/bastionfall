@@ -17,6 +17,7 @@ import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/c
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import { ENEMY_BASE_MODEL, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
+import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -91,6 +92,8 @@ const ATTACK_FEEDBACK_FIXTURE = Object.freeze(getAttackFeedbackFixtures());
 const ENEMY_BASE_FIXTURE = Object.freeze(getEnemyBaseFixtures());
 
 const NORMAL_ENEMY_BUDGET = Object.freeze(getNormalEnemyBudget());
+
+const RUNNER_ENEMY_BUDGET = Object.freeze(getRunnerEnemyBudget());
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -330,9 +333,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
 
     queuedWaveRef.current = run?.wave;
     setSpawnQueue(
-      Array.from({ length: waveScaling.enemyCount }, (_, index) => ({
-        id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`
-      }))
+      Array.from({ length: waveScaling.enemyCount }, (_, index) => {
+        const isRunner = waveScaling.waveNumber >= 3 && (index + 1) % 4 === 0;
+        return {
+          id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`,
+          archetype: isRunner ? RUNNER_ENEMY.archetype : NORMAL_ENEMY.archetype
+        };
+      })
     );
   }, [run?.phase, run?.wave]);
 
@@ -345,11 +352,17 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
         const [nextEnemy, ...remaining] = current;
         setActiveEnemies((active) => [
           ...active,
-          createNormalEnemyState({
-          ...nextEnemy,
-          progress: 0,
-          spawnedAt: performance.now()
-        })
+          (nextEnemy.archetype === RUNNER_ENEMY.archetype
+          ? createRunnerEnemyState({
+              ...nextEnemy,
+              progress: 0,
+              spawnedAt: performance.now()
+            })
+          : createNormalEnemyState({
+              ...nextEnemy,
+              progress: 0,
+              spawnedAt: performance.now()
+            }))
         ]);
         return remaining;
       });
@@ -369,7 +382,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
       setActiveEnemies((current) => current
         .map((enemy) => ({
           ...enemy,
-          progress: Math.min(1, (now - enemy.spawnedAt) / durationMs)
+          progress: Math.min(1, ((now - enemy.spawnedAt) / durationMs) * (enemy.moveSpeed || 1))
         }))
         .filter((enemy) => {
           if (enemy.progress >= 1) {
@@ -538,6 +551,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-normal-enemy={NORMAL_ENEMY.name}
             data-normal-enemy-threat={NORMAL_ENEMY.threatValue}
             data-normal-enemy-hp-per-threat={NORMAL_ENEMY_BUDGET.hpPerThreat}
+            data-runner-enemy={RUNNER_ENEMY.name}
+            data-runner-enemy-threat={RUNNER_ENEMY.threatValue}
+            data-runner-enemy-hp-per-threat={RUNNER_ENEMY_BUDGET.hpPerThreat}
+            data-runner-enemy-speed={RUNNER_ENEMY_BUDGET.speedIndex}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
