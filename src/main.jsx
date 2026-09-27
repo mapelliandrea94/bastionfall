@@ -29,6 +29,7 @@ import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, 
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
+import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
 import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } from './game/boss/bossSummonAdds.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
@@ -163,6 +164,7 @@ const TRI_GATE_BALANCE_SMOKE = Object.freeze(getTriGateBalanceSmokeTest());
 const BOSS_SCHEDULE_FIXTURE = Object.freeze(getBossScheduleFixtures());
 const BOSS_SUMMON_ADDS_FIXTURE = Object.freeze(getBossSummonAddsFixtures());
 const BOSS_ARMOR_ENRAGE_FIXTURE = Object.freeze(getBossArmorEnrageFixtures());
+const BOSS_TUNING_FIXTURE = Object.freeze(getBossTuningFixtures());
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
   ARCHER_TOWER,
@@ -601,6 +603,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const bossSummonPlan = getBossSummonAddsPlan(waveScaling.waveNumber);
   const bossIndex = bossWaveIncoming ? Math.max(1, Math.floor(waveScaling.waveNumber / BOSS_SCHEDULE.interval)) : null;
   const bossArmor = bossIndex ? getBossArmorForIndex(bossIndex) : 0;
+  const bossTuning = bossWaveIncoming ? getBossTuningForWave(waveScaling.waveNumber) : null;
   const bossEnragePreview = applyBossEnrageStats({ isBoss: bossWaveIncoming, hp: 35, maxHp: 100, moveSpeed: 1 });
   const threatWave = composeWaveByThreatBudget(
     waveScaling.waveNumber,
@@ -1139,6 +1142,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-boss-schedule-version={BOSS_SCHEDULE.version}
             data-boss-summon-adds-version={BOSS_SUMMON_ADDS.version}
             data-boss-armor-enrage-version={BOSS_ARMOR_ENRAGE.version}
+            data-boss-tuning-version={BOSS_TUNING.version}
+            data-boss-tuning-pass={BOSS_TUNING_FIXTURE.nonBossNull === true && BOSS_TUNING_FIXTURE.wave10HpExpected === BOSS_TUNING_FIXTURE.wave10HpActual && BOSS_TUNING_FIXTURE.hpScalesUp === true && BOSS_TUNING_FIXTURE.armorScalesUp === true && BOSS_TUNING_FIXTURE.moveSpeedCapped === true && BOSS_TUNING_FIXTURE.rewardScalesUp === true && BOSS_TUNING_FIXTURE.summonsIncluded === true}
             data-boss-enrage-preview={bossEnragePreview.enraged}
             data-boss-armor-enrage-pass={BOSS_ARMOR_ENRAGE_FIXTURE.armorBoss1Expected === BOSS_ARMOR_ENRAGE_FIXTURE.armorBoss1Actual && BOSS_ARMOR_ENRAGE_FIXTURE.armorBoss3Expected === BOSS_ARMOR_ENRAGE_FIXTURE.armorBoss3Actual && BOSS_ARMOR_ENRAGE_FIXTURE.armorCaps === true && BOSS_ARMOR_ENRAGE_FIXTURE.aboveThresholdNotEnraged === true && BOSS_ARMOR_ENRAGE_FIXTURE.atThresholdEnraged === true && BOSS_ARMOR_ENRAGE_FIXTURE.enrageBoostsMovement === true && BOSS_ARMOR_ENRAGE_FIXTURE.nonBossUnaffected === true}
             data-boss-summon-adds-pass={BOSS_SUMMON_ADDS_FIXTURE.normalWaveInactive === true && BOSS_SUMMON_ADDS_FIXTURE.firstBossActive === true && BOSS_SUMMON_ADDS_FIXTURE.firstBossPulseCountExpected === BOSS_SUMMON_ADDS_FIXTURE.firstBossPulseCountActual && BOSS_SUMMON_ADDS_FIXTURE.firstBossAddsPerPulseExpected === BOSS_SUMMON_ADDS_FIXTURE.firstBossAddsPerPulseActual && BOSS_SUMMON_ADDS_FIXTURE.laterBossScalesAdds === true && BOSS_SUMMON_ADDS_FIXTURE.idsUnique === true && BOSS_SUMMON_ADDS_FIXTURE.sourceTagged === true}
@@ -1230,8 +1235,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           <div className={bossWaveIncoming ? 'boss-schedule boss-schedule--incoming' : 'boss-schedule'}>
             <span>{bossWaveIncoming ? 'BOSS WAVE' : 'NEXT BOSS'}</span>
             <strong>Wave {upcomingBossWave}</strong>
-            {bossWaveIncoming && <small>{bossSummonPlan.totalAdds} adds · {bossArmor} armor · enrage ≤ {Math.round(BOSS_ARMOR_ENRAGE.enrageThreshold * 100)}% HP</small>}
+            {bossWaveIncoming && bossTuning && <small>{bossTuning.name} · {bossTuning.maxHp} HP · {bossArmor} armor · {bossSummonPlan.totalAdds} adds · enrage ≤ {Math.round(BOSS_ARMOR_ENRAGE.enrageThreshold * 100)}% HP</small>}
           </div>
+
+          {bossWaveIncoming && bossTuning && (
+            <div className="boss-milestone" aria-label="Boss milestone">
+              <span>BOSS MILESTONE</span>
+              <strong>{bossTuning.name}</strong>
+              <small>HP {bossTuning.maxHp} · ARMOR {bossTuning.armor} · CORE DMG {bossTuning.bastionDamage} · REWARD +{bossTuning.goldReward}G</small>
+            </div>
+          )}
 
           <div className="run-sidebar__status">
             <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
