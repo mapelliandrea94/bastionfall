@@ -15,7 +15,8 @@ function snapshot(entry) {
     ticketId: entry.ticketId,
     userId: entry.userId,
     joinedAt: entry.joinedAt,
-    status: 'queued',
+    ready: Boolean(entry.ready),
+    status: entry.ready ? 'ready' : 'queued',
     position: position >= 0 ? position + 1 : null,
     queuedPlayers: queue.length
   });
@@ -33,7 +34,8 @@ export function joinLastBastionQueue(userId) {
   const entry = Object.freeze({
     ticketId: randomUUID(),
     userId: id,
-    joinedAt: new Date().toISOString()
+    joinedAt: new Date().toISOString(),
+    ready: false
   });
   queue.push(entry);
   byUserId.set(id, entry);
@@ -53,6 +55,19 @@ export function leaveLastBastionQueue(userId) {
   byUserId.delete(id);
 
   return Object.freeze({ ok: true, removed: true, queuedPlayers: queue.length });
+}
+
+export function setLastBastionReady(userId, ready = true) {
+  const id = String(userId || '').trim();
+  const existing = byUserId.get(id);
+  if (!existing) return Object.freeze({ ok: false, error: 'not_queued' });
+
+  const next = Object.freeze({ ...existing, ready: Boolean(ready) });
+  const index = queue.findIndex((item) => item.userId === id);
+  if (index >= 0) queue[index] = next;
+  byUserId.set(id, next);
+
+  return Object.freeze({ ok: true, ticket: snapshot(next) });
 }
 
 export function getLastBastionQueueStatus(userId) {
@@ -76,6 +91,7 @@ export function getLastBastionMatchmakingFixtures() {
   const joinA = joinLastBastionQueue(a);
   const joinAAgain = joinLastBastionQueue(a);
   const joinB = joinLastBastionQueue(b);
+  const readyA = setLastBastionReady(a, true);
   const statusA = getLastBastionQueueStatus(a);
   const leaveA = leaveLastBastionQueue(a);
   const afterLeaveA = getLastBastionQueueStatus(a);
@@ -86,6 +102,7 @@ export function getLastBastionMatchmakingFixtures() {
     joinCreatesTicket: joinA.ok === true && joinA.created === true && Boolean(joinA.ticket?.ticketId),
     duplicateJoinIsIdempotent: joinAAgain.ok === true && joinAAgain.created === false && joinAAgain.ticket?.ticketId === joinA.ticket?.ticketId,
     queuePositionTracksOrder: joinB.ticket?.position === 2 && statusA.ticket?.position === 1,
+    readyLifecycleWorks: readyA.ok === true && readyA.ticket?.ready === true && statusA.ticket?.ready === true,
     leaveRemovesUser: leaveA.removed === true && afterLeaveA.queued === false,
     fixtureCleanupLeavesQueueEmpty: getLastBastionQueueStatus('fixture-none').queuedPlayers === 0
   });
