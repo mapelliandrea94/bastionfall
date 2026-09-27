@@ -1449,3 +1449,66 @@ button { font: inherit; }
 .battlefield-map__bastion {
   filter: drop-shadow(0 14px 24px rgba(0,0,0,.34));
 }
+
+
+/* BATCH 23 — Bastion HP & damage feedback */
+.battlefield-map__bastion-hp-bg {
+  fill: rgba(8, 10, 12, .86);
+  stroke: rgba(255,255,255,.12);
+  stroke-width: 2;
+}
+
+.battlefield-map__bastion-hp-fill {
+  fill: #c8a44b;
+  transition: width .2s ease;
+}
+
+.battlefield-map__bastion-hp-text {
+  fill: #f5e7bd;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.battlefield-map__bastion--damaged .battlefield-map__bastion-base,
+.battlefield-map__bastion--damaged .battlefield-map__bastion-keep,
+.battlefield-map__bastion--damaged .battlefield-map__bastion-tower {
+  stroke: #d98e59;
+}
+
+.battlefield-map__bastion--critical .battlefield-map__bastion-base,
+.battlefield-map__bastion--critical .battlefield-map__bastion-keep,
+.battlefield-map__bastion--critical .battlefield-map__bastion-tower {
+  stroke: #df6656;
+}
+
+.battlefield-map__bastion[data-hit-id]:not([data-hit-id="0"]) .battlefield-map__bastion-core {
+  animation: bastion-hit-pulse .32s ease-out;
+}
+
+@keyframes bastion-hit-pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(232, 184, 74, .45)); }
+  35% { transform: scale(1.45); filter: drop-shadow(0 0 24px rgba(230, 85, 67, .9)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 12px rgba(232, 184, 74, .45)); }
+}
+
+.run-damage-test {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 12px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  border: 1px solid rgba(211, 104, 87, .3);
+  background: rgba(112, 37, 30, .14);
+  color: #e4b1a8;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.run-damage-test small {
+  font-size: 9px;
+  color: #8f7771;
+  letter-spacing: .03em;
+}
