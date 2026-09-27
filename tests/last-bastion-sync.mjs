@@ -18,6 +18,10 @@ assert(fixture.sharedSeed, 'Matched players must receive the same seed');
 assert(fixture.sharedStart, 'Matched players must receive the same synchronized start');
 assert(fixture.participantCountCorrect, 'Matched participant count must be consistent');
 assert(fixture.matchedPlayersRemovedFromQueue, 'Matched players must leave the queue');
+assert(fixture.heartbeatAccepted, 'Last Bastion heartbeat must be accepted');
+assert(fixture.heartbeatUpdatesProgress, 'Heartbeat must update participant wave/core HP');
+assert(fixture.heartbeatMarksConnected, 'Fresh heartbeat must mark participant connected');
+assert(fixture.timeoutMarksDisconnectedWithoutElimination, 'Heartbeat timeout must mark disconnected without eliminating the participant');
 
 const seed = 'last-bastion:sync-fixture';
 const playerA = generateWavePlan({ seed, waveNumber: 18, mode: 'last-bastion' });
