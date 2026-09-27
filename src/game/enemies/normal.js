@@ -3,6 +3,8 @@ import { createEnemyBaseState } from './enemyBase.js';
 export const NORMAL_ENEMY = Object.freeze({
   id: 'normal',
   name: 'Raider',
+  faction: 'human',
+  unitType: 'infantry',
   archetype: 'normal',
   maxHp: 100,
   moveSpeed: 1,
