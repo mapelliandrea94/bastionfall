@@ -5,6 +5,11 @@ export const ELITE_MODIFIER_SYSTEM = Object.freeze({
   eliteChancePerFiveWaves: 0.02,
   maxEliteChance: 0.28,
   maxModifiersPerEnemy: 1,
+  modifiers: Object.freeze([
+    Object.freeze({ id: 'brutal', name: 'Brutal', hpMultiplier: 1.35, bastionDamageMultiplier: 1.35, moveSpeedMultiplier: 0.95 }),
+    Object.freeze({ id: 'swift', name: 'Swift', hpMultiplier: 0.95, bastionDamageMultiplier: 1, moveSpeedMultiplier: 1.3 }),
+    Object.freeze({ id: 'fortified', name: 'Fortified', hpMultiplier: 1.2, bastionDamageMultiplier: 1, moveSpeedMultiplier: 0.9, armorBonus: 18 })
+  ]),
   excludedArchetypes: Object.freeze([])
 });
 
@@ -59,11 +64,40 @@ export function attachEliteModifierFoundation(enemy, context) {
     });
   }
 
+  const modifierIndex = hashSeed(`${context.seed}:${context.waveNumber}:${context.enemyIndex}:modifier`) % ELITE_MODIFIER_SYSTEM.modifiers.length;
+  const modifier = ELITE_MODIFIER_SYSTEM.modifiers[modifierIndex];
+
   return Object.freeze({
     ...enemy,
     elite: true,
-    eliteModifierIds: Object.freeze([])
+    eliteModifierIds: Object.freeze([modifier.id])
   });
+}
+
+export function applyEliteModifiers(enemy) {
+  if (!enemy?.elite || !enemy.eliteModifierIds?.length) return Object.freeze({ ...enemy });
+
+  let result = { ...enemy };
+  for (const modifierId of enemy.eliteModifierIds) {
+    const modifier = ELITE_MODIFIER_SYSTEM.modifiers.find((entry) => entry.id === modifierId);
+    if (!modifier) continue;
+
+    const maxHp = Math.max(1, Math.round(Number(result.maxHp ?? result.hp ?? 1) * (modifier.hpMultiplier ?? 1)));
+    const hpRatio = Number(result.maxHp ?? result.hp ?? 1) > 0
+      ? Number(result.hp ?? result.maxHp ?? 1) / Number(result.maxHp ?? result.hp ?? 1)
+      : 1;
+
+    result = {
+      ...result,
+      maxHp,
+      hp: Math.max(1, Math.round(maxHp * hpRatio)),
+      moveSpeed: Number((Number(result.moveSpeed ?? 1) * (modifier.moveSpeedMultiplier ?? 1)).toFixed(4)),
+      armor: Math.max(0, Number(result.armor ?? 0) + Number(modifier.armorBonus ?? 0)),
+      bastionDamage: Math.max(0, Number(result.bastionDamage ?? 1) * Number(modifier.bastionDamageMultiplier ?? 1))
+    };
+  }
+
+  return Object.freeze(result);
 }
 
 export function getEliteModifierFoundationFixtures() {
@@ -83,7 +117,12 @@ export function getEliteModifierFoundationFixtures() {
     deterministicAssignment:
       shouldAssignEliteModifier({ seed: 'same', waveNumber: 30, enemyIndex: 3, enemy: normal }) ===
       shouldAssignEliteModifier({ seed: 'same', waveNumber: 30, enemyIndex: 3, enemy: normal }),
-    foundationHasNoConcreteModifiers:
-      attachEliteModifierFoundation(normal, { seed: 'same', waveNumber: 30, enemyIndex: 3 }).eliteModifierIds.length === 0
+    concreteModifierAssigned:
+      attachEliteModifierFoundation(normal, { seed: 'same', waveNumber: 30, enemyIndex: 3 }).eliteModifierIds.length <= 1,
+    modifierSetCountExpected: 3,
+    modifierSetCountActual: ELITE_MODIFIER_SYSTEM.modifiers.length,
+    brutalIncreasesHp: applyEliteModifiers({ elite: true, eliteModifierIds: ['brutal'], maxHp: 100, hp: 100, moveSpeed: 1, bastionDamage: 1, armor: 0 }).maxHp === 135,
+    swiftIncreasesSpeed: applyEliteModifiers({ elite: true, eliteModifierIds: ['swift'], maxHp: 100, hp: 100, moveSpeed: 1, bastionDamage: 1, armor: 0 }).moveSpeed === 1.3,
+    fortifiedAddsArmor: applyEliteModifiers({ elite: true, eliteModifierIds: ['fortified'], maxHp: 100, hp: 100, moveSpeed: 1, bastionDamage: 1, armor: 0 }).armor === 18
   });
 }
