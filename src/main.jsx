@@ -72,7 +72,8 @@ function canTransitionWavePhase(from, to) {
 
 const RUN_DEFAULTS = Object.freeze({
   startingGold: 240,
-  coreHp: 20
+  coreHp: 20,
+  preparationSeconds: 15
 });
 
 function createInitialRunState(mode, seedInput = `${mode}:prototype`) {
@@ -223,6 +224,7 @@ function ModePreRun({ mode, onBack, onStart }) {
 
 function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   const [testEnemy, setTestEnemy] = useState(null);
+  const [preparationRemaining, setPreparationRemaining] = useState(RUN_DEFAULTS.preparationSeconds);
   const animationFrameRef = useRef(null);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
@@ -230,6 +232,25 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
     : coreRatio <= 0.5
       ? 'battlefield-map__bastion--damaged'
       : '';
+
+  useEffect(() => {
+    if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
+
+    setPreparationRemaining(RUN_DEFAULTS.preparationSeconds);
+
+    const intervalId = window.setInterval(() => {
+      setPreparationRemaining((current) => {
+        if (current <= 1) {
+          window.clearInterval(intervalId);
+          onPhaseChange(RUN_PHASES.ACTIVE);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, [run?.phase, run?.wave]);
 
   useEffect(() => {
     if (!testEnemy || run?.phase === RUN_PHASES.ENDED) return undefined;
@@ -378,7 +399,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
           <div className="run-sidebar__status">
             <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
             <strong>
-              {run?.phase === RUN_PHASES.PREPARATION && `Ready for Wave ${(run?.wave ?? 0) + 1}`}
+              {run?.phase === RUN_PHASES.PREPARATION && `Wave ${(run?.wave ?? 0) + 1} starts in ${preparationRemaining}s`}
               {run?.phase === RUN_PHASES.ACTIVE && 'Wave in progress'}
               {run?.phase === RUN_PHASES.RESOLVING && 'Resolving wave outcome'}
               {run?.phase === RUN_PHASES.ENDED && 'Bastion fallen'}
@@ -386,15 +407,21 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
           </div>
 
           <button
-            className="run-spawn-test"
-            onClick={() => {
-              onPhaseChange(RUN_PHASES.ACTIVE);
-              setTestEnemy({ id: Date.now(), progress: 0 });
-            }}
-            disabled={!run || run.coreHp <= 0 || Boolean(testEnemy) || run.phase !== RUN_PHASES.PREPARATION}
+            className="run-prep-start"
+            onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
+            disabled={!run || run.phase !== RUN_PHASES.PREPARATION}
           >
-            START TEST WAVE
-            <small>Preparation → Active</small>
+            START NOW
+            <small>Skip the preparation countdown</small>
+          </button>
+
+          <button
+            className="run-spawn-test"
+            onClick={() => setTestEnemy({ id: Date.now(), progress: 0 })}
+            disabled={!run || run.coreHp <= 0 || Boolean(testEnemy) || run.phase !== RUN_PHASES.ACTIVE}
+          >
+            SPAWN TEST ENEMY
+            <small>QA movement control while Active</small>
           </button>
 
           <button
