@@ -171,7 +171,15 @@ app.post('/api/last-bastion/match/heartbeat', requireUser, (req, res) => {
     coreHp: req.body?.coreHp
   });
 
-  if (!result.ok) return res.status(404).json({ error: result.error || 'heartbeat_failed' });
+  if (!result.ok) {
+    if (result.error === 'heartbeat_rate_limited') {
+      return res.status(429).json({ error: result.error });
+    }
+    if (['invalid_wave', 'invalid_core_hp', 'wave_regression'].includes(result.error)) {
+      return res.status(400).json({ error: result.error });
+    }
+    return res.status(404).json({ error: result.error || 'heartbeat_failed' });
+  }
   return res.json(result);
 });
 
