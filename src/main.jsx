@@ -39,6 +39,7 @@ import { SUPPORT_STACKING, applyStrongestArmorShred, applyStrongestTimedEffect, 
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, getTriGateWaveScaling } from './game/balance/triGatePacing.js';
+import { getLateGameSoakPass, getLateGameSoakQa } from './game/balance/lateGameSoakQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
@@ -206,6 +207,8 @@ const TRI_GATE_MAP_FIXTURE = Object.freeze(getTriGateMapFixtures());
 const TRI_GATE_SPAWN_FIXTURE = Object.freeze(getTriGateSpawnFixtures());
 const TRI_GATE_ECONOMY_FIXTURE = Object.freeze(getTriGateEconomyFixtures());
 const TRI_GATE_BALANCE_SMOKE = Object.freeze(getTriGateBalanceSmokeTest());
+const LATE_GAME_SOAK_QA = Object.freeze(getLateGameSoakQa());
+const LATE_GAME_SOAK_PASS = getLateGameSoakPass();
 const BOSS_SCHEDULE_FIXTURE = Object.freeze(getBossScheduleFixtures());
 const BOSS_SUMMON_ADDS_FIXTURE = Object.freeze(getBossSummonAddsFixtures());
 const BOSS_ARMOR_ENRAGE_FIXTURE = Object.freeze(getBossArmorEnrageFixtures());
@@ -1520,6 +1523,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
             data-gauntlet-map-version={SINGLE_GATE_MAP.version}
             data-gauntlet-wall-count={SINGLE_GATE_MAP.wallSlots.sockets.length}
+            data-late-game-soak-pass={LATE_GAME_SOAK_PASS}
+            data-late-game-wave100-mix={LATE_GAME_SOAK_QA.wave100HasBroadThreatMix}
+            data-late-game-wave250-mix={LATE_GAME_SOAK_QA.wave250HasBroadThreatMix}
             data-gauntlet-wall-pass={WALL_SYSTEM_FIXTURE.socketCount === 4 && WALL_SYSTEM_FIXTURE.maximumActive === 4 && WALL_SYSTEM_FIXTURE.allSocketIdsUnique === true && WALL_SYSTEM_FIXTURE.allWallsKeepPathOpen === true && WALL_SYSTEM_FIXTURE.compatibleWithSingleGate === true && WALL_SYSTEM_FIXTURE.compatibleWithTftShop === true}
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
