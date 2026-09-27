@@ -1195,7 +1195,7 @@ function Leaderboard({ session, onBack }) {
       onBack={onBack}
       kicker="GLOBAL RECORDS"
       title="LEADERBOARD"
-      subtitle="Verified records only. Switch between Single Gate and Tri-Gate."
+      subtitle="Verified records only. Ranked by wave, survival, score, kills, then oldest verified record."
     >
       <div className="leaderboard-tabs">
         <button
