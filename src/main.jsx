@@ -16,6 +16,7 @@ import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getWaveClearReward } from
 import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOpportunityCost } from './game/structures/goldMine.js';
 import { WAR_FORGE, applyWarForgePreview, getWarForgeFixtures } from './game/structures/warForge.js';
 import { GUARDIAN_SHRINE, applyGuardianShrineRangePreview, applyGuardianShrineToBastionDamage, getGuardianShrineFixtures } from './game/structures/guardianShrine.js';
+import { ECONOMY_SPEND_CURVE, getEconomyRiskProfile, getSpendCurveFixtures, getStrategicSpendProfile } from './game/balance/economySpendCurve.js';
 import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
@@ -149,6 +150,10 @@ const WAR_FORGE_ARCHER_PREVIEW = Object.freeze(applyWarForgePreview(ARCHER_TOWER
 const GUARDIAN_SHRINE_FIXTURE = Object.freeze(getGuardianShrineFixtures(ARCHER_TOWER));
 const GUARDIAN_SHRINE_RANGE_PREVIEW = Object.freeze(applyGuardianShrineRangePreview(ARCHER_TOWER, GUARDIAN_SHRINE.auraRadius));
 const GUARDIAN_SHRINE_DAMAGE_PREVIEW = Object.freeze(applyGuardianShrineToBastionDamage(10, GUARDIAN_SHRINE.auraRadius));
+
+const SPEND_CURVE_FIXTURE = Object.freeze(getSpendCurveFixtures());
+const OPENING_ECONOMY_RISK = Object.freeze(getEconomyRiskProfile({ waveNumber: 1, currentGold: ECONOMY_BASELINE.startingGold, mineCount: 1 }));
+const OPENING_STRATEGIC_SPEND = Object.freeze(getStrategicSpendProfile(ECONOMY_BASELINE.startingGold));
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -677,6 +682,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-guardian-shrine-preview-damage={GUARDIAN_SHRINE_DAMAGE_PREVIEW.finalDamage}
             data-guardian-shrine-preview-range={GUARDIAN_SHRINE_RANGE_PREVIEW.modifiedRange}
             data-guardian-shrine-pass={GUARDIAN_SHRINE_FIXTURE.activeExpected === GUARDIAN_SHRINE_FIXTURE.activeActual && GUARDIAN_SHRINE_FIXTURE.mitigatedExpected === GUARDIAN_SHRINE_FIXTURE.mitigatedActual && GUARDIAN_SHRINE_FIXTURE.outOfRangeExpected === GUARDIAN_SHRINE_FIXTURE.outOfRangeActual && GUARDIAN_SHRINE_FIXTURE.rangeIncreased === true}
+            data-spend-curve-version={ECONOMY_SPEND_CURVE.version}
+            data-spend-curve-opening-reserve={OPENING_ECONOMY_RISK.reserve}
+            data-spend-curve-opening-mine-share={OPENING_ECONOMY_RISK.mineShare}
+            data-spend-curve-forge-share={OPENING_STRATEGIC_SPEND.forgeShare}
+            data-spend-curve-shrine-share={OPENING_STRATEGIC_SPEND.shrineShare}
+            data-spend-curve-pass={SPEND_CURVE_FIXTURE.openingMineLeavesReserve === true && SPEND_CURVE_FIXTURE.openingMineUnderSoftCap === true && SPEND_CURVE_FIXTURE.doubleMineBelowReserve === true && SPEND_CURVE_FIXTURE.doubleMineOverSoftCap === true && SPEND_CURVE_FIXTURE.forgeOpeningShareExpected === SPEND_CURVE_FIXTURE.forgeOpeningShareActual && SPEND_CURVE_FIXTURE.shrineOpeningShareExpected === SPEND_CURVE_FIXTURE.shrineOpeningShareActual}
             data-enemy-base-version={ENEMY_BASE_MODEL.version}
             data-enemy-base-pass={ENEMY_BASE_FIXTURE.shieldExpected === ENEMY_BASE_FIXTURE.shieldActual && ENEMY_BASE_FIXTURE.hpExpected === ENEMY_BASE_FIXTURE.hpActual && ENEMY_BASE_FIXTURE.slowedSpeedExpected === ENEMY_BASE_FIXTURE.slowedSpeedActual && ENEMY_BASE_FIXTURE.expiredSlowSpeedExpected === ENEMY_BASE_FIXTURE.expiredSlowSpeedActual}
             data-normal-enemy={NORMAL_ENEMY.name}
