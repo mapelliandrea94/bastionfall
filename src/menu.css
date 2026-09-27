@@ -1617,3 +1617,55 @@ button { font: inherit; }
   color: #c7d2dd;
   font-size: 11px;
 }
+
+
+/* BATCH 30 — wave preview HUD */
+.run-wave-preview {
+  margin-top: 10px;
+  padding: 11px 12px;
+  border: 1px solid rgba(215, 176, 92, .24);
+  background: rgba(54, 42, 20, .18);
+  display: grid;
+  gap: 9px;
+}
+
+.run-wave-preview__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.run-wave-preview__title span,
+.run-wave-preview__grid span {
+  color: #8f8168;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.run-wave-preview__title strong {
+  color: #ecd28e;
+  font-size: 12px;
+  letter-spacing: .06em;
+}
+
+.run-wave-preview__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.run-wave-preview__grid div {
+  min-height: 38px;
+  padding: 7px 8px;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.025);
+  display: grid;
+  gap: 2px;
+}
+
+.run-wave-preview__grid strong {
+  color: #d7dde5;
+  font-size: 11px;
+}
