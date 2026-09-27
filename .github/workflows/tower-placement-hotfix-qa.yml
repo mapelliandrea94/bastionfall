@@ -16,6 +16,7 @@ on:
       - "tests/last-bastion-sync.mjs"
       - "tests/last-bastion-spectate.mjs"
       - "tests/game-feedback.mjs"
+      - "tests/accessibility-responsive.mjs"
       - ".github/workflows/tower-placement-hotfix-qa.yml"
 
 jobs:
@@ -50,5 +51,7 @@ jobs:
           done
           cat /tmp/bastionfall-preview.log
           exit 1
+      - name: Accessibility responsive QA
+        run: node tests/accessibility-responsive.mjs
       - name: Mouse placement QA
         run: node tests/tower-placement-mouse.mjs
