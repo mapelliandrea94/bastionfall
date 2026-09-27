@@ -7,32 +7,38 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const here = path.dirname(fileURLToPath(import.meta.url));
 const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseSecret = process.env.SUPABASE_SECRET_KEY || '';
-const admin = supabaseUrl && supabaseSecret
-  ? createClient(supabaseUrl, supabaseSecret, { auth: { persistSession: false } })
-  : null;
+const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 
 app.use(express.json({ limit: '64kb' }));
 
+function clientForToken(token) {
+  return createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: 'Bearer ' + token } }
+  });
+}
+
 async function requireUser(req, res, next) {
-  if (!admin) return res.status(503).json({ error: 'server_not_configured' });
+  if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'server_not_configured' });
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'missing_token' });
-  const { data, error } = await admin.auth.getUser(token);
+  const userClient = clientForToken(token);
+  const { data, error } = await userClient.auth.getUser(token);
   if (error || !data.user) return res.status(401).json({ error: 'invalid_token' });
   req.user = data.user;
+  req.db = userClient;
   next();
 }
 
-app.get('/api/health', (_req, res) => res.json({ ok: true, game: 'Bastionfall', version: '0.1.0' }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, game: 'Bastionfall', version: '0.1.1' }));
 app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35, towerCap: 32 }));
 
 app.get('/api/profile', requireUser, async (req, res) => {
-  const { data, error } = await admin.from('profiles').select('*').eq('user_id', req.user.id).maybeSingle();
+  const { data, error } = await req.db.from('profiles').select('*').eq('user_id', req.user.id).maybeSingle();
   if (error) return res.status(500).json({ error: 'profile_read_failed' });
   if (data) return res.json({ profile: data });
   const fresh = { user_id: req.user.id, display_name: req.user.user_metadata?.full_name || 'Defender' };
-  const created = await admin.from('profiles').insert(fresh).select('*').single();
+  const created = await req.db.from('profiles').insert(fresh).select('*').single();
   if (created.error) return res.status(500).json({ error: 'profile_create_failed' });
   res.json({ profile: created.data });
 });
@@ -41,7 +47,7 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
   const wave = Math.max(0, Math.min(9999, Number(req.body?.wave || 0)));
   const kills = Math.max(0, Math.min(1000000, Number(req.body?.kills || 0)));
   const shards = Math.max(1, Math.floor(wave / 2));
-  const { data: current } = await admin.from('profiles').select('*').eq('user_id', req.user.id).single();
+  const { data: current } = await req.db.from('profiles').select('*').eq('user_id', req.user.id).single();
   if (!current) return res.status(404).json({ error: 'profile_missing' });
   const patch = {
     best_wave: Math.max(current.best_wave || 0, wave),
@@ -50,17 +56,17 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
     lifetime_kills: (current.lifetime_kills || 0) + kills,
     updated_at: new Date().toISOString()
   };
-  const saved = await admin.from('profiles').update(patch).eq('user_id', req.user.id).select('*').single();
+  const saved = await req.db.from('profiles').update(patch).eq('user_id', req.user.id).select('*').single();
   if (saved.error) return res.status(500).json({ error: 'progress_save_failed' });
   res.json({ profile: saved.data, earnedShards: shards });
 });
 
 app.post('/api/fortress/upgrade', requireUser, async (req, res) => {
-  const { data: current } = await admin.from('profiles').select('*').eq('user_id', req.user.id).single();
+  const { data: current } = await req.db.from('profiles').select('*').eq('user_id', req.user.id).single();
   if (!current) return res.status(404).json({ error: 'profile_missing' });
   const cost = Math.max(40, (current.fortress_level || 1) * 40);
   if ((current.shards || 0) < cost) return res.status(400).json({ error: 'not_enough_shards', cost });
-  const saved = await admin.from('profiles').update({
+  const saved = await req.db.from('profiles').update({
     fortress_level: (current.fortress_level || 1) + 1,
     shards: current.shards - cost,
     updated_at: new Date().toISOString()
