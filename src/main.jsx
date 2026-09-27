@@ -59,6 +59,7 @@ import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/ru
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
 import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
+import { ENEMY_ROSTER, getEnemyRosterFixtures } from './game/enemies/enemyRoster.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
@@ -165,6 +166,7 @@ const RUN_END_FIXTURE = Object.freeze(getRunEndFixtures());
 const PERSONAL_BEST_FIXTURE = Object.freeze(getPersonalBestFixtures());
 
 const ENEMY_BASE_FIXTURE = Object.freeze(getEnemyBaseFixtures());
+const ENEMY_ROSTER_FIXTURE = Object.freeze(getEnemyRosterFixtures());
 
 const NORMAL_ENEMY_BUDGET = Object.freeze(getNormalEnemyBudget());
 
