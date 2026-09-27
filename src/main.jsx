@@ -34,42 +34,35 @@ function Shell({ title, kicker, subtitle, onBack, children }) {
   );
 }
 
-function ModeSelect({ onBack, onSolo }) {
+function ModeSelect({ onBack }) {
   return (
     <Shell
       onBack={onBack}
       kicker="CHOOSE YOUR DEFENSE"
-      title="ENDLESS MODES"
-      subtitle="Everyone starts equal. Every run begins from zero."
+      title="SELECT MODE"
+      subtitle="Three ways to hold the line. Gameplay selection opens in later batches."
     >
       <div className="mode-grid">
-        <button className="mode-card mode-card--ready" onClick={onSolo}>
-          <span className="mode-card__players">1 PLAYER</span>
-          <strong>SOLO</strong>
-          <small>Pure endless survival.</small>
-          <em>READY</em>
-        </button>
+        <section className="mode-card" aria-label="Single Gate mode">
+          <span className="mode-card__players">ONE FRONT</span>
+          <strong>SINGLE GATE</strong>
+          <small>One front. One Bastion. Survive.</small>
+          <em>MODE PREVIEW</em>
+        </section>
 
-        <button className="mode-card" disabled>
-          <span className="mode-card__players">2 PLAYERS</span>
-          <strong>DUO</strong>
-          <small>Hold the line together.</small>
-          <em>COMING SOON</em>
-        </button>
+        <section className="mode-card" aria-label="Tri-Gate mode">
+          <span className="mode-card__players">THREE FRONTS</span>
+          <strong>TRI-GATE</strong>
+          <small>Three fronts. Total siege.</small>
+          <em>MODE PREVIEW</em>
+        </section>
 
-        <button className="mode-card" disabled>
-          <span className="mode-card__players">3 PLAYERS</span>
-          <strong>TRIO</strong>
-          <small>Three defenders, one bastion.</small>
-          <em>COMING SOON</em>
-        </button>
-
-        <button className="mode-card" disabled>
-          <span className="mode-card__players">4 PLAYERS</span>
-          <strong>SQUAD</strong>
-          <small>Maximum chaos. Maximum survival.</small>
-          <em>COMING SOON</em>
-        </button>
+        <section className="mode-card" aria-label="Last Bastion mode">
+          <span className="mode-card__players">COMPETITIVE SURVIVAL</span>
+          <strong>LAST BASTION</strong>
+          <small>Same siege. Last survivor wins.</small>
+          <em>MODE PREVIEW</em>
+        </section>
       </div>
     </Shell>
   );
@@ -382,7 +375,7 @@ function App() {
     await supabase?.auth.signOut();
   }
 
-  if (screen === SCREENS.PLAY) return <ModeSelect onBack={() => setScreen(SCREENS.MENU)} onSolo={() => setScreen(SCREENS.SINGLE_GATE_PREP)} />;
+  if (screen === SCREENS.PLAY) return <ModeSelect onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.SINGLE_GATE_PREP) return <SoloPreRun onBack={() => setScreen(SCREENS.PLAY)} onStart={() => setScreen(SCREENS.SINGLE_GATE_RUN)} />;
   if (screen === SCREENS.SINGLE_GATE_RUN) return <SoloRun onExit={() => setScreen(SCREENS.SINGLE_GATE_PREP)} />;
   if (screen === SCREENS.LEADERBOARD) return <Leaderboard onBack={() => setScreen(SCREENS.MENU)} />;
