@@ -3488,6 +3488,52 @@ button:focus-visible,
   box-shadow: 0 10px 22px rgba(0,0,0,.2);
 }
 
+.tft-shop-card--selected {
+  border-color: rgba(255, 224, 138, .95) !important;
+  box-shadow: 0 0 0 2px rgba(255, 224, 138, .22), 0 10px 24px rgba(0,0,0,.24);
+  background:
+    radial-gradient(circle at 24% 50%, rgba(255,230,160,.12), transparent 38%),
+    rgba(255,255,255,.055);
+}
+
+.tft-shop-actions {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: .45rem;
+}
+
+.tft-shop-buy {
+  width: 100%;
+  min-height: 54px;
+  border: 2px solid rgba(119, 222, 132, .72);
+  background: linear-gradient(180deg, rgba(53, 135, 64, .95), rgba(27, 87, 38, .95));
+  color: #eaffd9;
+  font-weight: 950;
+  letter-spacing: .08em;
+  cursor: pointer;
+  box-shadow: 0 0 18px rgba(80,190,95,.16);
+}
+
+.tft-shop-buy:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.tft-shop-buy > span,
+.tft-shop-buy > small {
+  display: block;
+}
+
+.tft-shop-buy > span {
+  font-size: 1rem;
+}
+
+.tft-shop-buy > small {
+  margin-top: 2px;
+  font-size: .68rem;
+  color: #d7f6cf;
+}
+
 .tft-shop-economy {
   display: grid;
   grid-template-columns: 1fr 1.6fr;
