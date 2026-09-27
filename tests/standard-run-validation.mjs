@@ -22,6 +22,16 @@ assert(server.includes("'run_checkpoint_missing'"), 'Completion must reject miss
 assert(main.includes("fetch('/api/run/progress'"), 'Client must report standard run progress');
 assert(main.includes('lastStandardProgressRef'), 'Client must deduplicate per-wave checkpoint reports');
 
+
+assert(server.includes("'persist_verified_standard_result_v2'"), 'Server must use idempotent standard result v2 RPC');
+assert(server.includes("'score_mismatch'"), 'Server must reject tampered score values');
+assert(server.includes("'kills_exceed_wave_capacity'"), 'Server must cap kills by deterministic wave capacity');
+assert(server.includes("'elapsed_time_below_wave_minimum'"), 'Server must reject impossible wave completion timing');
+assert(server.includes("'final_gold_checkpoint_mismatch'"), 'Final gold must match the final checkpoint');
+assert(server.includes("'final_core_checkpoint_mismatch'"), 'Final core state must match the final checkpoint');
+assert(main.includes('const finalCheckpoint = await reportStandardRunProgress'), 'Client must send a final standard-run checkpoint before completion');
+assert(migration.includes('standard_run_sessions'), 'Standard validation migration must persist run sessions');
+
 console.log('Standard run validation foundation QA PASS', {
   persistedSessions: true,
   waveCheckpoints: true,
