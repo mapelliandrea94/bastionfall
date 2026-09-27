@@ -150,6 +150,11 @@ const ARMORED_ENEMY_BUDGET = Object.freeze(getArmoredEnemyBudget());
 const SHIELDED_ENEMY_BUDGET = Object.freeze(getShieldedEnemyBudget());
 
 const FLYING_ENEMY_BUDGET = Object.freeze(getFlyingEnemyBudget());
+const ENEMY_TAG_FIXTURE = Object.freeze({
+  allTemplatesTagged: [NORMAL_ENEMY, RUNNER_ENEMY, TANK_ENEMY, ARMORED_ENEMY, SHIELDED_ENEMY, FLYING_ENEMY].every((enemy) => Boolean(enemy.faction) && Boolean(enemy.unitType)),
+  runtimeTagsPersist: ENEMY_BASE_FIXTURE.tagsPersist === true,
+  bossTagsPresent: BOSS_TUNING_FIXTURE.bossTagsPresent === true
+});
 const TOWER_ROSTER_FIXTURE = Object.freeze(getTowerRosterFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
@@ -1069,6 +1074,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-faction-counter-version={FACTION_COUNTER_ENGINE.version}
             data-faction-counter-pass={FACTION_COUNTER_FIXTURE.humanVsInsectExpected === FACTION_COUNTER_FIXTURE.humanVsInsectActual && FACTION_COUNTER_FIXTURE.insectVsAlienExpected === FACTION_COUNTER_FIXTURE.insectVsAlienActual && FACTION_COUNTER_FIXTURE.alienVsHumanExpected === FACTION_COUNTER_FIXTURE.alienVsHumanActual && FACTION_COUNTER_FIXTURE.sameFactionExpected === FACTION_COUNTER_FIXTURE.sameFactionActual && FACTION_COUNTER_FIXTURE.neutralExpected === FACTION_COUNTER_FIXTURE.neutralActual && FACTION_COUNTER_FIXTURE.correctTypeExpected === FACTION_COUNTER_FIXTURE.correctTypeActual && FACTION_COUNTER_FIXTURE.wrongTypeExpected === FACTION_COUNTER_FIXTURE.wrongTypeActual && FACTION_COUNTER_FIXTURE.perfectExpected === FACTION_COUNTER_FIXTURE.perfectActual && FACTION_COUNTER_FIXTURE.fullyBadExpected === FACTION_COUNTER_FIXTURE.fullyBadActual}
             data-counterplay-pass={COUNTERPLAY_FIXTURE.physicalVsArmor.hpDamage === 60 && COUNTERPLAY_FIXTURE.piercingVsArmor.hpDamage === 86 && COUNTERPLAY_FIXTURE.arcaneVsShield.shieldDamage === 100 && COUNTERPLAY_FIXTURE.archerVsFlying === true && COUNTERPLAY_FIXTURE.cannonVsFlying === false && COUNTERPLAY_FIXTURE.barracksVsFlying === false}
+            data-enemy-tag-migration-pass={ENEMY_TAG_FIXTURE.allTemplatesTagged === true && ENEMY_TAG_FIXTURE.runtimeTagsPersist === true && ENEMY_TAG_FIXTURE.bossTagsPresent === true}
             data-threat-model-version={WAVE_THREAT_MODEL.version}
             data-threat-model-pass={THREAT_MODEL_FIXTURE.wave1BudgetExpected === THREAT_MODEL_FIXTURE.wave1BudgetActual && THREAT_MODEL_FIXTURE.wave1OnlyNormal === true && THREAT_MODEL_FIXTURE.wave5HasTank === true && THREAT_MODEL_FIXTURE.wave11HasFlying === true && THREAT_MODEL_FIXTURE.wave11WithinBudget === true}
             data-difficulty-bands={DIFFICULTY_BANDS.length}
