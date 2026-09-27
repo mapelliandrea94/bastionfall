@@ -46,6 +46,7 @@ import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/ene
 import { ARMORED_ENEMY, createArmoredEnemyState, getArmoredEnemyBudget } from './game/enemies/armored.js';
 import { SHIELDED_ENEMY, createShieldedEnemyState, getShieldedEnemyBudget } from './game/enemies/shielded.js';
 import { FLYING_ENEMY, createFlyingEnemyState, getFlyingEnemyBudget } from './game/enemies/flying.js';
+import { ELITE_MODIFIER_SYSTEM, attachEliteModifierFoundation, getEliteModifierFoundationFixtures } from './game/elites/eliteModifiers.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -145,6 +146,7 @@ const ARMORED_ENEMY_BUDGET = Object.freeze(getArmoredEnemyBudget());
 const SHIELDED_ENEMY_BUDGET = Object.freeze(getShieldedEnemyBudget());
 
 const FLYING_ENEMY_BUDGET = Object.freeze(getFlyingEnemyBudget());
+const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 
 const ECONOMY_BASELINE_FIXTURE = Object.freeze(getEconomyBaselineFixtures({
   archer: ARCHER_TOWER,
@@ -695,10 +697,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     queuedWaveRef.current = run?.wave;
     setSpawnQueue(
-      threatWave.composition.map((enemy, index) => ({
+      threatWave.composition.map((enemy, index) => attachEliteModifierFoundation({
         id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`,
         archetype: enemy.archetype,
         threatValue: enemy.threatValue
+      }, {
+        seed: run?.seed ?? 'run',
+        waveNumber: waveScaling.waveNumber,
+        enemyIndex: index
       }))
     );
   }, [run?.phase, run?.wave]);
@@ -1167,6 +1173,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-blessing-engine-version={BLESSING_ENGINE.version}
             data-blessing-reroll-version={BLESSING_REROLL.version}
             data-blessing-power-budget-version={BLESSING_POWER_BUDGET.version}
+            data-elite-modifier-version={ELITE_MODIFIER_SYSTEM.version}
+            data-elite-modifier-pass={ELITE_MODIFIER_FIXTURE.belowMinWaveNeverElite === true && ELITE_MODIFIER_FIXTURE.bossNeverElite === true && ELITE_MODIFIER_FIXTURE.normalEligible === true && ELITE_MODIFIER_FIXTURE.baseChanceExpected === ELITE_MODIFIER_FIXTURE.baseChanceActual && ELITE_MODIFIER_FIXTURE.chanceScales === true && ELITE_MODIFIER_FIXTURE.chanceCapped === true && ELITE_MODIFIER_FIXTURE.deterministicAssignment === true && ELITE_MODIFIER_FIXTURE.foundationHasNoConcreteModifiers === true}
             data-blessing-power-budget-pass={BLESSING_EXPLOIT_FIXTURE.definitionsStayWithinDeclaredStacks === true && BLESSING_EXPLOIT_FIXTURE.damageCapRespected === true && BLESSING_EXPLOIT_FIXTURE.economyMultiplierCapRespected === true && BLESSING_EXPLOIT_FIXTURE.economyBonusCapRespected === true && BLESSING_EXPLOIT_FIXTURE.defenseFloorRespected === true && BLESSING_EXPLOIT_FIXTURE.maxHpCapRespected === true && BLESSING_EXPLOIT_FIXTURE.controlSlowCapRespected === true && BLESSING_EXPLOIT_FIXTURE.enemySpeedFloorRespected === true && BLESSING_EXPLOIT_FIXTURE.rerollSpendToCapExpected === BLESSING_EXPLOIT_FIXTURE.rerollSpendToCapActual && BLESSING_EXPLOIT_FIXTURE.rerollCannotBeFree === true && BLESSING_EXPLOIT_FIXTURE.economyDoesNotExplode === true}
             data-blessing-reroll-pass={BLESSING_REROLL_FIXTURE.baseCostExpected === BLESSING_REROLL_FIXTURE.baseCostActual && BLESSING_REROLL_FIXTURE.secondCostExpected === BLESSING_REROLL_FIXTURE.secondCostActual && BLESSING_REROLL_FIXTURE.affordableAtExactCost === true && BLESSING_REROLL_FIXTURE.blockedBelowCost === true && BLESSING_REROLL_FIXTURE.blockedAtCap === true && BLESSING_REROLL_FIXTURE.firstRerollChangesOffer === true && BLESSING_REROLL_FIXTURE.rerollsAdvanceDeterministically === true}
             data-blessing-engine-pass={BLESSING_ENGINE_FIXTURE.stackedDamageAboveBase === true && BLESSING_ENGINE_FIXTURE.mixedGoldExpected === BLESSING_ENGINE_FIXTURE.mixedGoldActual && BLESSING_ENGINE_FIXTURE.emergencyDamageExpected === BLESSING_ENGINE_FIXTURE.emergencyDamageActual && BLESSING_ENGINE_FIXTURE.boostedHpExpected === BLESSING_ENGINE_FIXTURE.boostedHpActual && BLESSING_ENGINE_FIXTURE.timeLockSlows === true && BLESSING_ENGINE_FIXTURE.frostboundAddsControl === true}
