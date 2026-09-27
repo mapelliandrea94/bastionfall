@@ -909,6 +909,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedDefenseId, setSelectedDefenseId] = useState('human-aa');
   const [placedDefenses, setPlacedDefenses] = useState(() => matchingTftSnapshot?.placedDefenses ?? []);
   const [activeWallIds, setActiveWallIds] = useState(() => matchingTftSnapshot?.activeWallIds ?? []);
+  const [wallHpById, setWallHpById] = useState(() => matchingTftSnapshot?.wallHpById ?? {});
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
@@ -924,6 +925,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
+  const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
   const bossSummonTimeoutsRef = useRef([]);
@@ -1014,11 +1016,72 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }, [run?.gold]);
 
   useEffect(() => {
+    activeEnemiesRef.current = activeEnemies;
+  }, [activeEnemies]);
+
+  useEffect(() => {
+    if (run?.phase !== RUN_PHASES.ACTIVE || activeWallIds.length === 0) return undefined;
+
+    const wallProgress = {
+      'wall-01': 0.115,
+      'wall-02': 0.324,
+      'wall-03': 0.543,
+      'wall-04': 0.760
+    };
+
+    const intervalId = window.setInterval(() => {
+      const enemies = activeEnemiesRef.current ?? [];
+      if (enemies.length === 0) return;
+
+      const damageByWall = {};
+      for (const wallId of activeWallIds) {
+        const targetProgress = wallProgress[wallId];
+        if (!Number.isFinite(targetProgress)) continue;
+
+        let damage = 0;
+        for (const enemy of enemies) {
+          if (enemy.airborne) continue;
+          if (Math.abs(Number(enemy.progress ?? 0) - targetProgress) > 0.045) continue;
+          damage += enemy.unitType === 'armored'
+            ? WALL_SYSTEM.armoredDamagePerTick
+            : WALL_SYSTEM.infantryDamagePerTick;
+        }
+        if (damage > 0) damageByWall[wallId] = damage;
+      }
+
+      if (Object.keys(damageByWall).length === 0) return;
+
+      setWallHpById((current) => {
+        const next = { ...current };
+        const destroyed = [];
+
+        for (const [wallId, damage] of Object.entries(damageByWall)) {
+          const hp = Math.max(0, Number(next[wallId] ?? WALL_SYSTEM.maxHp) - damage);
+          next[wallId] = hp;
+          if (hp <= 0) destroyed.push(wallId);
+        }
+
+        if (destroyed.length > 0) {
+          setActiveWallIds((ids) => ids.filter((id) => !destroyed.includes(id)));
+          if (run?.mode === MODES.TFT_SHOP) {
+            setTftFeedback(`WALL DESTROYED · ${destroyed.join(', ').toUpperCase()}`);
+          }
+        }
+
+        return next;
+      });
+    }, WALL_SYSTEM.damageTickMs);
+
+    return () => window.clearInterval(intervalId);
+  }, [run?.phase, run?.mode, activeWallIds.join('|')]);
+
+  useEffect(() => {
     if (run?.mode !== MODES.TFT_SHOP || run?.phase === RUN_PHASES.ENDED) return;
     const snapshot = createTftRunSnapshot({
       run,
       placedDefenses,
       activeWallIds,
+      wallHpById,
       tftBench,
       selectedTftBenchIndex,
       tftRollIndex,
@@ -1026,7 +1089,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       tftPurchasedSlotIds
     });
     saveTftRunSnapshot(snapshot);
-  }, [run, placedDefenses, activeWallIds, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked, tftPurchasedSlotIds]);
+  }, [run, placedDefenses, activeWallIds, wallHpById, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked, tftPurchasedSlotIds]);
 
   useEffect(() => {
     if (!run || run.phase === RUN_PHASES.ENDED) return undefined;
@@ -1392,6 +1455,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     availableGoldRef.current = attempt.goldAfter;
     setActiveWallIds([...attempt.activeWallIds]);
+    setWallHpById((current) => ({ ...current, [wallId]: WALL_SYSTEM.maxHp }));
     onSpendGold(WALL_SYSTEM.cost);
     if (run?.mode === MODES.TFT_SHOP) setTftFeedback(`WALL BUILT · -${WALL_SYSTEM.cost}G`);
   };
@@ -1719,6 +1783,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             <g className="battlefield-map__wall-slots" aria-label="Purchasable wall sockets">
               {SINGLE_GATE_MAP.wallSlots.sockets.map((wall) => {
                 const built = activeWallIds.includes(wall.id);
+                const wallHp = built ? Math.max(0, Number(wallHpById[wall.id] ?? WALL_SYSTEM.maxHp)) : 0;
+                const wallHpRatio = built ? Math.max(0, Math.min(1, wallHp / WALL_SYSTEM.maxHp)) : 0;
                 const affordable = (run?.gold ?? 0) >= WALL_SYSTEM.cost;
                 const canBuildNow = run?.phase === RUN_PHASES.PREPARATION && !built && affordable;
                 return (
@@ -1754,6 +1820,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       <>
                         <rect className="wall-slot__wall" x="-28" y="-30" width="56" height="42" rx="5" />
                         <path className="wall-slot__battlement" d="M-28-30h12v10h10v-10H6v10h10v-10h12" />
+                        <rect className="wall-slot__hp-bg" x="-32" y="18" width="64" height="7" rx="3.5" />
+                        <rect className="wall-slot__hp-fill" x="-32" y="18" width={64 * wallHpRatio} height="7" rx="3.5" />
+                        <text className="wall-slot__hp-text" x="0" y="38" textAnchor="middle">{Math.ceil(wallHp)} / {WALL_SYSTEM.maxHp}</text>
                       </>
                     ) : (
                       <>
