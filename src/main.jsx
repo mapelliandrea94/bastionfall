@@ -28,7 +28,7 @@ const MODE_PRE_RUN = Object.freeze({
     fronts: '1 FRONT',
     objective: 'SURVIVE',
     record: 'HIGHEST WAVE',
-    status: 'RUN FOUNDATION NEXT'
+    status: 'READY TO INITIALIZE'
   }),
   [MODES.TRI_GATE]: Object.freeze({
     kicker: 'TRI-GATE',
@@ -49,6 +49,33 @@ const MODE_PRE_RUN = Object.freeze({
     status: 'MATCHMAKING LATER'
   })
 });
+
+const RUN_PHASES = Object.freeze({
+  PREPARATION: 'preparation',
+  ACTIVE: 'active',
+  ENDED: 'ended'
+});
+
+const RUN_DEFAULTS = Object.freeze({
+  startingGold: 240,
+  coreHp: 20
+});
+
+function createInitialRunState(mode) {
+  if (!Object.values(MODES).includes(mode)) return null;
+
+  return {
+    mode,
+    phase: RUN_PHASES.PREPARATION,
+    wave: 0,
+    gold: RUN_DEFAULTS.startingGold,
+    coreHp: RUN_DEFAULTS.coreHp,
+    coreMaxHp: RUN_DEFAULTS.coreHp,
+    kills: 0,
+    elapsedMs: 0,
+    result: null
+  };
+}
 
 function Shell({ title, kicker, subtitle, onBack, children }) {
   return (
@@ -99,7 +126,7 @@ function ModeSelect({ onBack, onSelect }) {
 }
 
 
-function ModePreRun({ mode, onBack }) {
+function ModePreRun({ mode, onBack, onStart }) {
   const contract = MODE_PRE_RUN[mode];
 
   if (!contract) return null;
@@ -133,9 +160,13 @@ function ModePreRun({ mode, onBack }) {
 
       <div className="pre-run-footer">
         <p>Status: <strong>{contract.status}</strong></p>
-        <button className="pre-run-start" disabled>
+        <button
+          className="pre-run-start"
+          disabled={mode !== MODES.SINGLE_GATE}
+          onClick={() => mode === MODES.SINGLE_GATE && onStart(mode)}
+        >
           START RUN
-          <small>Run state foundation arrives in Batch 16</small>
+          <small>{mode === MODES.SINGLE_GATE ? 'Initialize Single Gate run' : contract.status}</small>
         </button>
       </div>
     </Shell>
@@ -143,7 +174,7 @@ function ModePreRun({ mode, onBack }) {
 }
 
 
-function SoloRun({ onExit }) {
+function SoloRun({ run, onExit }) {
   return (
     <main className="run-screen">
       <section className="run-layout">
@@ -151,19 +182,19 @@ function SoloRun({ onExit }) {
           <header className="run-hud">
             <div>
               <span className="run-hud__label">MODE</span>
-              <strong>SOLO ENDLESS</strong>
+              <strong>{run?.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : 'UNKNOWN'}</strong>
             </div>
             <div>
               <span className="run-hud__label">WAVE</span>
-              <strong>0</strong>
+              <strong>{run?.wave ?? 0}</strong>
             </div>
             <div>
               <span className="run-hud__label">GOLD</span>
-              <strong>240</strong>
+              <strong>{run?.gold ?? RUN_DEFAULTS.startingGold}</strong>
             </div>
             <div>
               <span className="run-hud__label">CORE</span>
-              <strong>20 / 20</strong>
+              <strong>{run?.coreHp ?? RUN_DEFAULTS.coreHp} / {run?.coreMaxHp ?? RUN_DEFAULTS.coreHp}</strong>
             </div>
             <button className="run-exit" onClick={onExit}>EXIT RUN</button>
           </header>
@@ -188,7 +219,7 @@ function SoloRun({ onExit }) {
 
           <div className="run-sidebar__status">
             <span>PREPARATION</span>
-            <strong>Ready for Wave 1</strong>
+            <strong>{run?.phase === RUN_PHASES.PREPARATION ? 'Ready for Wave 1' : run?.phase || 'Run unavailable'}</strong>
           </div>
 
           <button className="run-wave" disabled>
@@ -396,6 +427,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
 function App() {
   const [screen, setScreen] = useState(SCREENS.MENU);
   const [selectedMode, setSelectedMode] = useState(null);
+  const [runState, setRunState] = useState(null);
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
 
@@ -422,9 +454,30 @@ function App() {
     );
   }
   if (screen === SCREENS.MODE_PREP) {
-    return <ModePreRun mode={selectedMode} onBack={() => setScreen(SCREENS.PLAY)} />;
+    return (
+      <ModePreRun
+        mode={selectedMode}
+        onBack={() => setScreen(SCREENS.PLAY)}
+        onStart={(mode) => {
+          const nextRun = createInitialRunState(mode);
+          if (!nextRun || mode !== MODES.SINGLE_GATE) return;
+          setRunState(nextRun);
+          setScreen(SCREENS.SINGLE_GATE_RUN);
+        }}
+      />
+    );
   }
-  if (screen === SCREENS.SINGLE_GATE_RUN) return <SoloRun onExit={() => setScreen(SCREENS.PLAY)} />;
+  if (screen === SCREENS.SINGLE_GATE_RUN) {
+    return (
+      <SoloRun
+        run={runState}
+        onExit={() => {
+          setRunState(null);
+          setScreen(SCREENS.MODE_PREP);
+        }}
+      />
+    );
+  }
   if (screen === SCREENS.LEADERBOARD) return <Leaderboard onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.PROFILE) return <Profile onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
