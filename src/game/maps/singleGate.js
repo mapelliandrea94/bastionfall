@@ -22,8 +22,8 @@ const WALL_SLOTS = Object.freeze([
     y: 450,
     closesSegment: Object.freeze(['p1', 'p2']),
     detour: Object.freeze([
-      freezePoint({ x: 140, y: 610 }),
-      freezePoint({ x: 140, y: 300 })
+      freezePoint({ x: 110, y: 620 }),
+      freezePoint({ x: 110, y: 280 })
     ])
   }),
   Object.freeze({
@@ -32,8 +32,8 @@ const WALL_SLOTS = Object.freeze([
     y: 450,
     closesSegment: Object.freeze(['p3', 'p4']),
     detour: Object.freeze([
-      freezePoint({ x: 650, y: 300 }),
-      freezePoint({ x: 650, y: 610 })
+      freezePoint({ x: 670, y: 280 }),
+      freezePoint({ x: 670, y: 620 })
     ])
   }),
   Object.freeze({
@@ -42,8 +42,8 @@ const WALL_SLOTS = Object.freeze([
     y: 450,
     closesSegment: Object.freeze(['p5', 'p6']),
     detour: Object.freeze([
-      freezePoint({ x: 690, y: 610 }),
-      freezePoint({ x: 690, y: 300 })
+      freezePoint({ x: 970, y: 620 }),
+      freezePoint({ x: 970, y: 280 })
     ])
   }),
   Object.freeze({
@@ -52,15 +52,15 @@ const WALL_SLOTS = Object.freeze([
     y: 450,
     closesSegment: Object.freeze(['p7', 'p8']),
     detour: Object.freeze([
-      freezePoint({ x: 1240, y: 300 }),
-      freezePoint({ x: 1240, y: 610 })
+      freezePoint({ x: 1260, y: 280 }),
+      freezePoint({ x: 1260, y: 620 })
     ])
   })
 ]);
 
 export const SINGLE_GATE_MAP = Object.freeze({
   id: 'single-gate-corridor-bastion',
-  version: 3,
+  version: 4,
   mode: 'single-gate',
   compatibleModes: Object.freeze(['single-gate', 'tower-draft']),
   name: 'Bastion Gauntlet',
@@ -89,24 +89,23 @@ export const SINGLE_GATE_MAP = Object.freeze({
     footprintRadius: 34,
     minimumPathCenterDistance: 104,
     slots: Object.freeze([
-      Object.freeze({ id: 'slot-01', x: 115, y: 190 }),
-      Object.freeze({ id: 'slot-02', x: 115, y: 450 }),
-      Object.freeze({ id: 'slot-03', x: 115, y: 700 }),
-      Object.freeze({ id: 'slot-04', x: 390, y: 320 }),
-      Object.freeze({ id: 'slot-05', x: 390, y: 580 }),
-      Object.freeze({ id: 'slot-06', x: 650, y: 120 }),
-      Object.freeze({ id: 'slot-07', x: 650, y: 450 }),
-      Object.freeze({ id: 'slot-08', x: 650, y: 780 }),
-      Object.freeze({ id: 'slot-09', x: 965, y: 320 }),
-      Object.freeze({ id: 'slot-10', x: 965, y: 580 }),
-      Object.freeze({ id: 'slot-11', x: 1235, y: 120 }),
-      Object.freeze({ id: 'slot-12', x: 1235, y: 450 }),
-      Object.freeze({ id: 'slot-13', x: 1235, y: 780 }),
-      Object.freeze({ id: 'slot-14', x: 1490, y: 250 }),
-      Object.freeze({ id: 'slot-15', x: 1490, y: 650 }),
-      Object.freeze({ id: 'slot-16', x: 390, y: 120 }),
-      Object.freeze({ id: 'slot-17', x: 965, y: 120 }),
-      Object.freeze({ id: 'slot-18', x: 1470, y: 800 })
+      Object.freeze({ id: 'slot-01', x: 1480, y: 110 }),
+      Object.freeze({ id: 'slot-02', x: 970, y: 800 }),
+      Object.freeze({ id: 'slot-03', x: 100, y: 110 }),
+      Object.freeze({ id: 'slot-04', x: 400, y: 800 }),
+      Object.freeze({ id: 'slot-05', x: 1480, y: 800 }),
+      Object.freeze({ id: 'slot-06', x: 670, y: 110 }),
+      Object.freeze({ id: 'slot-07', x: 1390, y: 320 }),
+      Object.freeze({ id: 'slot-08', x: 1240, y: 110 }),
+      Object.freeze({ id: 'slot-09', x: 400, y: 290 }),
+      Object.freeze({ id: 'slot-10', x: 400, y: 530 }),
+      Object.freeze({ id: 'slot-11', x: 1480, y: 560 }),
+      Object.freeze({ id: 'slot-12', x: 1360, y: 170 }),
+      Object.freeze({ id: 'slot-13', x: 1480, y: 230 }),
+      Object.freeze({ id: 'slot-14', x: 370, y: 410 }),
+      Object.freeze({ id: 'slot-15', x: 370, y: 650 }),
+      Object.freeze({ id: 'slot-16', x: 1480, y: 680 }),
+      Object.freeze({ id: 'slot-17', x: 1480, y: 320 })
     ])
   }),
   wallSlots: Object.freeze({
@@ -123,7 +122,7 @@ export const SINGLE_GATE_MAP = Object.freeze({
   tags: Object.freeze([
     'single-front',
     'tower-draft-compatible',
-    'serpentine',
+    'gauntlet-corridors',
     'buyable-walls',
     'endless-survival'
   ])
