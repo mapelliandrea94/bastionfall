@@ -1407,3 +1407,45 @@ button { font: inherit; }
 .battlefield > .run-sidebar {
   z-index: 10;
 }
+
+
+/* BATCH 22 — dedicated Bastion rendering */
+.battlefield-map__bastion-shadow {
+  fill: rgba(0, 0, 0, .34);
+}
+
+.battlefield-map__bastion-base,
+.battlefield-map__bastion-keep,
+.battlefield-map__bastion-tower {
+  fill: #6f6759;
+  stroke: #bcae90;
+  stroke-width: 5;
+}
+
+.battlefield-map__bastion-keep {
+  fill: #7b7262;
+}
+
+.battlefield-map__bastion-roof {
+  fill: #8f6b31;
+  stroke: #d9b66e;
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+
+.battlefield-map__bastion-core {
+  fill: #d8a941;
+  stroke: #f4d889;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 12px rgba(232, 184, 74, .45));
+}
+
+.battlefield-map__bastion-gate {
+  fill: #342d25;
+  stroke: #8d7b60;
+  stroke-width: 4;
+}
+
+.battlefield-map__bastion {
+  filter: drop-shadow(0 14px 24px rgba(0,0,0,.34));
+}
