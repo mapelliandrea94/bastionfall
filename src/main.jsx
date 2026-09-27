@@ -12,6 +12,7 @@ import { BARRACKS } from './game/structures/barracks.js';
 import { COMBAT_BALANCE_MODEL, COMBAT_BALANCE_SNAPSHOT } from './game/balance/combatBalance.js';
 import { getPlacementValidationFixtures, validateSingleGatePlacement } from './game/placement/singleGatePlacement.js';
 import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
+import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getWaveClearReward } from './game/economy/economyBaseline.js';
 import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
@@ -113,6 +114,15 @@ const SHIELDED_ENEMY_BUDGET = Object.freeze(getShieldedEnemyBudget());
 
 const FLYING_ENEMY_BUDGET = Object.freeze(getFlyingEnemyBudget());
 
+const ECONOMY_BASELINE_FIXTURE = Object.freeze(getEconomyBaselineFixtures({
+  archer: ARCHER_TOWER,
+  cannon: CANNON_TOWER,
+  frost: FROST_TOWER,
+  mage: MAGE_TOWER,
+  ballista: BALLISTA_TOWER,
+  barracks: BARRACKS
+}));
+
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
   ACTIVE: 'active',
@@ -146,7 +156,7 @@ function getWaveScaling(completedWaves) {
 }
 
 const RUN_DEFAULTS = Object.freeze({
-  startingGold: 240,
+  startingGold: ECONOMY_BASELINE.startingGold,
   coreHp: 20,
   preparationSeconds: 15
 });
@@ -619,6 +629,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-wave-threat-budget={threatWave.budget}
             data-wave-threat-spent={threatWave.spentThreat}
             data-wave-threat-unused={threatWave.unusedThreat}
+            data-economy-version={ECONOMY_BASELINE.version}
+            data-economy-pass={ECONOMY_BASELINE_FIXTURE.startingGoldExpected === ECONOMY_BASELINE_FIXTURE.startingGoldActual && ECONOMY_BASELINE_FIXTURE.archerCopiesExpected === ECONOMY_BASELINE_FIXTURE.archerCopiesActual && ECONOMY_BASELINE_FIXTURE.cannonCopiesExpected === ECONOMY_BASELINE_FIXTURE.cannonCopiesActual && ECONOMY_BASELINE_FIXTURE.wave1RewardExpected === ECONOMY_BASELINE_FIXTURE.wave1RewardActual && ECONOMY_BASELINE_FIXTURE.wave6RewardExpected === ECONOMY_BASELINE_FIXTURE.wave6RewardActual}
+            data-wave-clear-reward={getWaveClearReward(waveScaling.waveNumber)}
             data-enemy-base-version={ENEMY_BASE_MODEL.version}
             data-enemy-base-pass={ENEMY_BASE_FIXTURE.shieldExpected === ENEMY_BASE_FIXTURE.shieldActual && ENEMY_BASE_FIXTURE.hpExpected === ENEMY_BASE_FIXTURE.hpActual && ENEMY_BASE_FIXTURE.slowedSpeedExpected === ENEMY_BASE_FIXTURE.slowedSpeedActual && ENEMY_BASE_FIXTURE.expiredSlowSpeedExpected === ENEMY_BASE_FIXTURE.expiredSlowSpeedActual}
             data-normal-enemy={NORMAL_ENEMY.name}
@@ -1042,10 +1055,15 @@ function App() {
         onPhaseChange={(nextPhase, options = {}) => {
           setRunState((current) => {
             if (!current || !canTransitionWavePhase(current.phase, nextPhase)) return current;
+            const advancingWave = Boolean(options.advanceWave);
+            const completedWaveNumber = Math.max(1, current.wave + 1);
+            const waveClearGold = advancingWave ? getWaveClearReward(completedWaveNumber) : 0;
+
             return {
               ...current,
               phase: nextPhase,
-              wave: options.advanceWave ? current.wave + 1 : current.wave
+              wave: advancingWave ? current.wave + 1 : current.wave,
+              gold: current.gold + waveClearGold
             };
           });
         }}
