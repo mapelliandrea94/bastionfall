@@ -27,6 +27,7 @@ import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } 
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, getTriGateWaveScaling } from './game/balance/triGatePacing.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
+import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
@@ -157,6 +158,7 @@ const TRI_GATE_MAP_FIXTURE = Object.freeze(getTriGateMapFixtures());
 const TRI_GATE_SPAWN_FIXTURE = Object.freeze(getTriGateSpawnFixtures());
 const TRI_GATE_ECONOMY_FIXTURE = Object.freeze(getTriGateEconomyFixtures());
 const TRI_GATE_BALANCE_SMOKE = Object.freeze(getTriGateBalanceSmokeTest());
+const BOSS_SCHEDULE_FIXTURE = Object.freeze(getBossScheduleFixtures());
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
   ARCHER_TOWER,
@@ -588,6 +590,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
   const waveScaling = getWaveScaling(run?.wave ?? 0, run?.mode);
+  const nextWaveNumber = Math.max(1, (run?.wave ?? 0) + 1);
+  const upcomingBossWave = getUpcomingBossWave(nextWaveNumber);
+  const bossWaveIncoming = isBossWave(nextWaveNumber);
   const threatWave = composeWaveByThreatBudget(
     waveScaling.waveNumber,
     run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1
@@ -1104,6 +1109,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tri-gate-spawn-version={TRI_GATE_SPAWN.version}
             data-tri-gate-pacing-version={TRI_GATE_PACING.version}
             data-tri-gate-balance-pass={TRI_GATE_BALANCE_SMOKE.checks.openingCanCoverThreeFronts === true && TRI_GATE_BALANCE_SMOKE.checks.openingStillRequiresChoices === true && TRI_GATE_BALANCE_SMOKE.checks.threatActuallyHigherThanSingle === true && TRI_GATE_BALANCE_SMOKE.checks.rewardCurveIncreases === true && TRI_GATE_BALANCE_SMOKE.checks.laneThreatReasonable === true && TRI_GATE_BALANCE_SMOKE.checks.pacingMonotonic === true}
+            data-boss-schedule-version={BOSS_SCHEDULE.version}
+            data-boss-schedule-pass={BOSS_SCHEDULE_FIXTURE.wave9NotBoss === true && BOSS_SCHEDULE_FIXTURE.wave10BossIndexExpected === BOSS_SCHEDULE_FIXTURE.wave10BossIndexActual && BOSS_SCHEDULE_FIXTURE.wave20BossIndexExpected === BOSS_SCHEDULE_FIXTURE.wave20BossIndexActual && BOSS_SCHEDULE_FIXTURE.wave30BossIndexExpected === BOSS_SCHEDULE_FIXTURE.wave30BossIndexActual && BOSS_SCHEDULE_FIXTURE.wave40BossIndexExpected === BOSS_SCHEDULE_FIXTURE.wave40BossIndexActual && BOSS_SCHEDULE_FIXTURE.cadenceStable === true && BOSS_SCHEDULE_FIXTURE.cyclesProfiles === true && BOSS_SCHEDULE_FIXTURE.upcomingBossFrom11 === true && BOSS_SCHEDULE_FIXTURE.upcomingBossFrom20 === true}
             data-tri-gate-economy-pass={TRI_GATE_ECONOMY_FIXTURE.startingGoldExpected === TRI_GATE_ECONOMY_FIXTURE.startingGoldActual && TRI_GATE_ECONOMY_FIXTURE.startingGoldAboveSingleGate === true && TRI_GATE_ECONOMY_FIXTURE.preparationExpected === TRI_GATE_ECONOMY_FIXTURE.preparationActual && TRI_GATE_ECONOMY_FIXTURE.wave1RewardExpected === TRI_GATE_ECONOMY_FIXTURE.wave1RewardActual && TRI_GATE_ECONOMY_FIXTURE.wave6RewardExpected === TRI_GATE_ECONOMY_FIXTURE.wave6RewardActual && TRI_GATE_ECONOMY_FIXTURE.wave1ThreatMultiplierExpected === TRI_GATE_ECONOMY_FIXTURE.wave1ThreatMultiplierActual && TRI_GATE_ECONOMY_FIXTURE.wave1SpawnSlowerThanSingle === true && TRI_GATE_ECONOMY_FIXTURE.wave6TravelSlowerThanSingle === true && TRI_GATE_ECONOMY_FIXTURE.bastionDamageUnchanged === true}
             data-tri-gate-spawn-pass={TRI_GATE_SPAWN_FIXTURE.laneCountExpected === TRI_GATE_SPAWN_FIXTURE.laneCountActual && TRI_GATE_SPAWN_FIXTURE.allEnemiesAssigned === true && TRI_GATE_SPAWN_FIXTURE.noDuplicateAssignments === true && TRI_GATE_SPAWN_FIXTURE.originalOrderRecoverable === true && TRI_GATE_SPAWN_FIXTURE.countSpreadAtMostOne === true && TRI_GATE_SPAWN_FIXTURE.wave1RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave1RotationActual && TRI_GATE_SPAWN_FIXTURE.wave2RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave2RotationActual && TRI_GATE_SPAWN_FIXTURE.wave3RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave3RotationActual && TRI_GATE_SPAWN_FIXTURE.rotatesOpeningLane === true}
             data-tri-gate-map-pass={TRI_GATE_MAP_FIXTURE.modeExpected === TRI_GATE_MAP_FIXTURE.modeActual && TRI_GATE_MAP_FIXTURE.entranceCountExpected === TRI_GATE_MAP_FIXTURE.entranceCountActual && TRI_GATE_MAP_FIXTURE.laneCountExpected === TRI_GATE_MAP_FIXTURE.laneCountActual && TRI_GATE_MAP_FIXTURE.uniqueEntrances === true && TRI_GATE_MAP_FIXTURE.uniqueLanes === true && TRI_GATE_MAP_FIXTURE.lanesResolve === true && TRI_GATE_MAP_FIXTURE.pathsStartAtEntrance === true && TRI_GATE_MAP_FIXTURE.pathsEndAtBastion === true && TRI_GATE_MAP_FIXTURE.pathsHaveShape === true && TRI_GATE_MAP_FIXTURE.uniqueInteriorWaypoints === true && TRI_GATE_MAP_FIXTURE.bastionCentered === true && TRI_GATE_MAP_FIXTURE.individualSlotPolicy === true}
@@ -1188,6 +1195,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           </section>
 
+          <div className={bossWaveIncoming ? 'boss-schedule boss-schedule--incoming' : 'boss-schedule'}>
+            <span>{bossWaveIncoming ? 'BOSS WAVE' : 'NEXT BOSS'}</span>
+            <strong>Wave {upcomingBossWave}</strong>
+          </div>
+
           <div className="run-sidebar__status">
             <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
             <strong>
@@ -1208,7 +1220,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <div><span>TRAVEL</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
               <div><span>SPAWN</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
               <div><span>CORE DMG</span><strong>{waveScaling.bastionDamage}</strong></div>
-              <div><span>CLEAR GOLD</span><strong>+{getWaveClearReward(waveScaling.waveNumber)}</strong></div>
+              <div><span>CLEAR GOLD</span><strong>+{run?.mode === MODES.TRI_GATE ? getTriGateWaveClearReward(waveScaling.waveNumber) : getWaveClearReward(waveScaling.waveNumber)}</strong></div>
             </div>
           </div>
 
