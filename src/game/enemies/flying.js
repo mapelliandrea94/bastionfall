@@ -3,6 +3,8 @@ import { createEnemyBaseState } from './enemyBase.js';
 export const FLYING_ENEMY = Object.freeze({
   id: 'flying',
   name: 'Skyrake',
+  faction: 'alien',
+  unitType: 'air',
   archetype: 'flying',
   maxHp: 82,
   moveSpeed: 1.32,
