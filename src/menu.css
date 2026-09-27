@@ -2817,42 +2817,72 @@ body { background:#1c3f61; }
 }
 
 .tower-card--compact {
-  min-height: 68px;
-  padding: .42rem .48rem;
-  gap: .42rem;
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  position: relative;
+  min-width: 0;
+  min-height: 112px;
+  padding: .38rem .3rem .42rem;
+  gap: .2rem;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+  text-align: center;
 }
 
 .tower-card__art {
-  width: 48px;
-  height: 48px;
+  width: 62px;
+  height: 62px;
+  flex: 0 0 62px;
   background-repeat: no-repeat;
   border-radius: 8px;
   filter: drop-shadow(0 3px 3px rgba(0,0,0,.28));
-  flex: 0 0 auto;
 }
 
 .tower-card__copy {
+  width: 100%;
   min-width: 0;
   display: grid;
-  gap: .12rem;
-  align-content: center;
+  gap: .08rem;
+  align-content: start;
+  justify-items: center;
 }
 
 .tower-card--compact strong {
-  font-size: .72rem;
-  line-height: 1.1;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  font-size: .62rem;
+  line-height: 1.05;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .tower-card--compact span {
-  font-size: .68rem;
+  position: absolute;
+  top: .28rem;
+  right: .28rem;
+  z-index: 2;
+  padding: .08rem .2rem;
+  border-radius: 4px;
+  background: rgba(8, 17, 27, .78);
+  color: #f5d782;
+  font-size: .58rem;
+  line-height: 1;
+  font-weight: 900;
 }
 
 .tower-card--compact small {
-  font-size: .52rem;
-  line-height: 1.15;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  font-size: .44rem;
+  line-height: 1.05;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  opacity: .78;
 }
 
 .tower-card--human { border-color: rgba(88, 158, 221, .34); }
