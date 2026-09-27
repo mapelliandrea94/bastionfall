@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { eliminateLastBastionParticipant, getLastBastionActiveMatchPersistenceSnapshot, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionActiveMatches, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { advanceLastBastionMatchmaking, eliminateLastBastionParticipant, getLastBastionActiveMatchPersistenceSnapshot, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionActiveMatches, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -182,7 +182,7 @@ async function hydratePersistentLastBastionState(req) {
       .order('ended_at', { ascending: true }),
     serverDb
       .from('last_bastion_queue')
-      .select('user_id,ticket_id,joined_at,ready')
+      .select('user_id,ticket_id,joined_at,ready,updated_at')
       .order('joined_at', { ascending: true })
   ]);
 
@@ -229,8 +229,29 @@ async function persistLastBastionQueueTicket(serverDb, ticket) {
       ticket_id: ticket.ticketId,
       joined_at: ticket.joinedAt,
       ready: Boolean(ticket.ready),
-      updated_at: new Date().toISOString()
+      updated_at: ticket.ready && ticket.readyAt ? ticket.readyAt : new Date().toISOString()
     }, { onConflict: 'user_id' });
+
+  return error ? { ok: false, error } : { ok: true };
+}
+
+async function persistCreatedLastBastionMatch(serverDb, participantIds = []) {
+  const ids = Array.isArray(participantIds) ? participantIds.filter(Boolean) : [];
+  if (ids.length < 2) return { ok: false, error: new Error('match_persistence_snapshot_missing') };
+
+  const snapshot = getLastBastionActiveMatchPersistenceSnapshot(ids[0]);
+  if (!snapshot || snapshot.participantIds.length < 2) {
+    return { ok: false, error: new Error('match_persistence_snapshot_missing') };
+  }
+
+  const { error } = await serverDb.rpc('persist_last_bastion_match_foundation', {
+    p_match_id: snapshot.id,
+    p_seed: snapshot.seed,
+    p_created_at: snapshot.createdAt,
+    p_started_at: snapshot.startedAt,
+    p_wave_starts_at: snapshot.waveStartsAt,
+    p_participant_ids: snapshot.participantIds
+  });
 
   return error ? { ok: false, error } : { ok: true };
 }
@@ -313,27 +334,10 @@ app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-r
   if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_ready_failed' });
 
   if (result.matched && result.match) {
-    const snapshot = getLastBastionActiveMatchPersistenceSnapshot(req.user.id);
-    const participantIds = snapshot?.participantIds || getLastBastionActiveMatchUserIds(req.user.id);
-
-    if (!snapshot || participantIds.length < 2) {
-      return res.status(500).json({ error: 'match_persistence_snapshot_missing' });
-    }
-
-    const { error } = await hydrated.serverDb.rpc(
-      'persist_last_bastion_match_foundation',
-      {
-        p_match_id: snapshot.id,
-        p_seed: snapshot.seed,
-        p_created_at: snapshot.createdAt,
-        p_started_at: snapshot.startedAt,
-        p_wave_starts_at: snapshot.waveStartsAt,
-        p_participant_ids: participantIds
-      }
-    );
-
-    if (error) {
-      console.error('Last Bastion match persistence failed:', error.message);
+    const participantIds = getLastBastionActiveMatchUserIds(req.user.id);
+    const persistedMatch = await persistCreatedLastBastionMatch(hydrated.serverDb, participantIds);
+    if (!persistedMatch.ok) {
+      console.error('Last Bastion match persistence failed:', persistedMatch.error.message);
       return res.status(500).json({ error: 'match_persistence_write_failed' });
     }
   } else {
@@ -350,6 +354,16 @@ app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-r
 app.get('/api/last-bastion/matchmaking/status', requireUser, async (req, res) => {
   const hydrated = await hydratePersistentLastBastionState(req);
   if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+
+  const advanced = advanceLastBastionMatchmaking(Date.now());
+  if (advanced.matched) {
+    const persistedMatch = await persistCreatedLastBastionMatch(hydrated.serverDb, advanced.participantIds);
+    if (!persistedMatch.ok) {
+      console.error('Last Bastion fill-window match persistence failed:', persistedMatch.error.message);
+      return res.status(500).json({ error: 'match_persistence_write_failed' });
+    }
+  }
+
   return res.json(attachLastBastionMatchToken(getLastBastionQueueStatus(req.user.id), req.user.id));
 });
 
