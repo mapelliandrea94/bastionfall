@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { eliminateLastBastionParticipant, getLastBastionActiveMatchPersistenceSnapshot, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { eliminateLastBastionParticipant, getLastBastionActiveMatchPersistenceSnapshot, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionActiveMatches, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -150,21 +150,41 @@ function attachLastBastionMatchToken(result, userId) {
   };
 }
 
-async function hydratePersistentLastBastionQueue(req) {
+async function hydratePersistentLastBastionState(req) {
   const serverDb = clientForToken(req.accessToken, {
     'x-bastionfall-server-secret': matchTokenSecret
   });
-  const { data, error } = await serverDb
-    .from('last_bastion_queue')
-    .select('user_id,ticket_id,joined_at,ready')
-    .order('joined_at', { ascending: true });
 
-  if (error) {
-    console.error('Last Bastion queue hydrate failed:', error.message);
-    return { ok: false, error: 'queue_persistence_read_failed', serverDb };
+  const [matchesRead, participantsRead, queueRead] = await Promise.all([
+    serverDb
+      .from('last_bastion_matches')
+      .select('id,seed,status,created_at,started_at,wave_starts_at,ended_at,winner_user_id')
+      .eq('status', 'active')
+      .order('created_at', { ascending: true }),
+    serverDb
+      .from('last_bastion_participants')
+      .select('match_id,user_id,slot,alive,last_seen_at,wave,core_hp,placement,eliminated_at')
+      .order('slot', { ascending: true }),
+    serverDb
+      .from('last_bastion_queue')
+      .select('user_id,ticket_id,joined_at,ready')
+      .order('joined_at', { ascending: true })
+  ]);
+
+  if (matchesRead.error || participantsRead.error || queueRead.error) {
+    console.error(
+      'Last Bastion state hydrate failed:',
+      matchesRead.error?.message || participantsRead.error?.message || queueRead.error?.message
+    );
+    return { ok: false, error: 'last_bastion_persistence_read_failed', serverDb };
   }
 
-  hydrateLastBastionQueue(data || []);
+  const activeMatchIds = new Set((matchesRead.data || []).map((match) => match.id));
+  const activeParticipants = (participantsRead.data || []).filter((entry) => activeMatchIds.has(entry.match_id));
+
+  hydrateLastBastionActiveMatches(matchesRead.data || [], activeParticipants);
+  hydrateLastBastionQueue(queueRead.data || []);
+
   return { ok: true, serverDb };
 }
 
@@ -218,7 +238,7 @@ app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowM
 });
 
 app.post('/api/last-bastion/matchmaking/join', requireUser, rateLimitUser('lb-join', { windowMs: 10000, max: 8 }), async (req, res) => {
-  const hydrated = await hydratePersistentLastBastionQueue(req);
+  const hydrated = await hydratePersistentLastBastionState(req);
   if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
 
   const result = joinLastBastionQueue(req.user.id);
@@ -234,7 +254,7 @@ app.post('/api/last-bastion/matchmaking/join', requireUser, rateLimitUser('lb-jo
 });
 
 app.post('/api/last-bastion/matchmaking/leave', requireUser, rateLimitUser('lb-leave', { windowMs: 10000, max: 8 }), async (req, res) => {
-  const hydrated = await hydratePersistentLastBastionQueue(req);
+  const hydrated = await hydratePersistentLastBastionState(req);
   if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
 
   const result = leaveLastBastionQueue(req.user.id);
@@ -254,7 +274,7 @@ app.post('/api/last-bastion/matchmaking/leave', requireUser, rateLimitUser('lb-l
 });
 
 app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-ready', { windowMs: 10000, max: 10 }), async (req, res) => {
-  const hydrated = await hydratePersistentLastBastionQueue(req);
+  const hydrated = await hydratePersistentLastBastionState(req);
   if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
 
   const result = setLastBastionReady(req.user.id, req.body?.ready !== false);
@@ -296,7 +316,7 @@ app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-r
 });
 
 app.get('/api/last-bastion/matchmaking/status', requireUser, async (req, res) => {
-  const hydrated = await hydratePersistentLastBastionQueue(req);
+  const hydrated = await hydratePersistentLastBastionState(req);
   if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
   return res.json(attachLastBastionMatchToken(getLastBastionQueueStatus(req.user.id), req.user.id));
 });
@@ -328,16 +348,19 @@ app.post('/api/last-bastion/match/heartbeat', requireUser, (req, res) => {
   return res.json(result);
 });
 
-app.get('/api/last-bastion/match/status', requireUser, (req, res) => {
+app.get('/api/last-bastion/match/status', requireUser, async (req, res) => {
   const matchToken = String(req.query?.matchToken || '');
   const identity = verifyMatchIdentity(matchToken);
   if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
   if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
   if (identity.mode !== 'last-bastion') return res.status(400).json({ error: 'match_mode_mismatch' });
 
+  const hydrated = await hydratePersistentLastBastionState(req);
+  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+
   const result = getLastBastionMatchStatus(req.user.id, identity.matchId);
   if (!result.ok) return res.status(404).json({ error: result.error || 'match_status_failed' });
-  return res.json(result);
+  return res.json(attachLastBastionMatchToken(result, req.user.id));
 });
 
 app.post('/api/last-bastion/match/eliminate', requireUser, rateLimitUser('lb-eliminate', { windowMs: 10000, max: 6 }), (req, res) => {
