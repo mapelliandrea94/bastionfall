@@ -13,6 +13,7 @@ import { COMBAT_BALANCE_MODEL, COMBAT_BALANCE_SNAPSHOT } from './game/balance/co
 import { getPlacementValidationFixtures, validateSingleGatePlacement } from './game/placement/singleGatePlacement.js';
 import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
 import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getWaveClearReward } from './game/economy/economyBaseline.js';
+import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOpportunityCost } from './game/structures/goldMine.js';
 import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
@@ -122,6 +123,23 @@ const ECONOMY_BASELINE_FIXTURE = Object.freeze(getEconomyBaselineFixtures({
   ballista: BALLISTA_TOWER,
   barracks: BARRACKS
 }));
+
+const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
+  ARCHER_TOWER,
+  CANNON_TOWER,
+  FROST_TOWER,
+  MAGE_TOWER,
+  BALLISTA_TOWER,
+  BARRACKS
+]));
+const GOLD_MINE_FIXTURE = Object.freeze(getGoldMineFixtures([
+  ARCHER_TOWER,
+  CANNON_TOWER,
+  FROST_TOWER,
+  MAGE_TOWER,
+  BALLISTA_TOWER,
+  BARRACKS
+]));
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -632,6 +650,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-economy-version={ECONOMY_BASELINE.version}
             data-economy-pass={ECONOMY_BASELINE_FIXTURE.startingGoldExpected === ECONOMY_BASELINE_FIXTURE.startingGoldActual && ECONOMY_BASELINE_FIXTURE.archerCopiesExpected === ECONOMY_BASELINE_FIXTURE.archerCopiesActual && ECONOMY_BASELINE_FIXTURE.cannonCopiesExpected === ECONOMY_BASELINE_FIXTURE.cannonCopiesActual && ECONOMY_BASELINE_FIXTURE.wave1RewardExpected === ECONOMY_BASELINE_FIXTURE.wave1RewardActual && ECONOMY_BASELINE_FIXTURE.wave6RewardExpected === ECONOMY_BASELINE_FIXTURE.wave6RewardActual}
             data-wave-clear-reward={getWaveClearReward(waveScaling.waveNumber)}
+            data-gold-mine-cost={GOLD_MINE.cost}
+            data-gold-mine-income={GOLD_MINE.incomePerWave}
+            data-gold-mine-break-even={getGoldMineBreakEvenWave()}
+            data-gold-mine-opportunity-count={GOLD_MINE_OPPORTUNITY.affordableAlternatives.length}
+            data-gold-mine-pass={GOLD_MINE_FIXTURE.breakEvenWaveExpected === GOLD_MINE_FIXTURE.breakEvenWaveActual && GOLD_MINE_FIXTURE.beforeBreakEvenNegative === true && GOLD_MINE_FIXTURE.atBreakEvenNonNegative === true && GOLD_MINE_FIXTURE.includesArcherAlternative === true && GOLD_MINE_FIXTURE.includesFrostAlternative === true && GOLD_MINE_FIXTURE.excludesCannonAlternative === true}
             data-enemy-base-version={ENEMY_BASE_MODEL.version}
             data-enemy-base-pass={ENEMY_BASE_FIXTURE.shieldExpected === ENEMY_BASE_FIXTURE.shieldActual && ENEMY_BASE_FIXTURE.hpExpected === ENEMY_BASE_FIXTURE.hpActual && ENEMY_BASE_FIXTURE.slowedSpeedExpected === ENEMY_BASE_FIXTURE.slowedSpeedActual && ENEMY_BASE_FIXTURE.expiredSlowSpeedExpected === ENEMY_BASE_FIXTURE.expiredSlowSpeedActual}
             data-normal-enemy={NORMAL_ENEMY.name}
