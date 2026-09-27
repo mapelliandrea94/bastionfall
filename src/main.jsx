@@ -8,6 +8,7 @@ import { TRI_GATE_SPAWN, getTriGateSpawnFixtures } from './game/spawning/triGate
 import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
+import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -147,6 +148,7 @@ const ARMORED_ENEMY_BUDGET = Object.freeze(getArmoredEnemyBudget());
 const SHIELDED_ENEMY_BUDGET = Object.freeze(getShieldedEnemyBudget());
 
 const FLYING_ENEMY_BUDGET = Object.freeze(getFlyingEnemyBudget());
+const TOWER_ROSTER_FIXTURE = Object.freeze(getTowerRosterFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -1140,6 +1142,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-flying-enemy-speed={FLYING_ENEMY_BUDGET.speedIndex}
             data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
+            data-tower-roster-version={TOWER_ROSTER.version}
+            data-tower-roster-count={TOWER_ROSTER.towers.length}
+            data-tower-roster-pass={TOWER_ROSTER_FIXTURE.towerCountExpected === TOWER_ROSTER_FIXTURE.towerCountActual && TOWER_ROSTER_FIXTURE.humanCount === 3 && TOWER_ROSTER_FIXTURE.insectCount === 3 && TOWER_ROSTER_FIXTURE.alienCount === 3 && TOWER_ROSTER_FIXTURE.neutralCount === 3 && TOWER_ROSTER_FIXTURE.airCounterCount === 3 && TOWER_ROSTER_FIXTURE.armoredCounterCount === 3 && TOWER_ROSTER_FIXTURE.infantryCounterCount === 3 && TOWER_ROSTER_FIXTURE.supportCounterCount === 3 && TOWER_ROSTER_FIXTURE.neutralFlagsValid === true && TOWER_ROSTER_FIXTURE.legacyArcherResolves === true && TOWER_ROSTER_FIXTURE.legacySaveNormalizes === true}
             data-tri-gate-map-version={TRI_GATE_MAP.version}
             data-tri-gate-spawn-version={TRI_GATE_SPAWN.version}
             data-tri-gate-pacing-version={TRI_GATE_PACING.version}
