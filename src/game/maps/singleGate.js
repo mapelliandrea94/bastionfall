@@ -43,15 +43,15 @@ export const SINGLE_GATE_MAP = Object.freeze({
       Object.freeze({ id: 'slot-04', x: 710, y: 205 }),
       Object.freeze({ id: 'slot-05', x: 850, y: 215 }),
       Object.freeze({ id: 'slot-06', x: 1010, y: 405 }),
-      Object.freeze({ id: 'slot-07', x: 1240, y: 700 }),
-      Object.freeze({ id: 'slot-08', x: 1340, y: 610 }),
+      Object.freeze({ id: 'slot-07', x: 1120, y: 760 }),
+      Object.freeze({ id: 'slot-08', x: 1200, y: 300 }),
       Object.freeze({ id: 'slot-09', x: 220, y: 580 }),
       Object.freeze({ id: 'slot-10', x: 400, y: 575 }),
       Object.freeze({ id: 'slot-11', x: 560, y: 500 }),
       Object.freeze({ id: 'slot-12', x: 700, y: 505 }),
       Object.freeze({ id: 'slot-13', x: 820, y: 650 }),
       Object.freeze({ id: 'slot-14', x: 1040, y: 700 }),
-      Object.freeze({ id: 'slot-15', x: 1360, y: 320 })
+      Object.freeze({ id: 'slot-15', x: 1180, y: 420 })
     ])
   }),
   camera: Object.freeze({
