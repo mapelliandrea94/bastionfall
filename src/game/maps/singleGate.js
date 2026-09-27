@@ -156,22 +156,8 @@ export function getSingleGateWallSlots() {
 }
 
 export function getSingleGatePathForWalls(activeWallIds = []) {
-  const active = new Set(activeWallIds);
-  const result = [BASE_WAYPOINTS[0]];
-
-  for (let index = 0; index < BASE_WAYPOINTS.length - 1; index += 1) {
-    const from = BASE_WAYPOINTS[index];
-    const to = BASE_WAYPOINTS[index + 1];
-    const wall = WALL_SLOTS.find(
-      (entry) =>
-        active.has(entry.id) &&
-        entry.closesSegment[0] === from.id &&
-        entry.closesSegment[1] === to.id
-    );
-
-    if (wall) result.push(...wall.detour);
-    result.push(to);
-  }
-
-  return Object.freeze(result.map((point) => Object.freeze({ x: point.x, y: point.y })));
+  void activeWallIds;
+  return Object.freeze(
+    BASE_WAYPOINTS.map((point) => Object.freeze({ x: point.x, y: point.y }))
+  );
 }
