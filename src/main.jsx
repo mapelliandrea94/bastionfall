@@ -40,6 +40,7 @@ const SCREENS = Object.freeze({
   PLAY: 'play',
   MODE_PREP: 'mode-prep',
   SINGLE_GATE_RUN: 'single-gate-run',
+  RESULTS: 'results',
   LEADERBOARD: 'leaderboard',
   PROFILE: 'profile',
   SETTINGS: 'settings',
@@ -701,6 +702,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
             data-run-end-pass={RUN_END_FIXTURE.reasonExpected === RUN_END_FIXTURE.reasonActual && RUN_END_FIXTURE.modeExpected === RUN_END_FIXTURE.modeActual && RUN_END_FIXTURE.waveExpected === RUN_END_FIXTURE.waveActual && RUN_END_FIXTURE.elapsedExpected === RUN_END_FIXTURE.elapsedActual && RUN_END_FIXTURE.scorePositive === true && RUN_END_FIXTURE.frozen === true}
             data-run-end-reason={run?.endSnapshot?.reason ?? ''}
             data-run-end-score={run?.endSnapshot?.score ?? ''}
+            data-results-screen-ready={Boolean(run?.endSnapshot)}
             data-wave-threat-budget={threatWave.budget}
             data-wave-threat-spent={threatWave.spentThreat}
             data-wave-threat-unused={threatWave.unusedThreat}
@@ -899,6 +901,39 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
         </div>
       </section>
     </main>
+  );
+}
+
+function ResultsScreen({ snapshot, onRetry, onBack }) {
+  if (!snapshot) return null;
+
+  return (
+    <Shell
+      onBack={onBack}
+      kicker="RUN COMPLETE"
+      title="BASTION FALLEN"
+      subtitle="Your run has ended. Review the final snapshot before trying again."
+    >
+      <div className="results-hero">
+        <span>FINAL SCORE</span>
+        <strong>{snapshot.score.toLocaleString()}</strong>
+        <small>{snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED ? 'Bastion destroyed' : snapshot.reason}</small>
+      </div>
+
+      <div className="results-grid">
+        <div className="stat-card"><span>WAVE</span><strong>{snapshot.wave}</strong><small>Completed progression</small></div>
+        <div className="stat-card"><span>SURVIVAL</span><strong>{formatSurvivalTime(snapshot.elapsedMs)}</strong><small>Official survival time</small></div>
+        <div className="stat-card"><span>KILLS</span><strong>{snapshot.kills}</strong><small>Enemies defeated</small></div>
+        <div className="stat-card"><span>GOLD</span><strong>{snapshot.gold}</strong><small>Gold remaining</small></div>
+        <div className="stat-card"><span>BASTION</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>Final core state</small></div>
+        <div className="stat-card"><span>MODE</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>Run format</small></div>
+      </div>
+
+      <div className="results-actions">
+        <button className="pre-run-start" onClick={onRetry}>RETRY RUN</button>
+        <button className="run-exit" onClick={onBack}>BACK TO MODE</button>
+      </div>
+    </Shell>
   );
 }
 
@@ -1111,6 +1146,16 @@ function App() {
     await supabase?.auth.signOut();
   }
 
+  useEffect(() => {
+    if (
+      screen === SCREENS.SINGLE_GATE_RUN &&
+      runState?.phase === RUN_PHASES.ENDED &&
+      runState?.endSnapshot
+    ) {
+      setScreen(SCREENS.RESULTS);
+    }
+  }, [screen, runState?.phase, runState?.endSnapshot]);
+
   if (screen === SCREENS.PLAY) {
     return (
       <ModeSelect
@@ -1191,6 +1236,24 @@ function App() {
           });
         }}
         onExit={() => {
+          setRunState(null);
+          setScreen(SCREENS.MODE_PREP);
+        }}
+      />
+    );
+  }
+  if (screen === SCREENS.RESULTS) {
+    return (
+      <ResultsScreen
+        snapshot={runState?.endSnapshot}
+        onRetry={() => {
+          const mode = runState?.mode ?? selectedMode;
+          const nextRun = createInitialRunState(mode);
+          if (!nextRun || mode !== MODES.SINGLE_GATE) return;
+          setRunState(nextRun);
+          setScreen(SCREENS.SINGLE_GATE_RUN);
+        }}
+        onBack={() => {
           setRunState(null);
           setScreen(SCREENS.MODE_PREP);
         }}
