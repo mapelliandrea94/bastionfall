@@ -12,6 +12,7 @@ import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
+import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyleForTower } from './game/towers/towerArt.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -162,6 +163,7 @@ const BASE_TOWER_GAMEPLAY_FIXTURE = Object.freeze(getBaseTowerGameplayFixtures()
 const BASE_TOWER_COMBAT_FIXTURE = Object.freeze(getBaseTowerCombatFixtures(BASE_TOWER_GAMEPLAY_BY_ID));
 const SUPPORT_STACKING_FIXTURE = Object.freeze(getSupportStackingFixtures());
 const EVOLUTION_FIXTURE = Object.freeze(getEvolutionFixtures());
+const TOWER_ART_FIXTURE = Object.freeze(getTowerArtFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -1121,21 +1123,27 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
                     {!placed && affordable && (
                       <g className={`tower-visual tower-visual--ghost tower-visual--${selectedDefense.id}`}>
-                        <circle className="tower-visual__base" r="23" />
-                        <rect className="tower-visual__body" x="-12" y="-25" width="24" height="32" rx="5" />
-                        <path className="tower-visual__crest" d="M-16-24L0-38L16-24Z" />
-                        <text className="tower-visual__label" x="0" y="5" textAnchor="middle">{selectedDefense.name.slice(0, 1)}</text>
+                        <ellipse className="tower-visual__shadow" cx="0" cy="20" rx="30" ry="10" />
+                        <foreignObject x="-42" y="-54" width="84" height="84" pointerEvents="none">
+                          <div
+                            className="tower-art-sprite"
+                            style={getTowerArtStyleForTower(selectedDefense.id)}
+                            aria-hidden="true"
+                          />
+                        </foreignObject>
                       </g>
                     )}
 
                     {placed && (
-                      <g className={`tower-visual tower-visual--${placed.defenseId}`}>
-                        <circle className="tower-visual__base" r="23" />
-                        <rect className="tower-visual__body" x="-12" y="-25" width="24" height="32" rx="5" />
-                        <path className="tower-visual__crest" d="M-16-24L0-38L16-24Z" />
-                        <text className="tower-visual__label" x="0" y="5" textAnchor="middle">
-                          {(defenseDefinitions[placed.defenseId]?.name || '?').slice(0, 1)}
-                        </text>
+                      <g className={`tower-visual tower-visual--${placed.defenseId}`} data-evolution={placed.evolution ?? ''}>
+                        <ellipse className="tower-visual__shadow" cx="0" cy="20" rx="30" ry="10" />
+                        <foreignObject x="-42" y="-54" width="84" height="84" pointerEvents="none">
+                          <div
+                            className="tower-art-sprite"
+                            style={getTowerArtStyleForTower(placed.defenseId, placed.evolution)}
+                            aria-hidden="true"
+                          />
+                        </foreignObject>
                       </g>
                     )}
                   </g>
@@ -1335,6 +1343,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
+            data-tower-art-version={TOWER_ART_SYSTEM.version}
+            data-tower-art-pass={TOWER_ART_FIXTURE.expectedEvolutionCount === TOWER_ART_FIXTURE.actualEvolutionCount && TOWER_ART_FIXTURE.everyEvolutionMapped === true && TOWER_ART_FIXTURE.uniqueFrames === true && TOWER_ART_FIXTURE.humanPaletteDistinct === true && TOWER_ART_FIXTURE.alienNeutralDistinct === true && TOWER_ART_FIXTURE.everyBaseTowerHasRepresentativeArt === true}
             data-evolution-count={TOWER_EVOLUTIONS.length}
             data-evolution-pass={EVOLUTION_FIXTURE.evolutionCountExpected === EVOLUTION_FIXTURE.evolutionCountActual && EVOLUTION_FIXTURE.everyTowerHasTwoChoices === true && EVOLUTION_FIXTURE.levelGateBlocksEarly === true && EVOLUTION_FIXTURE.levelFourAllowsChoice === true && EVOLUTION_FIXTURE.choiceIsPerTower === true && EVOLUTION_FIXTURE.counterFactionPreserved === true && EVOLUTION_FIXTURE.counterTypePreserved === true}
             data-support-stacking-version={SUPPORT_STACKING.version}
