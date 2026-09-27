@@ -1970,6 +1970,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           >
           {run?.mode === MODES.TFT_SHOP ? (
           <>
+            <div className="tft-shop-layout">
             <p className="main-menu__kicker">SHOP</p>
             <h3>TFT SHOP</h3>
             <div className="tft-shop-grid" data-shop-slots={tftShopOffers.length}>
@@ -2103,6 +2104,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 ))}
               </div>
               {tftFeedback && <div className="tft-bench-feedback">{tftFeedback}</div>}
+            </div>
             </div>
           </>
         ) : (
