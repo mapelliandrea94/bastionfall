@@ -835,7 +835,7 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
 
     const { data: checkpoint, error: checkpointError } = await serverDb
       .from('standard_run_sessions')
-      .select('last_wave,last_core_hp,last_core_max_hp,last_kills,last_gold,status')
+      .select('last_wave,last_core_hp,last_core_max_hp,last_kills,last_gold,last_reported_at,status')
       .eq('match_id', identity.matchId)
       .eq('user_id', req.user.id)
       .maybeSingle();
@@ -865,28 +865,31 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
       return res.status(400).json({ error: 'invalid_standard_result_reason' });
     }
 
+    const checkpointReportedAtMs = Date.parse(checkpoint.last_reported_at || '');
+    if (!Number.isFinite(checkpointReportedAtMs) || checkpointReportedAtMs < startedAtMs) {
+      return res.status(409).json({ error: 'invalid_server_checkpoint_time' });
+    }
+
+    const officialElapsedMs = Math.max(0, checkpointReportedAtMs - startedAtMs);
     const validationBounds = getStandardRunValidationBounds(mode, identity.matchId, wave);
     if (kills > validationBounds.maxKills) {
       return res.status(400).json({ error: 'kills_exceed_wave_capacity' });
     }
 
     const minElapsedToleranceMs = 1500;
-    if (elapsedMs + minElapsedToleranceMs < validationBounds.minElapsedMs) {
+    if (officialElapsedMs + minElapsedToleranceMs < validationBounds.minElapsedMs) {
       return res.status(400).json({ error: 'elapsed_time_below_wave_minimum' });
     }
 
     const expectedScore = calculateRunScore({
       wave,
-      elapsedMs,
+      elapsedMs: officialElapsedMs,
       kills,
       coreHp,
       coreMaxHp
     }).totalScore;
-    if (Math.floor(score) !== expectedScore) {
-      return res.status(400).json({ error: 'score_mismatch' });
-    }
 
-    const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
+    const endedAt = new Date(checkpointReportedAtMs).toISOString();
 
     const { data: recordRows, error: recordError } = await serverDb.rpc(
       'persist_verified_standard_result_v2',
@@ -895,7 +898,7 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
         p_mode: mode,
         p_result_reason: resultReason,
         p_wave: wave,
-        p_elapsed_ms: Math.floor(elapsedMs),
+        p_elapsed_ms: Math.floor(officialElapsedMs),
         p_score: expectedScore,
         p_gold: gold,
         p_core_hp: coreHp,
@@ -1017,7 +1020,13 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     matchId: identity.matchId,
     profile: savedProfile,
     earnedShards,
-    record: persistedRecord
+    record: persistedRecord,
+    canonical: mode === 'single-gate' || mode === 'tri-gate'
+      ? {
+          elapsedMs: persistedRecord?.best_survival_ms ?? null,
+          score: persistedRecord?.best_score ?? null
+        }
+      : null
   });
 });
 
