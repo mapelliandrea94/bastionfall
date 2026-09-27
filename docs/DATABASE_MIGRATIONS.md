@@ -15,6 +15,7 @@ The production Supabase project must contain the same ordered migration history.
 - `20260927153010_create_bastionfall_profiles.sql`
 - `20260927175747_database_migration_foundation.sql`
 - `20260927180102_create_mode_specific_records.sql`
+- `20260927180341_create_completed_match_results.sql`
 
 The first migration captures the profile table that already existed in production before the migration folder was introduced.
 
@@ -36,6 +37,6 @@ The second migration establishes the private `bastionfall_internal` schema and t
 
 - Batch 65 creates the migration foundation only.
 - Batch 66 owns mode-specific record schema and creates `public.mode_records` with per-mode PB fields plus the leaderboard ordering index.
-- Batch 67 owns completed match result schema.
+- Batch 67 owns completed match result schema and creates append-only `public.completed_matches` history. Authenticated clients may read only their own rows; trusted server code will own writes in later batches.
 
 Do not move those table definitions into Batch 65.
