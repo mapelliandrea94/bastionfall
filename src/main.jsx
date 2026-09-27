@@ -190,6 +190,8 @@ const TFT_BENCH_FIXTURE = Object.freeze(getTftBenchFixtures());
 const TFT_COPY_PROGRESSION_FIXTURE = Object.freeze(getTftCopyProgressionFixtures());
 const TFT_EVOLUTION_FLOW_QA = Object.freeze(getTftEvolutionFlowQa());
 const TFT_EVOLUTION_FLOW_PASS = getTftEvolutionFlowPass();
+const EVOLUTION_PERSISTENCE_SELL_RECONNECT_QA = Object.freeze(getEvolutionPersistenceSellReconnectQa());
+const EVOLUTION_PERSISTENCE_SELL_RECONNECT_PASS = getEvolutionPersistenceSellReconnectPass();
 const TFT_PERSISTENCE_FIXTURE = Object.freeze(getTftPersistenceFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
@@ -1543,6 +1545,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-normal-mode-evolution-towers-checked={NORMAL_MODE_EVOLUTION_FLOW_QA.towerCountChecked}
             data-tft-evolution-flow-pass={TFT_EVOLUTION_FLOW_PASS}
             data-tft-evolution-towers-checked={TFT_EVOLUTION_FLOW_QA.towerCountChecked}
+            data-evolution-persistence-sell-reconnect-pass={EVOLUTION_PERSISTENCE_SELL_RECONNECT_PASS}
+            data-evolution-restore-investment-pass={EVOLUTION_PERSISTENCE_SELL_RECONNECT_QA.restoreKeepsInvestment}
             data-gauntlet-wall-pass={WALL_SYSTEM_FIXTURE.socketCount === 4 && WALL_SYSTEM_FIXTURE.maximumActive === 4 && WALL_SYSTEM_FIXTURE.allSocketIdsUnique === true && WALL_SYSTEM_FIXTURE.allWallsKeepPathOpen === true && WALL_SYSTEM_FIXTURE.compatibleWithSingleGate === true && WALL_SYSTEM_FIXTURE.compatibleWithTftShop === true}
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
