@@ -70,6 +70,22 @@ function canTransitionWavePhase(from, to) {
   return WAVE_PHASE_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
+function getWaveScaling(completedWaves) {
+  const waveNumber = Math.max(1, completedWaves + 1);
+  const enemyCount = 3 + Math.floor((waveNumber - 1) * 0.75);
+  const travelDurationMs = Math.max(3000, 7000 - (waveNumber - 1) * 140);
+  const spawnIntervalMs = Math.max(350, 900 - (waveNumber - 1) * 20);
+  const bastionDamage = 1 + Math.floor((waveNumber - 1) / 10);
+
+  return {
+    waveNumber,
+    enemyCount,
+    travelDurationMs,
+    spawnIntervalMs,
+    bastionDamage
+  };
+}
+
 const RUN_DEFAULTS = Object.freeze({
   startingGold: 240,
   coreHp: 20,
@@ -228,6 +244,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   const [preparationRemaining, setPreparationRemaining] = useState(RUN_DEFAULTS.preparationSeconds);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
+  const waveScaling = getWaveScaling(run?.wave ?? 0);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
@@ -257,13 +274,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || queuedWaveRef.current === run?.wave) return;
 
-    const waveNumber = (run?.wave ?? 0) + 1;
     queuedWaveRef.current = run?.wave;
-    setSpawnQueue([
-      { id: `wave-${waveNumber}-enemy-1` },
-      { id: `wave-${waveNumber}-enemy-2` },
-      { id: `wave-${waveNumber}-enemy-3` }
-    ]);
+    setSpawnQueue(
+      Array.from({ length: waveScaling.enemyCount }, (_, index) => ({
+        id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`
+      }))
+    );
   }, [run?.phase, run?.wave]);
 
   useEffect(() => {
@@ -279,7 +295,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
         ]);
         return remaining;
       });
-    }, activeEnemies.length === 0 ? 150 : 900);
+    }, activeEnemies.length === 0 ? 150 : waveScaling.spawnIntervalMs);
 
     return () => window.clearTimeout(timeoutId);
   }, [run?.phase, spawnQueue.length, activeEnemies.length]);
@@ -287,7 +303,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   useEffect(() => {
     if (activeEnemies.length === 0 || run?.phase === RUN_PHASES.ENDED) return undefined;
 
-    const durationMs = 7000;
+    const durationMs = waveScaling.travelDurationMs;
 
     const tick = (now) => {
       let reachedBastion = 0;
@@ -306,7 +322,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
         }));
 
       if (reachedBastion > 0) {
-        onDamageBastion(reachedBastion);
+        onDamageBastion(reachedBastion * waveScaling.bastionDamage);
       }
 
       animationFrameRef.current = requestAnimationFrame(tick);
