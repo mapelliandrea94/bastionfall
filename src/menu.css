@@ -1594,3 +1594,26 @@ button { font: inherit; }
   color: #96876b;
   letter-spacing: .03em;
 }
+
+
+/* BATCH 27 — wave spawn queue */
+.run-queue-status {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(136, 153, 171, .2);
+  background: rgba(25, 35, 46, .2);
+  display: grid;
+  gap: 3px;
+}
+
+.run-queue-status span {
+  color: #7f90a2;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.run-queue-status strong {
+  color: #c7d2dd;
+  font-size: 11px;
+}
