@@ -561,10 +561,10 @@ function getPathPosition(waypoints, progress) {
 function Shell({ title, kicker, subtitle, onBack, children }) {
   return (
     <main className="main-menu">
-      <section className="mode-screen" aria-label={title}>
-        <button className="mode-screen__back" onClick={onBack}>← BACK</button>
+      <section className="mode-screen" aria-labelledby="screen-title">
+        <button className="mode-screen__back" onClick={onBack} aria-label={`Back from ${title}`}>← BACK</button>
         <p className="main-menu__kicker">{kicker}</p>
-        <h2>{title}</h2>
+        <h2 id="screen-title">{title}</h2>
         {subtitle && <p className="mode-screen__subtitle">{subtitle}</p>}
         {children}
       </section>
@@ -580,7 +580,7 @@ function ModeSelect({ onBack, onSelect }) {
       title="SELECT MODE"
       subtitle="Choose a survival format. Each mode has its own pre-run contract."
     >
-      <div className="mode-grid">
+      <div className="mode-grid" role="group" aria-label="Game modes">
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.SINGLE_GATE)}>
           <span className="mode-card__players">ONE FRONT</span>
           <strong>SINGLE GATE</strong>
@@ -1471,10 +1471,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
 
   return (
-    <main className="run-screen">
+    <main className="run-screen" id="main-content">
       <section className="run-layout">
         <div className="battlefield">
-          <header className="run-hud">
+          <header className="run-hud" aria-label="Run status">
             <div>
               <span className="run-hud__label">MODE</span>
               <strong>{
@@ -1509,7 +1509,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <span className="run-hud__label">SCORE</span>
               <strong>{runScore.totalScore.toLocaleString()}</strong>
             </div>
-            <button className="run-exit" onClick={onExit}>EXIT RUN</button>
+            <button className="run-exit" onClick={onExit} aria-label="Exit current run">EXIT RUN</button>
           </header>
 
           {run?.mode === MODES.LAST_BASTION && (
@@ -1791,6 +1791,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           <aside
             className={`run-sidebar ${run?.mode === MODES.TFT_SHOP ? 'run-sidebar--tft' : ''}`}
+            aria-label="Tower management"
             data-balance-version={COMBAT_BALANCE_MODEL.version}
             data-archer-power={COMBAT_BALANCE_BY_ID.archer?.powerIndex}
             data-cannon-power={COMBAT_BALANCE_BY_ID.cannon?.powerIndex}
@@ -2667,10 +2668,10 @@ function AuthModal({ mode, onClose, onSuccess }) {
   }
 
   return (
-    <div className="auth-backdrop" onMouseDown={() => !busy && onClose()}>
-      <form className="auth-modal" onSubmit={submit} onMouseDown={e => e.stopPropagation()}>
+    <div className="auth-backdrop" onMouseDown={() => !busy && onClose()} role="presentation">
+      <form className="auth-modal" onSubmit={submit} onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <p className="main-menu__kicker">BASTIONFALL ACCOUNT</p>
-        <h3>{authMode === 'register' ? 'CREATE DEFENDER' : 'SIGN IN'}</h3>
+        <h3 id="auth-title">{authMode === 'register' ? 'CREATE DEFENDER' : 'SIGN IN'}</h3>
         <p className="auth-modal__copy">
           {authMode === 'register'
             ? 'Your account is active immediately. No email confirmation.'
@@ -2694,7 +2695,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} minLength="8" maxLength="72" required autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} />
         </label>
 
-        {error && <div className="auth-error">{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
 
         <button className="auth-submit" type="submit" disabled={busy}>
           {busy ? 'CONNECTING...' : authMode === 'register' ? 'CREATE ACCOUNT' : 'SIGN IN'}
