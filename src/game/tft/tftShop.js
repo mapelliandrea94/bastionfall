@@ -5,6 +5,8 @@ export const TFT_SHOP = Object.freeze({
   slotCount: 7,
   copyCost: 2,
   rerollCost: 3,
+  startingGold: 10,
+  waveClearGold: 5,
   composition: Object.freeze({
     [TOWER_FACTIONS.HUMAN]: 2,
     [TOWER_FACTIONS.INSECT]: 2,
@@ -68,6 +70,10 @@ export function getTftShopFixtures() {
     everyCopyCostsTwo: offers.every((offer) => offer.cost === 2),
     rerollCostExpected: 3,
     rerollCostActual: TFT_SHOP.rerollCost,
+    startingGoldExpected: 10,
+    startingGoldActual: TFT_SHOP.startingGold,
+    waveClearGoldExpected: 5,
+    waveClearGoldActual: TFT_SHOP.waveClearGold,
     deterministic: JSON.stringify(offers) === JSON.stringify(createTftShopOffers('fixture', 0)),
     rerollChangesSeededOffer: JSON.stringify(offers) !== JSON.stringify(rerolled)
   });
