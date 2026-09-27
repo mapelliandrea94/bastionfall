@@ -3059,3 +3059,132 @@ body { background:#1c3f61; }
 .last-bastion-lobby-actions .mode-screen__back {
   position: static;
 }
+
+
+/* BATCH 111 — Last Bastion spectator/status overlay */
+.last-bastion-status {
+  position: absolute;
+  top: 78px;
+  right: 14px;
+  z-index: 14;
+  width: min(320px, 34vw);
+  padding: 12px;
+  border: 1px solid rgba(215, 182, 106, .28);
+  background: rgba(8, 14, 22, .86);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 30px rgba(0,0,0,.28);
+}
+
+.last-bastion-status__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.last-bastion-status__header span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: #d7b66a;
+}
+
+.last-bastion-status__header strong {
+  font-size: 11px;
+  color: #f5e8c4;
+}
+
+.last-bastion-status__players {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.last-bastion-status__player {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.035);
+}
+
+.last-bastion-status__player span,
+.last-bastion-status__player small {
+  font-size: 9px;
+  color: #94a1ad;
+}
+
+.last-bastion-status__player strong {
+  font-size: 11px;
+  color: #f0f4f7;
+}
+
+.last-bastion-status__player--self {
+  border-color: rgba(215,182,106,.55);
+  background: rgba(215,182,106,.08);
+}
+
+.last-bastion-status__player--dead {
+  opacity: .55;
+  filter: grayscale(.55);
+}
+
+.last-bastion-status__player--offline small {
+  color: #c98d8d;
+}
+
+.last-bastion-spectate-banner {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 20;
+  width: min(560px, calc(100% - 36px));
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 8px;
+  padding: 22px 24px;
+  text-align: center;
+  border: 1px solid rgba(215,182,106,.38);
+  background: rgba(6, 10, 16, .9);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  pointer-events: none;
+}
+
+.last-bastion-spectate-banner span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  color: #d7b66a;
+}
+
+.last-bastion-spectate-banner strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(24px, 3vw, 40px);
+  color: #f5e8c4;
+}
+
+.last-bastion-spectate-banner small {
+  color: #9da8b4;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .last-bastion-status {
+    top: 72px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+  }
+
+  .last-bastion-status__players {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .last-bastion-status__players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
