@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { supabase } from './lib/supabase.js';
+import { normalizeRunSeed } from './lib/runSeed.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -61,11 +62,12 @@ const RUN_DEFAULTS = Object.freeze({
   coreHp: 20
 });
 
-function createInitialRunState(mode) {
+function createInitialRunState(mode, seedInput = `${mode}:prototype`) {
   if (!Object.values(MODES).includes(mode)) return null;
 
   return {
     mode,
+    seed: normalizeRunSeed(seedInput),
     phase: RUN_PHASES.PREPARATION,
     wave: 0,
     gold: RUN_DEFAULTS.startingGold,
