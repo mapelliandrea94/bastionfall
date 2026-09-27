@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { eliminateLastBastionParticipant, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { eliminateLastBastionParticipant, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -261,14 +261,15 @@ app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-r
   if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_ready_failed' });
 
   if (result.matched && result.match) {
-    const participantIds = (result.match.participants || [])
-      .map((participant) => participant.self ? req.user.id : null)
-      .filter(Boolean);
+    const participantIds = getLastBastionActiveMatchUserIds(req.user.id);
     const { error } = await hydrated.serverDb
       .from('last_bastion_queue')
       .delete()
       .in('user_id', participantIds.length ? participantIds : [req.user.id]);
-    if (error) console.error('Last Bastion matched queue cleanup failed:', error.message);
+    if (error) {
+      console.error('Last Bastion matched queue cleanup failed:', error.message);
+      return res.status(500).json({ error: 'queue_persistence_cleanup_failed' });
+    }
   } else {
     const persisted = await persistLastBastionQueueTicket(hydrated.serverDb, result.ticket);
     if (!persisted.ok) {
