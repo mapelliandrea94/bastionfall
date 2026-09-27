@@ -2352,6 +2352,24 @@ body { background:#1c3f61; }
   outline: none;
 }
 
+.battlefield-map__projectiles { pointer-events: none; }
+.battlefield-map__projectile {
+  fill: #f8dc77;
+  stroke: #fff9d7;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px currentColor);
+  color: #f8dc77;
+  animation: tower-shot linear forwards;
+}
+.battlefield-map__projectile--human { fill: #e2ad53; color: #e2ad53; }
+.battlefield-map__projectile--insect { fill: #8de166; color: #8de166; }
+.battlefield-map__projectile--alien { fill: #73d9ff; color: #73d9ff; }
+.battlefield-map__projectile--neutral { fill: #ff9f43; color: #ff9f43; }
+@keyframes tower-shot {
+  from { transform: translate(0, 0); opacity: 1; }
+  to { transform: translate(var(--shot-x), var(--shot-y)); opacity: .35; }
+}
+
 .tower-slot__shadow {
   fill: rgba(24, 67, 76, .24);
   transform: translateY(7px);

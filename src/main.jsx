@@ -936,6 +936,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const queuedWaveRef = useRef(null);
   const bossSummonTimeoutsRef = useRef([]);
   const towerAttackTimesRef = useRef({});
+  const projectileQueueRef = useRef([]);
+  const projectileIdRef = useRef(0);
+  const [projectiles, setProjectiles] = useState([]);
   const waveScaling = getWaveScaling(run?.wave ?? 0, run?.mode);
   const nextWaveNumber = Math.max(1, (run?.wave ?? 0) + 1);
   const upcomingBossWave = getUpcomingBossWave(nextWaveNumber);
@@ -1306,6 +1309,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           const primaryIndex = working.findIndex((enemy) => enemy.id === primary.id);
           if (primaryIndex < 0) continue;
 
+          const slot = SINGLE_GATE_MAP.buildSlots.slots.find((entry) => entry.id === placed.slotId);
+          if (slot && primary.position) {
+            const duration = Math.max(140, Math.min(360, Math.hypot(primary.position.x - slot.x, primary.position.y - slot.y) / Math.max(1, definition.projectileSpeed ?? 700) * 1000));
+            projectileQueueRef.current.push({
+              id: ++projectileIdRef.current,
+              x: slot.x, y: slot.y - 24,
+              dx: primary.position.x - slot.x,
+              dy: primary.position.y - (slot.y - 24),
+              faction: definition.faction ?? baseDefinition.faction ?? 'neutral',
+              duration,
+              expiresAt: now + duration + 80
+            });
+          }
+
           const hitEnemyAtIndex = (enemyIndex, damageScale = 1) => {
             const enemy = working[enemyIndex];
             if (!enemy || enemy.hp <= 0) return;
@@ -1386,6 +1403,23 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     return () => window.clearInterval(intervalId);
   }, [run?.phase, placedDefenses, activeEnemies.length]);
+
+  useEffect(() => {
+    if (run?.phase !== RUN_PHASES.ACTIVE) {
+      projectileQueueRef.current = [];
+      setProjectiles([]);
+      return undefined;
+    }
+    const intervalId = window.setInterval(() => {
+      const queued = projectileQueueRef.current.splice(0);
+      const now = performance.now();
+      setProjectiles((current) => {
+        const alive = current.filter((shot) => shot.expiresAt > now);
+        return queued.length || alive.length !== current.length ? [...alive, ...queued].slice(-100) : current;
+      });
+    }, 50);
+    return () => window.clearInterval(intervalId);
+  }, [run?.phase]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || activeEnemies.length === 0) return undefined;
@@ -1936,6 +1970,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 </g>
               );
             })}
+            <g className="battlefield-map__projectiles" aria-hidden="true">
+              {projectiles.map((shot) => (
+                <circle
+                  key={shot.id}
+                  className={`battlefield-map__projectile battlefield-map__projectile--${shot.faction}`}
+                  cx={shot.x}
+                  cy={shot.y}
+                  r="6"
+                  style={{ '--shot-x': `${shot.dx}px`, '--shot-y': `${shot.dy}px`, animationDuration: `${shot.duration}ms` }}
+                />
+              ))}
+            </g>
             <g
               className={`battlefield-map__bastion ${bastionStateClass}`}
               transform={`translate(${SINGLE_GATE_MAP.anchors.bastion.x} ${SINGLE_GATE_MAP.anchors.bastion.y})`}
