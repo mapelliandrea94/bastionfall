@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase.js';
 import { normalizeRunSeed } from './lib/runSeed.js';
 import { SINGLE_GATE_MAP } from './game/maps/singleGate.js';
 import { TRI_GATE_MAP, getTriGateMapFixtures } from './game/maps/triGate.js';
+import { TRI_GATE_SPAWN, getTriGateSpawnFixtures } from './game/spawning/triGateSpawn.js';
 import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
@@ -151,6 +152,7 @@ const TOWER_SLOT_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures(
 ));
 
 const TRI_GATE_MAP_FIXTURE = Object.freeze(getTriGateMapFixtures());
+const TRI_GATE_SPAWN_FIXTURE = Object.freeze(getTriGateSpawnFixtures());
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
   ARCHER_TOWER,
@@ -1088,6 +1090,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
             data-tri-gate-map-version={TRI_GATE_MAP.version}
+            data-tri-gate-spawn-version={TRI_GATE_SPAWN.version}
+            data-tri-gate-spawn-pass={TRI_GATE_SPAWN_FIXTURE.laneCountExpected === TRI_GATE_SPAWN_FIXTURE.laneCountActual && TRI_GATE_SPAWN_FIXTURE.allEnemiesAssigned === true && TRI_GATE_SPAWN_FIXTURE.noDuplicateAssignments === true && TRI_GATE_SPAWN_FIXTURE.originalOrderRecoverable === true && TRI_GATE_SPAWN_FIXTURE.countSpreadAtMostOne === true && TRI_GATE_SPAWN_FIXTURE.wave1RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave1RotationActual && TRI_GATE_SPAWN_FIXTURE.wave2RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave2RotationActual && TRI_GATE_SPAWN_FIXTURE.wave3RotationExpected === TRI_GATE_SPAWN_FIXTURE.wave3RotationActual && TRI_GATE_SPAWN_FIXTURE.rotatesOpeningLane === true}
             data-tri-gate-map-pass={TRI_GATE_MAP_FIXTURE.modeExpected === TRI_GATE_MAP_FIXTURE.modeActual && TRI_GATE_MAP_FIXTURE.entranceCountExpected === TRI_GATE_MAP_FIXTURE.entranceCountActual && TRI_GATE_MAP_FIXTURE.laneCountExpected === TRI_GATE_MAP_FIXTURE.laneCountActual && TRI_GATE_MAP_FIXTURE.uniqueEntrances === true && TRI_GATE_MAP_FIXTURE.uniqueLanes === true && TRI_GATE_MAP_FIXTURE.lanesResolve === true && TRI_GATE_MAP_FIXTURE.pathsStartAtEntrance === true && TRI_GATE_MAP_FIXTURE.pathsEndAtBastion === true && TRI_GATE_MAP_FIXTURE.pathsHaveShape === true && TRI_GATE_MAP_FIXTURE.uniqueInteriorWaypoints === true && TRI_GATE_MAP_FIXTURE.bastionCentered === true && TRI_GATE_MAP_FIXTURE.individualSlotPolicy === true}
             data-tower-slot-purchase-pass={TOWER_SLOT_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-placed-defense-count={placedDefenses.length}
