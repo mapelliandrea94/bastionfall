@@ -60,7 +60,7 @@ const WALL_SLOTS = Object.freeze([
 
 export const SINGLE_GATE_MAP = Object.freeze({
   id: 'single-gate-corridor-bastion',
-  version: 4,
+  version: 5,
   mode: 'single-gate',
   compatibleModes: Object.freeze(['single-gate', 'tft-shop']),
   name: 'Bastion Gauntlet',
@@ -89,23 +89,39 @@ export const SINGLE_GATE_MAP = Object.freeze({
     footprintRadius: 34,
     minimumPathCenterDistance: 104,
     slots: Object.freeze([
-      Object.freeze({ id: 'slot-01', x: 1480, y: 110 }),
-      Object.freeze({ id: 'slot-02', x: 970, y: 800 }),
-      Object.freeze({ id: 'slot-03', x: 100, y: 110 }),
-      Object.freeze({ id: 'slot-04', x: 400, y: 800 }),
-      Object.freeze({ id: 'slot-05', x: 1480, y: 800 }),
+      Object.freeze({ id: 'slot-01', x: 390, y: 290 }),
+      Object.freeze({ id: 'slot-02', x: 390, y: 410 }),
+      Object.freeze({ id: 'slot-03', x: 390, y: 530 }),
+      Object.freeze({ id: 'slot-04', x: 390, y: 650 }),
+      Object.freeze({ id: 'slot-05', x: 390, y: 800 }),
+
       Object.freeze({ id: 'slot-06', x: 670, y: 110 }),
-      Object.freeze({ id: 'slot-07', x: 1390, y: 320 }),
-      Object.freeze({ id: 'slot-08', x: 1240, y: 110 }),
-      Object.freeze({ id: 'slot-09', x: 400, y: 290 }),
-      Object.freeze({ id: 'slot-10', x: 400, y: 530 }),
-      Object.freeze({ id: 'slot-11', x: 1480, y: 560 }),
-      Object.freeze({ id: 'slot-12', x: 1360, y: 170 }),
-      Object.freeze({ id: 'slot-13', x: 1480, y: 230 }),
-      Object.freeze({ id: 'slot-14', x: 370, y: 410 }),
-      Object.freeze({ id: 'slot-15', x: 370, y: 650 }),
-      Object.freeze({ id: 'slot-16', x: 1480, y: 680 }),
-      Object.freeze({ id: 'slot-17', x: 1480, y: 320 })
+      Object.freeze({ id: 'slot-07', x: 670, y: 300 }),
+      Object.freeze({ id: 'slot-08', x: 670, y: 450 }),
+      Object.freeze({ id: 'slot-09', x: 670, y: 600 }),
+
+      Object.freeze({ id: 'slot-10', x: 965, y: 300 }),
+      Object.freeze({ id: 'slot-11', x: 965, y: 430 }),
+      Object.freeze({ id: 'slot-12', x: 965, y: 560 }),
+      Object.freeze({ id: 'slot-13', x: 965, y: 690 }),
+      Object.freeze({ id: 'slot-14', x: 965, y: 800 }),
+
+      Object.freeze({ id: 'slot-15', x: 1235, y: 110 }),
+      Object.freeze({ id: 'slot-16', x: 1235, y: 300 }),
+      Object.freeze({ id: 'slot-17', x: 1235, y: 430 }),
+      Object.freeze({ id: 'slot-18', x: 1235, y: 580 }),
+
+      Object.freeze({ id: 'slot-19', x: 100, y: 110 }),
+      Object.freeze({ id: 'slot-20', x: 100, y: 300 }),
+      Object.freeze({ id: 'slot-21', x: 100, y: 450 }),
+      Object.freeze({ id: 'slot-22', x: 100, y: 580 }),
+
+      Object.freeze({ id: 'slot-23', x: 1480, y: 110 }),
+      Object.freeze({ id: 'slot-24', x: 1480, y: 230 }),
+      Object.freeze({ id: 'slot-25', x: 1480, y: 320 }),
+      Object.freeze({ id: 'slot-26', x: 1480, y: 560 }),
+      Object.freeze({ id: 'slot-27', x: 1480, y: 680 }),
+      Object.freeze({ id: 'slot-28', x: 1480, y: 800 })
     ])
   }),
   wallSlots: Object.freeze({
