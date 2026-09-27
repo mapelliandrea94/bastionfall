@@ -934,6 +934,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
+  const spawnedWaveRef = useRef(null);
   const bossSummonTimeoutsRef = useRef([]);
   const towerAttackTimesRef = useRef({});
   const projectileQueueRef = useRef([]);
@@ -1212,6 +1213,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
                     : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() });
 
+        spawnedWaveRef.current = waveScaling.waveNumber;
         setActiveEnemies((active) => [...active, applyEliteModifiers(baseEnemyState)]);
         return remaining;
       });
@@ -1465,10 +1467,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   useEffect(() => {
     const queueInitialized = queuedWaveRef.current === waveScaling.waveNumber;
+    const waveActuallySpawned = spawnedWaveRef.current === waveScaling.waveNumber;
 
     if (
       run?.phase === RUN_PHASES.ACTIVE &&
       queueInitialized &&
+      waveActuallySpawned &&
       spawnQueue.length === 0 &&
       activeEnemies.length === 0
     ) {
