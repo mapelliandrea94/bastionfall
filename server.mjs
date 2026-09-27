@@ -176,6 +176,71 @@ app.get('/api/profile', requireUser, async (req, res) => {
   });
 });
 
+app.get('/api/leaderboards/:mode', requireUser, async (req, res) => {
+  const mode = String(req.params?.mode || '').trim();
+  if (!['single-gate', 'tri-gate'].includes(mode)) {
+    return res.status(400).json({ error: 'unsupported_leaderboard_mode' });
+  }
+
+  const requestedLimit = Number(req.query?.limit ?? 50);
+  const limit = Number.isInteger(requestedLimit)
+    ? Math.max(1, Math.min(100, requestedLimit))
+    : 50;
+
+  const serverDb = clientForToken(req.accessToken, {
+    'x-bastionfall-server-secret': matchTokenSecret
+  });
+
+  const recordsResult = await serverDb
+    .from('mode_records')
+    .select('user_id,mode,best_wave,best_survival_ms,best_score,best_kills,updated_at')
+    .eq('mode', mode)
+    .order('best_wave', { ascending: false })
+    .order('best_survival_ms', { ascending: false })
+    .order('best_score', { ascending: false })
+    .limit(limit);
+
+  if (recordsResult.error) {
+    console.error('Leaderboard record read failed:', recordsResult.error.message);
+    return res.status(500).json({ error: 'leaderboard_read_failed' });
+  }
+
+  const records = recordsResult.data || [];
+  if (records.length === 0) {
+    return res.json({ mode, entries: [], limit });
+  }
+
+  const userIds = [...new Set(records.map((record) => record.user_id))];
+  const profilesResult = await serverDb
+    .from('profiles')
+    .select('user_id,display_name')
+    .in('user_id', userIds);
+
+  if (profilesResult.error) {
+    console.error('Leaderboard profile read failed:', profilesResult.error.message);
+    return res.status(500).json({ error: 'leaderboard_profile_read_failed' });
+  }
+
+  const namesByUser = new Map(
+    (profilesResult.data || []).map((profile) => [profile.user_id, profile.display_name || 'Defender'])
+  );
+
+  const entries = records.map((record) => ({
+    displayName: namesByUser.get(record.user_id) || 'Defender',
+    bestWave: record.best_wave,
+    bestSurvivalMs: record.best_survival_ms,
+    bestScore: record.best_score,
+    bestKills: record.best_kills,
+    updatedAt: record.updated_at
+  }));
+
+  return res.json({
+    mode,
+    entries,
+    limit
+  });
+});
+
 app.post('/api/run/complete', requireUser, async (req, res) => {
   const matchToken = String(req.body?.matchToken || '');
   const identity = verifyMatchIdentity(matchToken);
