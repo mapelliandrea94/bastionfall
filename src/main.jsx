@@ -737,7 +737,7 @@ function TriGateBattlefieldPreview() {
 
 function LastBastionLobby({ session, onBack, onStart }) {
   const startedMatchIdRef = useRef(null);
-  const [state, setState] = useState({ loading: true, queued: false, matched: false, match: null, ticket: null, queuedPlayers: 0, error: '' });
+  const [state, setState] = useState({ loading: true, queued: false, matched: false, match: null, ticket: null, queuedPlayers: 0, readyPlayers: 0, fillWindowRemainingMs: null, error: '' });
 
   const refresh = async () => {
     const result = await lastBastionMatchmakingRequest(session, 'status');
@@ -752,6 +752,8 @@ function LastBastionLobby({ session, onBack, onStart }) {
       match: result.payload?.match ?? null,
       ticket: result.payload?.ticket ?? null,
       queuedPlayers: result.payload?.queuedPlayers ?? 0,
+      readyPlayers: result.payload?.readyPlayers ?? 0,
+      fillWindowRemainingMs: result.payload?.fillWindowRemainingMs ?? null,
       error: ''
     });
   };
@@ -832,8 +834,20 @@ function LastBastionLobby({ session, onBack, onStart }) {
         </section>
         <section className="pre-run-card">
           <span className="pre-run-card__eyebrow">MATCH</span>
-          <strong>{state.matched ? 'MATCH FOUND' : 'SHARED SIEGE'}</strong>
-          <small>{state.matched ? 'Shared seed locked. Synchronizing start...' : 'All matched defenders receive the same seed and start time.'}</small>
+          <strong>
+            {state.matched
+              ? 'MATCH FOUND'
+              : state.readyPlayers >= 2 && Number.isFinite(Number(state.fillWindowRemainingMs))
+                ? `FILLING ${Math.max(0, Math.ceil(Number(state.fillWindowRemainingMs) / 1000))}s`
+                : 'SHARED SIEGE'}
+          </strong>
+          <small>
+            {state.matched
+              ? 'Shared seed locked. Synchronizing start...'
+              : state.readyPlayers >= 2
+                ? `READY ${state.readyPlayers}/8 · filling the lobby before launch.`
+                : `READY ${state.readyPlayers}/8 · minimum 2 defenders.`}
+          </small>
         </section>
       </div>
 
