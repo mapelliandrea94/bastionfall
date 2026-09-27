@@ -2788,6 +2788,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   async function submit(e) {
     e.preventDefault();
@@ -2798,7 +2799,30 @@ function AuthModal({ mode, onClose, onSuccess }) {
 
     setBusy(true);
     setError('');
+    setNotice('');
+
     try {
+      if (authMode === 'forgot') {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin
+        });
+        if (resetError) throw resetError;
+        setNotice('If an account exists for this email, a password reset link has been sent.');
+        return;
+      }
+
+      if (authMode === 'reset-password') {
+        const { error: updateError } = await supabase.auth.updateUser({ password });
+        if (updateError) throw updateError;
+        setNotice('Password updated. You can continue with your account.');
+        window.history.replaceState({}, document.title, window.location.pathname);
+        setTimeout(() => {
+          onSuccess();
+          onClose();
+        }, 700);
+        return;
+      }
+
       if (authMode === 'register') {
         const { data, error: registerError } = await supabase.functions.invoke('register-player', {
           body: { email, password, displayName: name }
@@ -2817,6 +2841,9 @@ function AuthModal({ mode, onClose, onSuccess }) {
         email_in_use: 'This email is already registered.',
         password_length: 'Password must be 8–72 characters.',
         invalid_email: 'Enter a valid email address.',
+        invalid_display_name: 'Defender name must be 1–40 valid characters.',
+        rate_limited: 'Too many attempts. Please try again later.',
+        signup_temporarily_unavailable: 'Account creation is temporarily unavailable.',
         'Invalid login credentials': 'Email or password is incorrect.'
       };
       setError(friendly[code] || code);
@@ -2825,15 +2852,25 @@ function AuthModal({ mode, onClose, onSuccess }) {
     }
   }
 
+  const title =
+    authMode === 'register' ? 'CREATE DEFENDER' :
+    authMode === 'forgot' ? 'RESET PASSWORD' :
+    authMode === 'reset-password' ? 'CHOOSE NEW PASSWORD' :
+    'SIGN IN';
+
   return (
     <div className="auth-backdrop" onMouseDown={() => !busy && onClose()} role="presentation">
       <form className="auth-modal" onSubmit={submit} onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="auth-title">
         <p className="main-menu__kicker">BASTIONFALL ACCOUNT</p>
-        <h3 id="auth-title">{authMode === 'register' ? 'CREATE DEFENDER' : 'SIGN IN'}</h3>
+        <h3 id="auth-title">{title}</h3>
         <p className="auth-modal__copy">
           {authMode === 'register'
             ? 'Your account is active immediately. No email confirmation.'
-            : 'Continue your records from any device.'}
+            : authMode === 'forgot'
+              ? 'Enter your account email and we will send a secure reset link.'
+              : authMode === 'reset-password'
+                ? 'Set a new password for your Bastionfall account.'
+                : 'Continue your records from any device.'}
         </p>
 
         {authMode === 'register' && (
@@ -2843,32 +2880,70 @@ function AuthModal({ mode, onClose, onSuccess }) {
           </label>
         )}
 
-        <label>
-          <span>Email</span>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
-        </label>
+        {authMode !== 'reset-password' && (
+          <label>
+            <span>Email</span>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
+          </label>
+        )}
 
-        <label>
-          <span>Password</span>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} minLength="8" maxLength="72" required autoComplete={authMode === 'register' ? 'new-password' : 'current-password'} />
-        </label>
+        {authMode !== 'forgot' && (
+          <label>
+            <span>{authMode === 'reset-password' ? 'New password' : 'Password'}</span>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              minLength="8"
+              maxLength="72"
+              required
+              autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+            />
+          </label>
+        )}
 
         {error && <div className="auth-error" role="alert">{error}</div>}
+        {notice && <div className="auth-notice" role="status">{notice}</div>}
 
         <button className="auth-submit" type="submit" disabled={busy}>
-          {busy ? 'CONNECTING...' : authMode === 'register' ? 'CREATE ACCOUNT' : 'SIGN IN'}
+          {busy
+            ? 'CONNECTING...'
+            : authMode === 'register'
+              ? 'CREATE ACCOUNT'
+              : authMode === 'forgot'
+                ? 'SEND RESET LINK'
+                : authMode === 'reset-password'
+                  ? 'SAVE NEW PASSWORD'
+                  : 'SIGN IN'}
         </button>
 
-        <button
-          className="auth-switch"
-          type="button"
-          onClick={() => {
-            setAuthMode(authMode === 'login' ? 'register' : 'login');
-            setError('');
-          }}
-        >
-          {authMode === 'login' ? 'New here? Create account' : 'Already registered? Sign in'}
-        </button>
+        {authMode === 'login' && (
+          <button
+            className="auth-switch"
+            type="button"
+            onClick={() => {
+              setAuthMode('forgot');
+              setError('');
+              setNotice('');
+            }}
+          >
+            Forgot password?
+          </button>
+        )}
+
+        {authMode !== 'reset-password' && (
+          <button
+            className="auth-switch"
+            type="button"
+            onClick={() => {
+              setAuthMode(authMode === 'register' ? 'login' : authMode === 'login' ? 'register' : 'login');
+              setError('');
+              setNotice('');
+            }}
+          >
+            {authMode === 'register' ? 'Already registered? Sign in' : authMode === 'login' ? 'New here? Create account' : 'Back to sign in'}
+          </button>
+        )}
       </form>
     </div>
   );
@@ -2893,7 +2968,12 @@ function App() {
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession));
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      setSession(nextSession);
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthMode('reset-password');
+      }
+    });
     return () => listener.subscription.unsubscribe();
   }, []);
 
