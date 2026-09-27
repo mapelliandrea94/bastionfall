@@ -16,6 +16,7 @@ import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyleForTower } from 
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
 import { TFT_BENCH, addCopyToBench, createEmptyBench, getTftBenchFixtures, removeCopyFromBench } from './game/tft/tftBench.js';
 import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftCopyProgressionFixtures, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
+import { TFT_PERSISTENCE, clearTftRunSnapshot, createTftRunSnapshot, getTftPersistenceFixtures, loadTftRunSnapshot, saveTftRunSnapshot } from './game/tft/tftPersistence.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -180,6 +181,7 @@ const TOWER_ART_FIXTURE = Object.freeze(getTowerArtFixtures());
 const TFT_SHOP_FIXTURE = Object.freeze(getTftShopFixtures());
 const TFT_BENCH_FIXTURE = Object.freeze(getTftBenchFixtures());
 const TFT_COPY_PROGRESSION_FIXTURE = Object.freeze(getTftCopyProgressionFixtures());
+const TFT_PERSISTENCE_FIXTURE = Object.freeze(getTftPersistenceFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -644,20 +646,22 @@ function ModePreRun({ mode, onBack, onStart }) {
 
 
 function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold }) {
+  const restoredTftSnapshot = useRef(run?.mode === MODES.TFT_SHOP ? loadTftRunSnapshot() : null);
+  const matchingTftSnapshot = restoredTftSnapshot.current?.run?.seed === run?.seed ? restoredTftSnapshot.current : null;
   const [spawnQueue, setSpawnQueue] = useState([]);
   const [activeEnemies, setActiveEnemies] = useState([]);
   const [preparationRemaining, setPreparationRemaining] = useState(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
   const [selectedDefenseId, setSelectedDefenseId] = useState('human-aa');
-  const [placedDefenses, setPlacedDefenses] = useState([]);
+  const [placedDefenses, setPlacedDefenses] = useState(() => matchingTftSnapshot?.placedDefenses ?? []);
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
-  const [tftRollIndex, setTftRollIndex] = useState(0);
-  const [tftShopLocked, setTftShopLocked] = useState(false);
-  const [tftBench, setTftBench] = useState(() => createEmptyBench());
-  const [tftFeedback, setTftFeedback] = useState('');
-  const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(null);
+  const [tftRollIndex, setTftRollIndex] = useState(() => matchingTftSnapshot?.tftRollIndex ?? 0);
+  const [tftShopLocked, setTftShopLocked] = useState(() => matchingTftSnapshot?.tftShopLocked ?? false);
+  const [tftBench, setTftBench] = useState(() => matchingTftSnapshot?.tftBench ?? createEmptyBench());
+  const [tftFeedback, setTftFeedback] = useState(() => matchingTftSnapshot ? 'RUN RESTORED' : '');
+  const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
@@ -713,6 +717,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   useEffect(() => {
     availableGoldRef.current = run?.gold ?? 0;
   }, [run?.gold]);
+
+  useEffect(() => {
+    if (run?.mode !== MODES.TFT_SHOP || run?.phase === RUN_PHASES.ENDED) return;
+    const snapshot = createTftRunSnapshot({
+      run,
+      placedDefenses,
+      tftBench,
+      selectedTftBenchIndex,
+      tftRollIndex,
+      tftShopLocked
+    });
+    saveTftRunSnapshot(snapshot);
+  }, [run, placedDefenses, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked]);
 
   useEffect(() => {
     if (!run || run.phase === RUN_PHASES.ENDED) return undefined;
@@ -1432,6 +1449,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tft-bench-version={TFT_BENCH.version}
             data-tft-copy-progression-version={TFT_COPY_PROGRESSION.version}
             data-tft-copy-progression-pass={TFT_COPY_PROGRESSION_FIXTURE.oneCopyLevelOne === true && TFT_COPY_PROGRESSION_FIXTURE.twoAndThreeLevelTwo === true && TFT_COPY_PROGRESSION_FIXTURE.fourToSixLevelThree === true && TFT_COPY_PROGRESSION_FIXTURE.sevenLevelFour === true && TFT_COPY_PROGRESSION_FIXTURE.wrongTypeBlocked === true && TFT_COPY_PROGRESSION_FIXTURE.independentProgress === true && TFT_COPY_PROGRESSION_FIXTURE.reachesSevenExactly === true && TFT_COPY_PROGRESSION_FIXTURE.maxBlocksExtra === true}
+            data-tft-persistence-version={TFT_PERSISTENCE.version}
+            data-tft-persistence-pass={TFT_PERSISTENCE_FIXTURE.validSnapshotCreated === true && TFT_PERSISTENCE_FIXTURE.runFieldsPersist === true && TFT_PERSISTENCE_FIXTURE.towerProgressPersists === true && TFT_PERSISTENCE_FIXTURE.evolutionPersists === true && TFT_PERSISTENCE_FIXTURE.benchPersists === true && TFT_PERSISTENCE_FIXTURE.rollLockPersist === true && TFT_PERSISTENCE_FIXTURE.invalidVersionRejected === true}
             data-tft-bench-selected={selectedTftBenchIndex ?? ''}
             data-tft-bench-pass={TFT_BENCH_FIXTURE.slotCountExpected === TFT_BENCH_FIXTURE.slotCountActual && TFT_BENCH_FIXTURE.buyToBenchWorks === true && TFT_BENCH_FIXTURE.fullBlocksPurchase === true && TFT_BENCH_FIXTURE.sellRemovesCopy === true && TFT_BENCH_FIXTURE.noAutoMerge === true}
             data-tft-shop-version={TFT_SHOP.version}
@@ -2193,14 +2212,15 @@ function AuthModal({ mode, onClose, onSuccess }) {
 }
 
 function App() {
+  const restoredTftRun = loadTftRunSnapshot();
   const towerPlacementQa = (
     ['127.0.0.1', 'localhost'].includes(window.location.hostname) &&
     new URLSearchParams(window.location.search).get('qa') === 'tower-placement'
   );
-  const [screen, setScreen] = useState(towerPlacementQa ? SCREENS.SINGLE_GATE_RUN : SCREENS.MENU);
-  const [selectedMode, setSelectedMode] = useState(towerPlacementQa ? MODES.SINGLE_GATE : null);
+  const [screen, setScreen] = useState(towerPlacementQa ? SCREENS.SINGLE_GATE_RUN : restoredTftRun ? SCREENS.SINGLE_GATE_RUN : SCREENS.MENU);
+  const [selectedMode, setSelectedMode] = useState(towerPlacementQa ? MODES.SINGLE_GATE : restoredTftRun ? MODES.TFT_SHOP : null);
   const [runState, setRunState] = useState(
-    towerPlacementQa ? createInitialRunState(MODES.SINGLE_GATE, 'tower-placement-qa') : null
+    towerPlacementQa ? createInitialRunState(MODES.SINGLE_GATE, 'tower-placement-qa') : restoredTftRun?.run ?? null
   );
   const [personalBestByMode, setPersonalBestByMode] = useState({});
   const [completedMatchId, setCompletedMatchId] = useState(null);
@@ -2288,6 +2308,7 @@ function App() {
           if (!started.ok) return;
           const nextRun = createInitialRunState(mode, started.match.seed, started.match);
           if (!nextRun) return;
+          if (mode === MODES.TFT_SHOP) clearTftRunSnapshot();
           setRunState(nextRun);
           setScreen(SCREENS.SINGLE_GATE_RUN);
         }}
@@ -2382,6 +2403,7 @@ function App() {
           });
         }}
         onExit={() => {
+          if (runState?.mode === MODES.TFT_SHOP) clearTftRunSnapshot();
           setRunState(null);
           setScreen(SCREENS.MODE_PREP);
         }}
