@@ -212,6 +212,36 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
       return res.status(500).json({ error: 'record_persist_failed' });
     }
 
+  if (mode === 'last-bastion') {
+    const serverDb = clientForToken(req.accessToken, {
+      'x-bastionfall-server-secret': matchTokenSecret
+    });
+    const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
+
+    const { data: statRows, error: statError } = await serverDb.rpc(
+      'persist_verified_last_bastion_result',
+      {
+        p_result_reason: resultReason,
+        p_wave: wave,
+        p_elapsed_ms: Math.floor(elapsedMs),
+        p_score: Math.floor(score),
+        p_gold: gold,
+        p_core_hp: coreHp,
+        p_core_max_hp: coreMaxHp,
+        p_kills: kills,
+        p_started_at: identity.startedAt,
+        p_ended_at: endedAt
+      }
+    );
+
+    if (statError) {
+      console.error('Last Bastion persistence failed:', statError.message);
+      return res.status(500).json({ error: 'last_bastion_persist_failed' });
+    }
+
+    persistedRecord = Array.isArray(statRows) ? statRows[0] ?? null : statRows;
+  }
+
     persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
   }
 
