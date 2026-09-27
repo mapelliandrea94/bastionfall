@@ -1,5 +1,5 @@
 export const WORLD_MODIFIER_SYSTEM = Object.freeze({
-  version: 1,
+  version: 2,
   minWave: 21,
   cadence: 5,
   maxActiveModifiers: 1,
@@ -9,21 +9,21 @@ export const WORLD_MODIFIER_SYSTEM = Object.freeze({
       name: 'Pressure Front',
       description: 'Global siege pressure modifier.',
       tags: Object.freeze(['threat']),
-      effects: Object.freeze({})
+      effects: Object.freeze({ threatMultiplier: 1.18, eliteChanceMultiplier: 1.25 })
     }),
     Object.freeze({
       id: 'scarcity',
       name: 'Scarcity',
       description: 'Global economy pressure modifier.',
       tags: Object.freeze(['economy']),
-      effects: Object.freeze({})
+      effects: Object.freeze({ waveGoldMultiplier: 0.78, rerollCostMultiplier: 1.25 })
     }),
     Object.freeze({
       id: 'unstable-ground',
       name: 'Unstable Ground',
       description: 'Global battlefield control modifier.',
       tags: Object.freeze(['control']),
-      effects: Object.freeze({})
+      effects: Object.freeze({ enemyMoveSpeedMultiplier: 1.12, spawnIntervalMultiplier: 0.9 })
     })
   ])
 });
@@ -66,6 +66,29 @@ export function getActiveWorldModifiers(seed, waveNumber) {
   return Object.freeze(modifier ? [modifier] : []);
 }
 
+export function getWorldModifierEffects(modifiers = []) {
+  const effects = {
+    threatMultiplier: 1,
+    eliteChanceMultiplier: 1,
+    waveGoldMultiplier: 1,
+    rerollCostMultiplier: 1,
+    enemyMoveSpeedMultiplier: 1,
+    spawnIntervalMultiplier: 1
+  };
+
+  for (const modifier of modifiers) {
+    const source = modifier?.effects ?? {};
+    if (source.threatMultiplier) effects.threatMultiplier *= source.threatMultiplier;
+    if (source.eliteChanceMultiplier) effects.eliteChanceMultiplier *= source.eliteChanceMultiplier;
+    if (source.waveGoldMultiplier) effects.waveGoldMultiplier *= source.waveGoldMultiplier;
+    if (source.rerollCostMultiplier) effects.rerollCostMultiplier *= source.rerollCostMultiplier;
+    if (source.enemyMoveSpeedMultiplier) effects.enemyMoveSpeedMultiplier *= source.enemyMoveSpeedMultiplier;
+    if (source.spawnIntervalMultiplier) effects.spawnIntervalMultiplier *= source.spawnIntervalMultiplier;
+  }
+
+  return Object.freeze(effects);
+}
+
 export function getWorldModifierFoundationFixtures() {
   const before = getActiveWorldModifiers('fixture', 20);
   const first = getActiveWorldModifiers('fixture', 21);
@@ -82,8 +105,11 @@ export function getWorldModifierFoundationFixtures() {
     deterministicSelection:
       first[0]?.id === repeat[0]?.id &&
       first[0]?.waveNumber === repeat[0]?.waveNumber,
-    definitionsHaveNoLiveEffectsYet: WORLD_MODIFIER_SYSTEM.definitions.every(
-      (entry) => Object.keys(entry.effects ?? {}).length === 0
-    )
+    definitionsHaveLiveEffects: WORLD_MODIFIER_SYSTEM.definitions.every(
+      (entry) => Object.keys(entry.effects ?? {}).length >= 1
+    ),
+    pressureRaisesThreat: getWorldModifierEffects([WORLD_MODIFIER_SYSTEM.definitions[0]]).threatMultiplier > 1,
+    scarcityCutsGold: getWorldModifierEffects([WORLD_MODIFIER_SYSTEM.definitions[1]]).waveGoldMultiplier < 1,
+    unstableGroundAcceleratesPressure: getWorldModifierEffects([WORLD_MODIFIER_SYSTEM.definitions[2]]).enemyMoveSpeedMultiplier > 1
   });
 }
