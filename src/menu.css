@@ -3226,7 +3226,11 @@ body { background:#1c3f61; }
   }
 
   .battlefield-map {
-    inset: 52px 0 0;
-    height: auto;
+    top: 52px;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 52px);
   }
 }
