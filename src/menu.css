@@ -3635,14 +3635,14 @@ button:focus-visible,
     height: 64px;
   }
 
-  .tft-shop-layout .tft-bench-slot {
+  .run-sidebar--tft .tft-shop-layout .tft-bench-slot {
     min-height: 94px;
     grid-template-columns: 56px minmax(0, 1fr);
     padding: .42rem;
     column-gap: .38rem;
   }
 
-  .tft-shop-layout .tft-bench-slot__art {
+  .run-sidebar--tft .tft-shop-layout .tft-bench-slot__art {
     width: 56px;
     height: 56px;
   }
