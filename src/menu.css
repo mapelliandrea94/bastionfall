@@ -3393,3 +3393,191 @@ button:focus-visible,
     right: 344px;
   }
 }
+
+
+/* HOTFIX — visual TFT shop cards + prominent gold */
+@media (min-width: 901px) {
+  .run-sidebar--tft {
+    width: min(440px, calc(100% - 28px));
+    padding: 18px;
+  }
+}
+
+.run-sidebar--tft h3 {
+  margin-bottom: 10px;
+}
+
+.run-sidebar--tft .main-menu__kicker {
+  margin-bottom: 6px;
+}
+
+.tft-shop-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .6rem;
+  margin-bottom: .75rem;
+}
+
+.tft-shop-card {
+  position: relative;
+  min-height: 138px;
+  grid-template-columns: 92px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: .65rem;
+  row-gap: .2rem;
+  padding: .65rem .7rem;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  background:
+    radial-gradient(circle at 24% 50%, rgba(255,255,255,.06), transparent 36%),
+    rgba(255,255,255,.035);
+}
+
+.tft-shop-card:nth-child(7) {
+  grid-column: auto;
+}
+
+.tft-shop-card__art {
+  width: 92px;
+  height: 92px;
+  grid-row: 1 / span 2;
+  background-repeat: no-repeat;
+  border-radius: 8px;
+  filter: drop-shadow(0 6px 6px rgba(0,0,0,.34));
+  transform: scale(1.06);
+  transform-origin: 50% 68%;
+}
+
+.tft-shop-card__copy {
+  min-width: 0;
+  display: grid;
+  gap: .32rem;
+}
+
+.tft-shop-card__copy strong {
+  font-size: .94rem;
+  line-height: 1.02;
+  color: #f7f1df;
+  white-space: normal;
+}
+
+.tft-shop-card__copy small {
+  font-size: .58rem;
+  line-height: 1.25;
+  color: #aeb8c5;
+  letter-spacing: .04em;
+}
+
+.tft-shop-card__cost {
+  align-self: start;
+  justify-self: end;
+  min-width: 42px;
+  padding: .38rem .45rem;
+  border: 1px solid rgba(240,200,92,.45);
+  background: rgba(129,83,20,.34);
+  color: #ffe49c;
+  font-size: .82rem !important;
+  font-weight: 950;
+  text-align: center;
+  border-radius: 6px;
+}
+
+.tft-shop-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+  border-color: rgba(245,214,135,.72);
+  box-shadow: 0 10px 22px rgba(0,0,0,.2);
+}
+
+.tft-shop-economy {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: .65rem;
+  margin: .2rem 0 .55rem;
+}
+
+.tft-shop-gold {
+  min-height: 64px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  border: 2px solid rgba(240,200,92,.72);
+  background:
+    radial-gradient(circle at 50% 15%, rgba(255,233,153,.15), transparent 55%),
+    linear-gradient(180deg, rgba(154,101,24,.5), rgba(83,50,13,.64));
+  box-shadow: 0 0 18px rgba(224,168,61,.18);
+}
+
+.tft-shop-gold span {
+  font-size: .62rem;
+  font-weight: 950;
+  letter-spacing: .14em;
+  color: #d9bf76;
+}
+
+.tft-shop-gold strong {
+  font-size: 1.65rem;
+  line-height: 1;
+  color: #fff0a9;
+  text-shadow: 0 2px 8px rgba(0,0,0,.45);
+}
+
+.tft-shop-roll {
+  min-height: 64px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+}
+
+.tft-shop-roll > span {
+  font-size: 1.05rem;
+  font-weight: 950;
+}
+
+.tft-shop-roll > small {
+  font-size: .72rem;
+  color: #ffe49c;
+  letter-spacing: .08em;
+}
+
+@media (max-width: 1180px) and (min-width: 901px) {
+  .run-sidebar--tft {
+    width: min(390px, calc(100% - 20px));
+  }
+
+  .tft-shop-card {
+    min-height: 124px;
+    grid-template-columns: 78px minmax(0, 1fr) auto;
+  }
+
+  .tft-shop-card__art {
+    width: 78px;
+    height: 78px;
+  }
+}
+
+@media (max-width: 900px) {
+  .tft-shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tft-shop-card {
+    min-height: 112px;
+    grid-template-columns: 72px minmax(0, 1fr) auto;
+  }
+
+  .tft-shop-card__art {
+    width: 72px;
+    height: 72px;
+  }
+
+  .tft-shop-economy {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    padding-top: .4rem;
+    background: linear-gradient(180deg, transparent, rgba(7,10,14,.98) 28%);
+  }
+}
