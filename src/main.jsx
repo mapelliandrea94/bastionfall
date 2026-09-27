@@ -153,11 +153,6 @@ const ARMORED_ENEMY_BUDGET = Object.freeze(getArmoredEnemyBudget());
 const SHIELDED_ENEMY_BUDGET = Object.freeze(getShieldedEnemyBudget());
 
 const FLYING_ENEMY_BUDGET = Object.freeze(getFlyingEnemyBudget());
-const ENEMY_TAG_FIXTURE = Object.freeze({
-  allTemplatesTagged: [NORMAL_ENEMY, RUNNER_ENEMY, TANK_ENEMY, ARMORED_ENEMY, SHIELDED_ENEMY, FLYING_ENEMY].every((enemy) => Boolean(enemy.faction) && Boolean(enemy.unitType)),
-  runtimeTagsPersist: ENEMY_BASE_FIXTURE.tagsPersist === true,
-  bossTagsPresent: BOSS_TUNING_FIXTURE.bossTagsPresent === true
-});
 const TOWER_ROSTER_FIXTURE = Object.freeze(getTowerRosterFixtures());
 const NORMAL_BUILD_ROSTER_FIXTURE = Object.freeze(getNormalBuildRosterFixtures());
 const NORMAL_BUILD_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures(NORMAL_MODE_TOWERS, 10000));
@@ -189,6 +184,11 @@ const BOSS_SCHEDULE_FIXTURE = Object.freeze(getBossScheduleFixtures());
 const BOSS_SUMMON_ADDS_FIXTURE = Object.freeze(getBossSummonAddsFixtures());
 const BOSS_ARMOR_ENRAGE_FIXTURE = Object.freeze(getBossArmorEnrageFixtures());
 const BOSS_TUNING_FIXTURE = Object.freeze(getBossTuningFixtures());
+const ENEMY_TAG_FIXTURE = Object.freeze({
+  allTemplatesTagged: [NORMAL_ENEMY, RUNNER_ENEMY, TANK_ENEMY, ARMORED_ENEMY, SHIELDED_ENEMY, FLYING_ENEMY].every((enemy) => Boolean(enemy.faction) && Boolean(enemy.unitType)),
+  runtimeTagsPersist: ENEMY_BASE_FIXTURE.tagsPersist === true,
+  bossTagsPresent: BOSS_TUNING_FIXTURE.bossTagsPresent === true
+});
 const BLESSING_SYSTEM_FIXTURE = Object.freeze(getBlessingSystemFixtures());
 const BLESSING_ENGINE_FIXTURE = Object.freeze(getBlessingEngineFixtures());
 const BLESSING_REROLL_FIXTURE = Object.freeze(getBlessingRerollFixtures());
