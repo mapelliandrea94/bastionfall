@@ -10,7 +10,7 @@ import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
 import { COMBAT_BALANCE_MODEL, COMBAT_BALANCE_SNAPSHOT } from './game/balance/combatBalance.js';
-import { getPlacementValidationFixtures, validateSingleGatePlacement } from './game/placement/singleGatePlacement.js';
+import { getPlacementValidationFixtures, getTowerSlotPurchaseFixtures, tryPurchaseDefenseOnSlot, validateSingleGatePlacement } from './game/placement/singleGatePlacement.js';
 import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
 import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getWaveClearReward } from './game/economy/economyBaseline.js';
 import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOpportunityCost } from './game/structures/goldMine.js';
@@ -142,6 +142,12 @@ const ECONOMY_BASELINE_FIXTURE = Object.freeze(getEconomyBaselineFixtures({
   ballista: BALLISTA_TOWER,
   barracks: BARRACKS
 }));
+
+
+const TOWER_SLOT_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures(
+  [ARCHER_TOWER, CANNON_TOWER, FROST_TOWER, MAGE_TOWER, BALLISTA_TOWER, BARRACKS],
+  ECONOMY_BASELINE.startingGold
+));
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
   ARCHER_TOWER,
@@ -427,11 +433,15 @@ function ModePreRun({ mode, onBack, onStart }) {
 }
 
 
-function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
+function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold }) {
   const [spawnQueue, setSpawnQueue] = useState([]);
   const [activeEnemies, setActiveEnemies] = useState([]);
   const [preparationRemaining, setPreparationRemaining] = useState(RUN_DEFAULTS.preparationSeconds);
   const [selectedDefenseId, setSelectedDefenseId] = useState('archer');
+  const [placedDefenses, setPlacedDefenses] = useState([]);
+  const [hoveredSlotId, setHoveredSlotId] = useState(null);
+  const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
+  const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
   const waveScaling = getWaveScaling(run?.wave ?? 0);
@@ -446,10 +456,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
     barracks: BARRACKS
   });
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? ARCHER_TOWER;
-  const selectedSellPreview = getSellPreview(selectedDefense);
-  const selectedUpgradePreview = getNextUpgradePreview(selectedDefense, 1);
-  const selectedTargetingValue = getTargetingValue(selectedDefense);
-  const selectedAttackInstrumentation = getAttackInstrumentation(selectedDefense);
+  const selectedPlacedDefense = placedDefenses.find((entry) => entry.id === selectedPlacedDefenseId) ?? null;
+  const inspectedDefense = selectedPlacedDefense
+    ? defenseDefinitions[selectedPlacedDefense.defenseId] ?? selectedDefense
+    : selectedDefense;
+  const selectedSellPreview = getSellPreview(inspectedDefense);
+  const selectedUpgradePreview = getNextUpgradePreview(inspectedDefense, 1);
+  const selectedTargetingValue = getTargetingValue(inspectedDefense);
+  const selectedAttackInstrumentation = getAttackInstrumentation(inspectedDefense);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
@@ -457,6 +471,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
       ? 'battlefield-map__bastion--damaged'
       : '';
 
+
+  useEffect(() => {
+    availableGoldRef.current = run?.gold ?? 0;
+  }, [run?.gold]);
 
   useEffect(() => {
     if (!run || run.phase === RUN_PHASES.ENDED) return undefined;
@@ -607,6 +625,35 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
     position: getPathPosition(SINGLE_GATE_MAP.path.waypoints, enemy.progress)
   }));
 
+  const handleDefenseSelection = (defenseId) => {
+    setSelectedDefenseId(defenseId);
+    setSelectedPlacedDefenseId(null);
+  };
+
+  const handleBuildSlot = (slotId) => {
+    const occupied = placedDefenses.find((entry) => entry.slotId === slotId);
+    if (occupied) {
+      setSelectedPlacedDefenseId(occupied.id);
+      return;
+    }
+
+    if (!run || run.phase === RUN_PHASES.ENDED) return;
+
+    const attempt = tryPurchaseDefenseOnSlot({
+      slotId,
+      defense: selectedDefense,
+      gold: availableGoldRef.current,
+      placedStructures: placedDefenses
+    });
+
+    if (!attempt.ok) return;
+
+    availableGoldRef.current = attempt.goldAfter;
+    setPlacedDefenses((current) => [...current, attempt.structure]);
+    setSelectedPlacedDefenseId(attempt.structure.id);
+    onSpendGold(selectedDefense.cost);
+  };
+
 
   return (
     <main className="run-screen">
@@ -657,17 +704,69 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
               {[ [95,150],[730,85],[1280,130],[145,740],[695,805],[1390,750] ].map(([x,y]) => <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}><path className="battlefield-map__pine-shadow" d="M-33 19H34L0-72Z"/><path className="battlefield-map__pine" d="M0-82L-20-35H-12L-30 5H-21L-38 25H38L21 5H30L12-35H20Z"/><path className="battlefield-map__pine-light" d="M0-82L-20-35H-12L-30 5H-21L-38 25H0Z"/></g>)}
               {[ [270,125],[905,116],[400,755],[1230,796] ].map(([x,y]) => <path key={`${x}-${y}`} className="battlefield-map__crystal" d={`M${x} ${y-35}l18 27-18 25-18-25Z`}/>)}
             </g>
-            {SINGLE_GATE_MAP.buildZones.zones.map((zone) => (
-              <rect
-                key={zone.id}
-                className="battlefield-map__build-zone"
-                x={zone.x}
-                y={zone.y}
-                width={zone.width}
-                height={zone.height}
-                rx="20"
-              />
-            ))}
+            <g className="battlefield-map__build-slots">
+              {SINGLE_GATE_MAP.buildSlots.slots.map((slot) => {
+                const placed = placedDefenses.find((entry) => entry.slotId === slot.id) ?? null;
+                const affordable = (run?.gold ?? 0) >= selectedDefense.cost;
+                const hovered = hoveredSlotId === slot.id;
+                const selectedPlaced = placed?.id === selectedPlacedDefenseId;
+                const slotClass = [
+                  'battlefield-map__tower-slot',
+                  placed ? 'battlefield-map__tower-slot--occupied' : 'battlefield-map__tower-slot--available',
+                  !placed && !affordable ? 'battlefield-map__tower-slot--unaffordable' : '',
+                  hovered ? 'battlefield-map__tower-slot--hovered' : '',
+                  selectedPlaced ? 'battlefield-map__tower-slot--selected' : ''
+                ].filter(Boolean).join(' ');
+
+                return (
+                  <g
+                    key={slot.id}
+                    className={slotClass}
+                    transform={`translate(${slot.x} ${slot.y})`}
+                    role="button"
+                    tabIndex="0"
+                    aria-label={placed ? `Select ${defenseDefinitions[placed.defenseId]?.name || 'tower'}` : `Build ${selectedDefense.name}`}
+                    data-slot-id={slot.id}
+                    data-occupied={Boolean(placed)}
+                    data-defense-id={placed?.defenseId ?? ''}
+                    onMouseEnter={() => setHoveredSlotId(slot.id)}
+                    onMouseLeave={() => setHoveredSlotId((current) => current === slot.id ? null : current)}
+                    onClick={() => handleBuildSlot(slot.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleBuildSlot(slot.id);
+                      }
+                    }}
+                  >
+                    <rect className="tower-slot__shadow" x="-39" y="-25" width="78" height="58" rx="14" />
+                    <rect className="tower-slot__stone" x="-36" y="-30" width="72" height="56" rx="12" />
+                    <path className="tower-slot__grass" d="M-29 14Q-12 6 0 12T29 9V22H-29Z" />
+                    <path className="tower-slot__accent" d="M-25-19H25M-25 18H25" />
+
+                    {!placed && hovered && affordable && (
+                      <g className={`tower-visual tower-visual--ghost tower-visual--${selectedDefense.id}`}>
+                        <circle className="tower-visual__base" r="23" />
+                        <rect className="tower-visual__body" x="-12" y="-25" width="24" height="32" rx="5" />
+                        <path className="tower-visual__crest" d="M-16-24L0-38L16-24Z" />
+                        <text className="tower-visual__label" x="0" y="5" textAnchor="middle">{selectedDefense.name.slice(0, 1)}</text>
+                      </g>
+                    )}
+
+                    {placed && (
+                      <g className={`tower-visual tower-visual--${placed.defenseId}`}>
+                        <circle className="tower-visual__base" r="23" />
+                        <rect className="tower-visual__body" x="-12" y="-25" width="24" height="32" rx="5" />
+                        <path className="tower-visual__crest" d="M-16-24L0-38L16-24Z" />
+                        <text className="tower-visual__label" x="0" y="5" textAnchor="middle">
+                          {(defenseDefinitions[placed.defenseId]?.name || '?').slice(0, 1)}
+                        </text>
+                      </g>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
             <polyline
               className="battlefield-map__path"
               points={SINGLE_GATE_MAP.path.waypoints.map((point) => `${point.x},${point.y}`).join(' ')}
@@ -854,35 +953,38 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
             data-flying-enemy-threat={FLYING_ENEMY.threatValue}
             data-flying-enemy-speed={FLYING_ENEMY_BUDGET.speedIndex}
             data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
+            data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
+            data-tower-slot-purchase-pass={TOWER_SLOT_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
+            data-placed-defense-count={placedDefenses.length}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
-          <button className={`tower-card tower-card--archer ${selectedDefenseId === 'archer' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('archer')}>
+          <button className={`tower-card tower-card--archer ${selectedDefenseId === 'archer' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('archer')}>
             <strong>{ARCHER_TOWER.name}</strong>
             <span>{ARCHER_TOWER.cost}g</span>
             <small>{ARCHER_TOWER.damage} DMG · {ARCHER_TOWER.range} RANGE · {(1000 / ARCHER_TOWER.attackIntervalMs).toFixed(1)}/s</small>
           </button>
-          <button className={`tower-card tower-card--cannon ${selectedDefenseId === 'cannon' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('cannon')}>
+          <button className={`tower-card tower-card--cannon ${selectedDefenseId === 'cannon' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('cannon')}>
             <strong>{CANNON_TOWER.name}</strong>
             <span>{CANNON_TOWER.cost}g</span>
             <small>{CANNON_TOWER.damage} DMG · {CANNON_TOWER.splashRadius} SPLASH · {(1000 / CANNON_TOWER.attackIntervalMs).toFixed(1)}/s</small>
           </button>
-          <button className={`tower-card tower-card--frost ${selectedDefenseId === 'frost' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('frost')}>
+          <button className={`tower-card tower-card--frost ${selectedDefenseId === 'frost' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('frost')}>
             <strong>{FROST_TOWER.name}</strong>
             <span>{FROST_TOWER.cost}g</span>
             <small>{FROST_TOWER.damage} DMG · {FROST_TOWER.slowPercent}% SLOW · {(FROST_TOWER.slowDurationMs / 1000).toFixed(1)}s</small>
           </button>
-          <button className={`tower-card tower-card--mage ${selectedDefenseId === 'mage' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('mage')}>
+          <button className={`tower-card tower-card--mage ${selectedDefenseId === 'mage' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('mage')}>
             <strong>{MAGE_TOWER.name}</strong>
             <span>{MAGE_TOWER.cost}g</span>
             <small>{MAGE_TOWER.damage} DMG · {MAGE_TOWER.range} RANGE · {MAGE_TOWER.damageType.toUpperCase()}</small>
           </button>
-          <button className={`tower-card tower-card--ballista ${selectedDefenseId === 'ballista' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('ballista')}>
+          <button className={`tower-card tower-card--ballista ${selectedDefenseId === 'ballista' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('ballista')}>
             <strong>{BALLISTA_TOWER.name}</strong>
             <span>{BALLISTA_TOWER.cost}g</span>
             <small>{BALLISTA_TOWER.damage} DMG · {BALLISTA_TOWER.range} RANGE · {BALLISTA_TOWER.damageType.toUpperCase()}</small>
           </button>
-          <button className={`tower-card tower-card--barracks ${selectedDefenseId === 'barracks' ? 'tower-card--selected' : ''}`} onClick={() => setSelectedDefenseId('barracks')}>
+          <button className={`tower-card tower-card--barracks ${selectedDefenseId === 'barracks' ? 'tower-card--selected' : ''}`} onClick={() => handleDefenseSelection('barracks')}>
             <strong>{BARRACKS.name}</strong>
             <span>{BARRACKS.cost}g</span>
             <small>{BARRACKS.squadSize} UNITS · {BARRACKS.engageRadius} ENGAGE · {(BARRACKS.respawnIntervalMs / 1000).toFixed(1)}s RESPAWN</small>
@@ -890,22 +992,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
 
           <section className="defense-inspector" aria-label="Selected defense inspection">
             <div className="defense-inspector__header">
-              <span>SELECTED DEFENSE</span>
-              <strong>{selectedDefense.name}</strong>
+              <span>{selectedPlacedDefense ? 'PLACED DEFENSE' : 'SELECTED DEFENSE'}</span>
+              <strong>{inspectedDefense.name}</strong>
             </div>
             <div className="defense-inspector__grid">
-              <div><span>ROLE</span><strong>{selectedDefense.role}</strong></div>
-              <div><span>COST</span><strong>{selectedDefense.cost}g</strong></div>
-              {'damage' in selectedDefense && <div><span>DAMAGE</span><strong>{selectedDefense.damage}</strong></div>}
-              {'range' in selectedDefense && <div><span>RANGE</span><strong>{selectedDefense.range}</strong></div>}
-              {'attackIntervalMs' in selectedDefense && <div><span>RATE</span><strong>{(1000 / selectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
-              {'damageType' in selectedDefense && <div><span>TYPE</span><strong>{selectedDefense.damageType}</strong></div>}
-              {'splashRadius' in selectedDefense && <div><span>SPLASH</span><strong>{selectedDefense.splashRadius}</strong></div>}
-              {'slowPercent' in selectedDefense && <div><span>SLOW</span><strong>{selectedDefense.slowPercent}%</strong></div>}
-              {'squadSize' in selectedDefense && <div><span>SQUAD</span><strong>{selectedDefense.squadSize}</strong></div>}
-              {'unitHp' in selectedDefense && <div><span>UNIT HP</span><strong>{selectedDefense.unitHp}</strong></div>}
+              <div><span>ROLE</span><strong>{inspectedDefense.role}</strong></div>
+              <div><span>COST</span><strong>{inspectedDefense.cost}g</strong></div>
+              {'damage' in inspectedDefense && <div><span>DAMAGE</span><strong>{inspectedDefense.damage}</strong></div>}
+              {'range' in inspectedDefense && <div><span>RANGE</span><strong>{inspectedDefense.range}</strong></div>}
+              {'attackIntervalMs' in inspectedDefense && <div><span>RATE</span><strong>{(1000 / inspectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
+              {'damageType' in inspectedDefense && <div><span>TYPE</span><strong>{inspectedDefense.damageType}</strong></div>}
+              {'splashRadius' in inspectedDefense && <div><span>SPLASH</span><strong>{inspectedDefense.splashRadius}</strong></div>}
+              {'slowPercent' in inspectedDefense && <div><span>SLOW</span><strong>{inspectedDefense.slowPercent}%</strong></div>}
+              {'squadSize' in inspectedDefense && <div><span>SQUAD</span><strong>{inspectedDefense.squadSize}</strong></div>}
+              {'unitHp' in inspectedDefense && <div><span>UNIT HP</span><strong>{inspectedDefense.unitHp}</strong></div>}
             </div>
-            <p>{selectedDefense.description}</p>
+            <p>{inspectedDefense.description}</p>
             <div className="defense-inspector__sell">
               <span>SELL REFUND</span>
               <strong>{selectedSellPreview.refund}g</strong>
@@ -1388,6 +1490,14 @@ function App() {
           setRunState((current) => {
             if (!current || current.phase === RUN_PHASES.ENDED) return current;
             return { ...current, elapsedMs };
+          });
+        }}
+        onSpendGold={(amount) => {
+          setRunState((current) => {
+            if (!current || current.phase === RUN_PHASES.ENDED) return current;
+            const spend = Math.max(0, Number(amount) || 0);
+            if (current.gold < spend) return current;
+            return { ...current, gold: current.gold - spend };
           });
         }}
         onDamageBastion={(damage) => {
