@@ -256,7 +256,7 @@ async function persistCreatedLastBastionMatch(serverDb, participantIds = []) {
   return error ? { ok: false, error } : { ok: true };
 }
 
-app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowMs: 10000, max: 6 }), (req, res) => {
+app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowMs: 10000, max: 6 }), async (req, res) => {
   if (!matchTokenSecret) {
     return res.status(503).json({ error: 'match_identity_not_configured' });
   }
@@ -278,6 +278,27 @@ app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowM
   };
   const matchToken = signMatchIdentity(identityPayload);
 
+  if (mode === 'single-gate' || mode === 'tri-gate') {
+    const serverDb = clientForToken(req.accessToken, {
+      'x-bastionfall-server-secret': matchTokenSecret
+    });
+    const { error } = await serverDb.rpc('persist_standard_run_checkpoint', {
+      p_match_id: matchId,
+      p_mode: mode,
+      p_started_at: startedAt,
+      p_wave: 0,
+      p_core_hp: 20,
+      p_core_max_hp: 20,
+      p_kills: 0,
+      p_gold: mode === 'tri-gate' ? 240 : 240,
+      p_reported_at: startedAt
+    });
+    if (error) {
+      console.error('Standard run foundation persistence failed:', error.message);
+      return res.status(500).json({ error: 'run_foundation_persist_failed' });
+    }
+  }
+
   return res.status(201).json({
     match: {
       id: matchId,
@@ -288,6 +309,55 @@ app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowM
       token: matchToken
     }
   });
+});
+
+app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windowMs: 10000, max: 30 }), async (req, res) => {
+  const matchToken = String(req.body?.matchToken || '');
+  const identity = verifyMatchIdentity(matchToken);
+  if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
+  if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
+
+  const mode = String(req.body?.mode || '').trim();
+  if (!['single-gate', 'tri-gate'].includes(mode) || identity.mode !== mode) {
+    return res.status(400).json({ error: 'match_mode_mismatch' });
+  }
+
+  const wave = Number(req.body?.wave);
+  const coreHp = Number(req.body?.coreHp);
+  const coreMaxHp = Number(req.body?.coreMaxHp);
+  const kills = Number(req.body?.kills);
+  const gold = Number(req.body?.gold);
+  if (!Number.isInteger(wave) || wave < 0 || wave > 9999) return res.status(400).json({ error: 'invalid_wave' });
+  if (!Number.isInteger(coreMaxHp) || coreMaxHp < 1 || coreMaxHp > 100000) return res.status(400).json({ error: 'invalid_core_max_hp' });
+  if (!Number.isInteger(coreHp) || coreHp < 0 || coreHp > coreMaxHp) return res.status(400).json({ error: 'invalid_core_hp' });
+  if (!Number.isInteger(kills) || kills < 0 || kills > 1000000) return res.status(400).json({ error: 'invalid_kills' });
+  if (!Number.isInteger(gold) || gold < 0 || gold > 10000000) return res.status(400).json({ error: 'invalid_gold' });
+
+  const serverDb = clientForToken(req.accessToken, {
+    'x-bastionfall-server-secret': matchTokenSecret
+  });
+  const { data, error } = await serverDb.rpc('persist_standard_run_checkpoint', {
+    p_match_id: identity.matchId,
+    p_mode: mode,
+    p_started_at: identity.startedAt,
+    p_wave: wave,
+    p_core_hp: coreHp,
+    p_core_max_hp: coreMaxHp,
+    p_kills: kills,
+    p_gold: gold,
+    p_reported_at: new Date().toISOString()
+  });
+
+  if (error) {
+    const message = String(error.message || '');
+    if (message.includes('wave_regression')) return res.status(400).json({ error: 'wave_regression' });
+    if (message.includes('kills_regression')) return res.status(400).json({ error: 'kills_regression' });
+    if (message.includes('run_not_active')) return res.status(409).json({ error: 'run_not_active' });
+    console.error('Standard run checkpoint failed:', error.message);
+    return res.status(500).json({ error: 'run_progress_persist_failed' });
+  }
+
+  return res.json({ ok: true, checkpoint: Array.isArray(data) ? data[0] ?? null : data });
 });
 
 app.post('/api/last-bastion/matchmaking/join', requireUser, rateLimitUser('lb-join', { windowMs: 10000, max: 8 }), async (req, res) => {
@@ -693,6 +763,30 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     const serverDb = clientForToken(req.accessToken, {
       'x-bastionfall-server-secret': matchTokenSecret
     });
+
+    const { data: checkpoint, error: checkpointError } = await serverDb
+      .from('standard_run_sessions')
+      .select('last_wave,last_core_hp,last_core_max_hp,last_kills,last_gold,status')
+      .eq('match_id', identity.matchId)
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+
+    if (checkpointError || !checkpoint) {
+      return res.status(409).json({ error: 'run_checkpoint_missing' });
+    }
+    if (checkpoint.status !== 'active') {
+      return res.status(409).json({ error: 'run_not_active' });
+    }
+    if (wave !== Number(checkpoint.last_wave)) {
+      return res.status(400).json({ error: 'final_wave_checkpoint_mismatch' });
+    }
+    if (kills < Number(checkpoint.last_kills)) {
+      return res.status(400).json({ error: 'final_kills_checkpoint_mismatch' });
+    }
+    if (coreMaxHp !== Number(checkpoint.last_core_max_hp)) {
+      return res.status(400).json({ error: 'final_core_checkpoint_mismatch' });
+    }
+
     const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
 
     const { data: recordRows, error: recordError } = await serverDb.rpc(
@@ -718,6 +812,12 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     }
 
     persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
+
+    await serverDb
+      .from('standard_run_sessions')
+      .update({ status: 'completed', completed_at: endedAt, updated_at: new Date().toISOString() })
+      .eq('match_id', identity.matchId)
+      .eq('user_id', req.user.id);
 
     const { data: current, error: profileError } = await req.db
       .from('profiles')
