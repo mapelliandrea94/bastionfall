@@ -2281,12 +2281,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
   if (!snapshot) return null;
 
+  const isLastBastion = snapshot.mode === MODES.LAST_BASTION;
+  const lastBastionWon = isLastBastion && snapshot.won === true;
+
   return (
     <Shell
       onBack={onBack}
-      kicker="RUN COMPLETE"
-      title="BASTION FALLEN"
-      subtitle="Your run has ended. Review the final snapshot before trying again."
+      kicker={isLastBastion ? 'LAST BASTION RESULT' : 'RUN COMPLETE'}
+      title={lastBastionWon ? 'LAST BASTION STANDING' : isLastBastion ? 'ELIMINATED' : 'BASTION FALLEN'}
+      subtitle={isLastBastion
+        ? lastBastionWon
+          ? 'You outlasted every other defender.'
+          : 'Your final competitive result is locked.'
+        : 'Your run has ended. Review the final snapshot before trying again.'}
     >
       <div className="results-hero">
         <span>{personalBestResult?.isPersonalBest ? 'NEW PERSONAL BEST' : 'FINAL SCORE'}</span>
@@ -2294,13 +2301,22 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
         <small>
           {personalBestResult?.isPersonalBest
             ? `Improved by ${personalBestResult.reason}`
-            : snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED
-              ? 'Bastion destroyed'
-              : snapshot.reason}
+            : snapshot.reason === 'last-bastion-win'
+              ? 'Last defender standing'
+              : snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED
+                ? 'Bastion destroyed'
+                : snapshot.reason}
         </small>
       </div>
 
       <div className="results-grid">
+        {isLastBastion && (
+          <div className="stat-card">
+            <span>PLACEMENT</span>
+            <strong>#{snapshot.placement}</strong>
+            <small>{snapshot.won ? 'Winner' : `of ${snapshot.participantCount || '?'} defenders`}</small>
+          </div>
+        )}
         <div className="stat-card"><span>WAVE</span><strong>{snapshot.wave}</strong><small>Completed progression</small></div>
         <div className="stat-card"><span>SURVIVAL</span><strong>{formatSurvivalTime(snapshot.elapsedMs)}</strong><small>Official survival time</small></div>
         <div className="stat-card"><span>KILLS</span><strong>{snapshot.kills}</strong><small>Enemies defeated</small></div>
@@ -2705,7 +2721,10 @@ function App() {
       runState?.phase === RUN_PHASES.ENDED &&
       runState?.endSnapshot
     ) {
-      if (runState.mode === MODES.LAST_BASTION) return;
+      if (
+        runState.mode === MODES.LAST_BASTION &&
+        (runState.lastBastionMatchStatus !== 'finished' || !Number.isInteger(runState.endSnapshot?.placement))
+      ) return;
       const mode = runState.endSnapshot.mode ?? MODES.SINGLE_GATE;
       const previous = personalBestByMode[mode] ?? null;
       const personalBestResult = comparePersonalBest(runState.endSnapshot, previous);
@@ -2785,14 +2804,50 @@ function App() {
         if (!current || current.matchId !== result.payload.match.id) return current;
 
         const nextStatus = result.payload.match.status ?? current.lastBastionMatchStatus ?? 'active';
-        const shouldFreezeWinner =
+        const placement = Number(result.payload.match.selfPlacement);
+        const won = result.payload.match.selfWon === true;
+        const matchFinished =
           nextStatus === 'finished' &&
-          current.phase !== RUN_PHASES.ENDED &&
-          result.payload.match.winnerSlot != null;
+          Number.isInteger(placement) &&
+          placement >= 1;
+
+        if (matchFinished) {
+          const endedAtMs = current.endedAtMs ?? Date.now();
+          const reason = won ? 'last-bastion-win' : RUN_END_REASONS.BASTION_DESTROYED;
+          const endedRun = {
+            ...current,
+            phase: RUN_PHASES.ENDED,
+            elapsedMs: current.elapsedMs || getElapsedRunMs(current.startedAtMs, endedAtMs),
+            endedAtMs,
+            result: reason,
+            lastBastionParticipants:
+              result.payload.match.participants ?? current.lastBastionParticipants ?? [],
+            lastBastionFairness:
+              result.payload.match.fairness ?? current.lastBastionFairness ?? null,
+            lastBastionWinnerSlot:
+              result.payload.match.winnerSlot ?? current.lastBastionWinnerSlot ?? null,
+            lastBastionMatchStatus: nextStatus,
+            lastBastionPlacement: placement,
+            lastBastionWon: won
+          };
+
+          const baseSnapshot = current.endSnapshot ??
+            createRunEndSnapshot(endedRun, reason);
+
+          return {
+            ...endedRun,
+            endSnapshot: Object.freeze({
+              ...baseSnapshot,
+              reason,
+              placement,
+              won,
+              participantCount: result.payload.match.participantCount ?? 0
+            })
+          };
+        }
 
         return {
           ...current,
-          ...(shouldFreezeWinner ? { phase: RUN_PHASES.ENDED } : {}),
           lastBastionParticipants:
             result.payload.match.participants ?? current.lastBastionParticipants ?? [],
           lastBastionFairness:
