@@ -56,6 +56,27 @@ function getStandardRunValidationBounds(mode, matchId, completedWave) {
   });
 }
 
+function validateLastBastionWavePace(identity, wave, nowMs = Date.now()) {
+  const startedAtMs = Date.parse(identity?.startedAt || '');
+  if (!Number.isFinite(startedAtMs) || nowMs < startedAtMs) {
+    return Object.freeze({ ok: false, error: 'wave_before_match_start' });
+  }
+
+  const bounds = getStandardRunValidationBounds('last-bastion', identity.matchId, wave);
+  const elapsedMs = nowMs - startedAtMs;
+  if (elapsedMs + 1500 < bounds.minElapsedMs) {
+    return Object.freeze({
+      ok: false,
+      error: 'wave_progression_too_fast',
+      minElapsedMs: bounds.minElapsedMs,
+      elapsedMs
+    });
+  }
+
+  return Object.freeze({ ok: true, elapsedMs, minElapsedMs: bounds.minElapsedMs });
+}
+
+
 function pruneTimedMap(map, nowMs, ttlMs) {
   for (const [key, value] of map) {
     const touchedAtMs = Number(value?.touchedAtMs ?? value ?? 0);
@@ -478,8 +499,13 @@ app.post('/api/last-bastion/match/heartbeat', requireUser, async (req, res) => {
   if (!Number.isInteger(wave) || wave < 0 || wave > 9999) {
     return res.status(400).json({ error: 'invalid_wave' });
   }
-  if (!Number.isInteger(coreHp) || coreHp < 0 || coreHp > 100000) {
+  if (!Number.isInteger(coreHp) || coreHp < 0 || coreHp > 28) {
     return res.status(400).json({ error: 'invalid_core_hp' });
+  }
+
+  const heartbeatPace = validateLastBastionWavePace(identity, wave);
+  if (!heartbeatPace.ok) {
+    return res.status(400).json({ error: heartbeatPace.error });
   }
 
   const hydrated = await hydratePersistentLastBastionState(req);
@@ -504,6 +530,12 @@ app.post('/api/last-bastion/match/heartbeat', requireUser, async (req, res) => {
     }
     if (message.includes('wave_regression')) {
       return res.status(400).json({ error: 'wave_regression' });
+    }
+    if (message.includes('wave_progression_too_fast') || message.includes('wave_jump_too_large')) {
+      return res.status(400).json({ error: 'wave_progression_too_fast' });
+    }
+    if (message.includes('heartbeat_before_match_start') || message.includes('heartbeat_from_future')) {
+      return res.status(400).json({ error: 'invalid_heartbeat_time' });
     }
     if (message.includes('invalid_wave')) {
       return res.status(400).json({ error: 'invalid_wave' });
@@ -558,6 +590,11 @@ app.post('/api/last-bastion/match/eliminate', requireUser, rateLimitUser('lb-eli
   const wave = Number(req.body?.wave);
   if (!Number.isInteger(wave) || wave < 0 || wave > 9999) {
     return res.status(400).json({ error: 'invalid_wave' });
+  }
+
+  const eliminationPace = validateLastBastionWavePace(identity, wave);
+  if (!eliminationPace.ok) {
+    return res.status(400).json({ error: eliminationPace.error });
   }
 
   const hydrated = await hydratePersistentLastBastionState(req);
