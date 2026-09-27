@@ -33,6 +33,7 @@ import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game
 import { BLESSING_SYSTEM, addBlessingToLoadout, getBlessingOffer, getBlessingSystemFixtures } from './game/blessings/blessings.js';
 import { BLESSING_ENGINE, applyBlessingBastionDamage, applyBlessingWaveGold, getBlessingAdjustedMaxHp, getBlessingEngineFixtures, getBlessingModifiers } from './game/blessings/blessingEngine.js';
 import { BLESSING_REROLL, canRerollBlessings, getBlessingRerollCost, getBlessingRerollFixtures, getRerolledBlessingOffer } from './game/blessings/blessingReroll.js';
+import { BLESSING_POWER_BUDGET, getBlessingExploitChecks } from './game/blessings/blessingPowerBudget.js';
 import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } from './game/boss/bossSummonAdds.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
@@ -171,6 +172,7 @@ const BOSS_TUNING_FIXTURE = Object.freeze(getBossTuningFixtures());
 const BLESSING_SYSTEM_FIXTURE = Object.freeze(getBlessingSystemFixtures());
 const BLESSING_ENGINE_FIXTURE = Object.freeze(getBlessingEngineFixtures());
 const BLESSING_REROLL_FIXTURE = Object.freeze(getBlessingRerollFixtures());
+const BLESSING_EXPLOIT_FIXTURE = Object.freeze(getBlessingExploitChecks());
 const OPENING_BLESSING_OFFER = Object.freeze(getBlessingOffer('prototype-run', [], BLESSING_SYSTEM.choiceCount));
 
 const GOLD_MINE_OPPORTUNITY = Object.freeze(getGoldMineOpportunityCost([
@@ -1164,6 +1166,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-blessing-system-version={BLESSING_SYSTEM.version}
             data-blessing-engine-version={BLESSING_ENGINE.version}
             data-blessing-reroll-version={BLESSING_REROLL.version}
+            data-blessing-power-budget-version={BLESSING_POWER_BUDGET.version}
+            data-blessing-power-budget-pass={BLESSING_EXPLOIT_FIXTURE.definitionsStayWithinDeclaredStacks === true && BLESSING_EXPLOIT_FIXTURE.damageCapRespected === true && BLESSING_EXPLOIT_FIXTURE.economyMultiplierCapRespected === true && BLESSING_EXPLOIT_FIXTURE.economyBonusCapRespected === true && BLESSING_EXPLOIT_FIXTURE.defenseFloorRespected === true && BLESSING_EXPLOIT_FIXTURE.maxHpCapRespected === true && BLESSING_EXPLOIT_FIXTURE.controlSlowCapRespected === true && BLESSING_EXPLOIT_FIXTURE.enemySpeedFloorRespected === true && BLESSING_EXPLOIT_FIXTURE.rerollSpendToCapExpected === BLESSING_EXPLOIT_FIXTURE.rerollSpendToCapActual && BLESSING_EXPLOIT_FIXTURE.rerollCannotBeFree === true && BLESSING_EXPLOIT_FIXTURE.economyDoesNotExplode === true}
             data-blessing-reroll-pass={BLESSING_REROLL_FIXTURE.baseCostExpected === BLESSING_REROLL_FIXTURE.baseCostActual && BLESSING_REROLL_FIXTURE.secondCostExpected === BLESSING_REROLL_FIXTURE.secondCostActual && BLESSING_REROLL_FIXTURE.affordableAtExactCost === true && BLESSING_REROLL_FIXTURE.blockedBelowCost === true && BLESSING_REROLL_FIXTURE.blockedAtCap === true && BLESSING_REROLL_FIXTURE.firstRerollChangesOffer === true && BLESSING_REROLL_FIXTURE.rerollsAdvanceDeterministically === true}
             data-blessing-engine-pass={BLESSING_ENGINE_FIXTURE.stackedDamageAboveBase === true && BLESSING_ENGINE_FIXTURE.mixedGoldExpected === BLESSING_ENGINE_FIXTURE.mixedGoldActual && BLESSING_ENGINE_FIXTURE.emergencyDamageExpected === BLESSING_ENGINE_FIXTURE.emergencyDamageActual && BLESSING_ENGINE_FIXTURE.boostedHpExpected === BLESSING_ENGINE_FIXTURE.boostedHpActual && BLESSING_ENGINE_FIXTURE.timeLockSlows === true && BLESSING_ENGINE_FIXTURE.frostboundAddsControl === true}
             data-blessing-count={(run?.blessings ?? []).length}
