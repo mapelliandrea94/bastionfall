@@ -407,6 +407,115 @@ function ModeSelect({ onBack, onSelect }) {
 }
 
 
+function TriGateBattlefieldPreview() {
+  const bastion = TRI_GATE_MAP.anchors.bastion;
+
+  return (
+    <section
+      className="tri-gate-preview"
+      aria-label="Tri-Gate battlefield preview"
+      data-tri-gate-rendered-lanes={TRI_GATE_MAP.pathPlan.lanes.length}
+      data-tri-gate-rendered-entrances={TRI_GATE_MAP.anchors.entrances.length}
+    >
+      <div className="tri-gate-preview__header">
+        <span>THREE FRONTS</span>
+        <strong>{TRI_GATE_MAP.name}</strong>
+        <small>Battlefield render only — live multi-lane spawning arrives next.</small>
+      </div>
+
+      <svg
+        className="tri-gate-preview__map"
+        viewBox={`0 0 ${TRI_GATE_MAP.size.width} ${TRI_GATE_MAP.size.height}`}
+        role="img"
+        aria-label="Three entrance paths converging on the central Bastion"
+      >
+        <defs>
+          <linearGradient id="tri-terrain" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#a9d98e" />
+            <stop offset="55%" stopColor="#7fbd7c" />
+            <stop offset="100%" stopColor="#67a16e" />
+          </linearGradient>
+          <linearGradient id="tri-path" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#d2c49f" />
+            <stop offset="100%" stopColor="#b9a77b" />
+          </linearGradient>
+          <radialGradient id="tri-bastion-glow">
+            <stop offset="0%" stopColor="rgba(104,190,255,.75)" />
+            <stop offset="100%" stopColor="rgba(104,190,255,0)" />
+          </radialGradient>
+        </defs>
+
+        <rect width={TRI_GATE_MAP.size.width} height={TRI_GATE_MAP.size.height} fill="url(#tri-terrain)" />
+
+        <g className="tri-gate-preview__terrain-detail" opacity=".42">
+          <path d="M0 180Q210 100 390 190T760 160T1120 210T1600 140V0H0Z" />
+          <path d="M0 760Q220 700 420 760T820 720T1210 770T1600 710V900H0Z" />
+          <circle cx="260" cy="180" r="72" />
+          <circle cx="1310" cy="220" r="96" />
+          <circle cx="1315" cy="690" r="88" />
+          <circle cx="260" cy="700" r="82" />
+        </g>
+
+        {TRI_GATE_MAP.pathPlan.lanes.map((lane) => (
+          <polyline
+            key={lane.id}
+            className="tri-gate-preview__path-shadow"
+            points={lane.waypoints.map((point) => `${point.x},${point.y}`).join(' ')}
+            fill="none"
+            strokeWidth={lane.width + 18}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+
+        {TRI_GATE_MAP.pathPlan.lanes.map((lane) => (
+          <polyline
+            key={`${lane.id}-road`}
+            className="tri-gate-preview__path"
+            points={lane.waypoints.map((point) => `${point.x},${point.y}`).join(' ')}
+            fill="none"
+            stroke="url(#tri-path)"
+            strokeWidth={lane.width}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+
+        {TRI_GATE_MAP.anchors.entrances.map((entrance) => (
+          <g
+            key={entrance.id}
+            className="tri-gate-preview__entrance"
+            transform={`translate(${entrance.x} ${entrance.y})`}
+          >
+            <circle r="54" />
+            <path d="M-28 28V-8L0-36L28-8V28Z" />
+            <rect x="-9" y="2" width="18" height="26" rx="4" />
+            <text x="0" y="82" textAnchor="middle">{entrance.side.toUpperCase()}</text>
+          </g>
+        ))}
+
+        <circle
+          className="tri-gate-preview__bastion-glow"
+          cx={bastion.x}
+          cy={bastion.y}
+          r="120"
+          fill="url(#tri-bastion-glow)"
+        />
+
+        <g
+          className="tri-gate-preview__bastion"
+          transform={`translate(${bastion.x} ${bastion.y})`}
+        >
+          <circle r="72" />
+          <path d="M-48 42V-26L-24-48L0-26L24-48L48-26V42Z" />
+          <rect x="-18" y="2" width="36" height="40" rx="6" />
+          <text x="0" y="96" textAnchor="middle">BASTION</text>
+        </g>
+      </svg>
+    </section>
+  );
+}
+
 function ModePreRun({ mode, onBack, onStart }) {
   const contract = MODE_PRE_RUN[mode];
 
@@ -423,7 +532,7 @@ function ModePreRun({ mode, onBack, onStart }) {
         <section className="pre-run-card">
           <span className="pre-run-card__eyebrow">FORMAT</span>
           <strong>{contract.fronts}</strong>
-          <small>The battlefield implementation is intentionally outside this batch.</small>
+          <small>{mode === MODES.TRI_GATE ? 'Three rendered fronts converge on one central Bastion.' : 'Single-front battlefield.'}</small>
         </section>
 
         <section className="pre-run-card">
@@ -438,6 +547,8 @@ function ModePreRun({ mode, onBack, onStart }) {
           <small>Mode-specific persistence and validation arrive in later roadmap batches.</small>
         </section>
       </div>
+
+      {mode === MODES.TRI_GATE && <TriGateBattlefieldPreview />}
 
       <div className="pre-run-footer">
         <p>Status: <strong>{contract.status}</strong></p>
