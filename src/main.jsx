@@ -414,6 +414,21 @@ async function completeServerRun(session, run) {
   }
 
   const snapshot = run.endSnapshot;
+
+  if ([MODES.SINGLE_GATE, MODES.TRI_GATE].includes(snapshot.mode)) {
+    const finalCheckpoint = await reportStandardRunProgress(session, {
+      ...run,
+      wave: snapshot.wave,
+      gold: snapshot.gold,
+      coreHp: snapshot.coreHp,
+      coreMaxHp: snapshot.coreMaxHp,
+      kills: snapshot.kills
+    });
+    if (!finalCheckpoint.ok) {
+      return { ok: false, error: finalCheckpoint.error || 'final_checkpoint_failed' };
+    }
+  }
+
   const response = await fetch('/api/run/complete', {
     method: 'POST',
     headers: {
