@@ -8,6 +8,7 @@ import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
+import { BARRACKS } from './game/structures/barracks.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -492,6 +493,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             <strong>{BALLISTA_TOWER.name}</strong>
             <span>{BALLISTA_TOWER.cost}g</span>
             <small>{BALLISTA_TOWER.damage} DMG · {BALLISTA_TOWER.range} RANGE · {BALLISTA_TOWER.damageType.toUpperCase()}</small>
+          </button>
+          <button className="tower-card tower-card--barracks" disabled>
+            <strong>{BARRACKS.name}</strong>
+            <span>{BARRACKS.cost}g</span>
+            <small>{BARRACKS.squadSize} UNITS · {BARRACKS.engageRadius} ENGAGE · {(BARRACKS.respawnIntervalMs / 1000).toFixed(1)}s RESPAWN</small>
           </button>
 
           <div className="run-sidebar__status">
