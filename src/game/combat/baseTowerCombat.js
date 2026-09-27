@@ -1,4 +1,5 @@
 import { getCombinedCounterMultiplier } from './factionCounters.js';
+import { canDefenseTargetEnemy } from './counterplay.js';
 
 function distance(a, b) {
   return Math.hypot(Number(a?.x ?? 0) - Number(b?.x ?? 0), Number(a?.y ?? 0) - Number(b?.y ?? 0));
@@ -26,7 +27,10 @@ export function getEffectiveTowerAttackInterval(definition, attacker, placedDefe
 
 export function getTowerTargets(definition, attacker, enemies = []) {
   const inRange = enemies
-    .filter((enemy) => distance(attacker, enemy.position ?? enemy) <= Number(definition.range ?? 0))
+    .filter((enemy) =>
+      canDefenseTargetEnemy(definition, enemy) &&
+      distance(attacker, enemy.position ?? enemy) <= Number(definition.range ?? 0)
+    )
     .sort((a, b) => Number(b.progress ?? 0) - Number(a.progress ?? 0));
 
   if (definition.targetRule === 'highest-hp') {
