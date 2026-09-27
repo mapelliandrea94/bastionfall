@@ -3583,6 +3583,81 @@ button:focus-visible,
 }
 
 
+
+/* HOTFIX — TFT bench beside shop */
+.tft-shop-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, .82fr) minmax(260px, 1.18fr);
+  column-gap: .75rem;
+  row-gap: .35rem;
+  align-items: start;
+}
+
+.tft-shop-layout > .main-menu__kicker,
+.tft-shop-layout > h3,
+.tft-shop-layout > .tft-shop-grid,
+.tft-shop-layout > .tft-shop-economy,
+.tft-shop-layout > .tft-shop-lock {
+  grid-column: 2;
+}
+
+.tft-shop-layout > .main-menu__kicker { grid-row: 1; }
+.tft-shop-layout > h3 { grid-row: 2; }
+.tft-shop-layout > .tft-shop-grid { grid-row: 3; }
+.tft-shop-layout > .tft-shop-economy { grid-row: 4; }
+.tft-shop-layout > .tft-shop-lock { grid-row: 5; }
+
+.tft-shop-layout > .tft-bench {
+  grid-column: 1;
+  grid-row: 1 / span 5;
+  margin-top: 0 !important;
+}
+
+@media (min-width: 901px) {
+  .run-sidebar--tft {
+    width: min(620px, calc(100% - 28px));
+  }
+
+  .tft-shop-layout .tft-shop-grid,
+  .tft-shop-layout .tft-bench__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tft-shop-layout .tft-shop-card {
+    min-height: 106px;
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    padding: .48rem;
+    column-gap: .42rem;
+  }
+
+  .tft-shop-layout .tft-shop-card__art {
+    width: 64px;
+    height: 64px;
+  }
+
+  .tft-shop-layout .tft-bench-slot {
+    min-height: 94px;
+    grid-template-columns: 56px minmax(0, 1fr);
+    padding: .42rem;
+    column-gap: .38rem;
+  }
+
+  .tft-shop-layout .tft-bench-slot__art {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+@media (max-width: 900px) {
+  .tft-shop-layout {
+    display: block;
+  }
+
+  .tft-shop-layout > .tft-bench {
+    margin-top: .8rem !important;
+  }
+}
+
 /* HOTFIX — visual TFT bench cards */
 .run-sidebar--tft .tft-bench {
   margin-top: .8rem;
