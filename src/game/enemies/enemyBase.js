@@ -13,7 +13,12 @@ export const ENEMY_BASE_MODEL = Object.freeze({
     bastionDamage: 1,
     airborne: false,
     faction: 'human',
-    unitType: 'infantry'
+    unitType: 'infantry',
+    tier: 'common',
+    spawnCost: 1,
+    minWave: 1,
+    traits: Object.freeze([]),
+    visualAsset: null
   })
 });
 
@@ -33,6 +38,11 @@ export function createEnemyBaseState(overrides = {}) {
     airborne: Boolean(overrides.airborne ?? ENEMY_BASE_MODEL.defaults.airborne),
     faction: String(overrides.faction ?? ENEMY_BASE_MODEL.defaults.faction),
     unitType: String(overrides.unitType ?? ENEMY_BASE_MODEL.defaults.unitType),
+    tier: String(overrides.tier ?? ENEMY_BASE_MODEL.defaults.tier),
+    spawnCost: Math.max(0, Number(overrides.spawnCost ?? overrides.threatValue ?? ENEMY_BASE_MODEL.defaults.spawnCost)),
+    minWave: Math.max(1, Math.floor(Number(overrides.minWave ?? ENEMY_BASE_MODEL.defaults.minWave) || 1)),
+    traits: Object.freeze([...(overrides.traits ?? ENEMY_BASE_MODEL.defaults.traits)]),
+    visualAsset: overrides.visualAsset ? Object.freeze({ ...overrides.visualAsset }) : ENEMY_BASE_MODEL.defaults.visualAsset,
     progress: Math.max(0, Math.min(1, Number(overrides.progress ?? 0))),
     spawnedAt: Number(overrides.spawnedAt ?? 0),
     statusEffects: Object.freeze({
