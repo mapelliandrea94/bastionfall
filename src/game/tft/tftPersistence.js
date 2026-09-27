@@ -13,6 +13,7 @@ export function createTftRunSnapshot({
   run,
   placedDefenses = [],
   activeWallIds = [],
+  wallHpById = {},
   tftBench = [],
   selectedTftBenchIndex = null,
   tftRollIndex = 0,
@@ -27,6 +28,14 @@ export function createTftRunSnapshot({
     run: Object.freeze({ ...run }),
     placedDefenses: Object.freeze(placedDefenses.map((tower) => Object.freeze({ ...tower }))),
     activeWallIds: Object.freeze(activeWallIds.slice(0, 4)),
+    wallHpById: Object.freeze(
+      Object.fromEntries(
+        activeWallIds.slice(0, 4).map((id) => [
+          id,
+          clampInt(wallHpById?.[id] ?? 1000, 0, 1000, 1000)
+        ])
+      )
+    ),
     tftBench: Object.freeze(tftBench.map((copy) => copy ? Object.freeze({ ...copy }) : null)),
     selectedTftBenchIndex: selectedTftBenchIndex == null ? null : clampInt(selectedTftBenchIndex, 0, 6, null),
     tftRollIndex: clampInt(tftRollIndex, 0, Number.MAX_SAFE_INTEGER, 0),
@@ -51,6 +60,12 @@ export function normalizeTftRunSnapshot(snapshot) {
     : [];
 
   const activeWallIds = Array.isArray(snapshot.activeWallIds) ? snapshot.activeWallIds.slice(0, 4) : [];
+  const wallHpById = Object.fromEntries(
+    activeWallIds.map((id) => [
+      id,
+      clampInt(snapshot.wallHpById?.[id] ?? 1000, 0, 1000, 1000)
+    ])
+  );
 
   const tftBench = Array.from({ length: 7 }, (_, index) => {
     const copy = Array.isArray(snapshot.tftBench) ? snapshot.tftBench[index] : null;
@@ -63,6 +78,7 @@ export function normalizeTftRunSnapshot(snapshot) {
     run: { ...snapshot.run },
     placedDefenses,
     activeWallIds,
+    wallHpById,
     tftBench,
     selectedTftBenchIndex: snapshot.selectedTftBenchIndex == null
       ? null
@@ -113,6 +129,7 @@ export function getTftPersistenceFixtures() {
       { id: 'tower-b', defenseId: 'alien-aa', copyProgress: 7, level: 4, evolution: 'prism-beam-array' }
     ],
     activeWallIds: ['wall-01', 'wall-03'],
+    wallHpById: { 'wall-01': 760, 'wall-03': 1000 },
     tftBench: [{ copyId: 'copy-a', towerId: 'human-aa' }, null, null, null, null, null, null],
     selectedTftBenchIndex: 0,
     tftRollIndex: 4,
@@ -128,7 +145,10 @@ export function getTftPersistenceFixtures() {
     towerProgressPersists: restored?.placedDefenses?.[0]?.copyProgress === 6 && restored?.placedDefenses?.[0]?.level === 3,
     evolutionPersists: restored?.placedDefenses?.[1]?.evolution === 'prism-beam-array',
     benchPersists: restored?.tftBench?.[0]?.copyId === 'copy-a' && restored?.tftBench?.length === 7,
-    wallsPersist: restored?.activeWallIds?.join(',') === 'wall-01,wall-03',
+    wallsPersist:
+      restored?.activeWallIds?.join(',') === 'wall-01,wall-03' &&
+      restored?.wallHpById?.['wall-01'] === 760 &&
+      restored?.wallHpById?.['wall-03'] === 1000,
     rollLockPersist: restored?.tftRollIndex === 4 && restored?.tftShopLocked === true,
     purchasedSlotsPersist:
       restored?.tftPurchasedSlotIds?.join(',') === 'human-1,alien-2',
