@@ -13,6 +13,7 @@ import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtu
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
 import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyleForTower } from './game/towers/towerArt.js';
+import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -73,7 +74,8 @@ const SCREENS = Object.freeze({
 const MODES = Object.freeze({
   SINGLE_GATE: 'single-gate',
   TRI_GATE: 'tri-gate',
-  LAST_BASTION: 'last-bastion'
+  LAST_BASTION: 'last-bastion',
+  TFT_SHOP: 'tft-shop'
 });
 
 const MODE_PRE_RUN = Object.freeze({
@@ -94,6 +96,15 @@ const MODE_PRE_RUN = Object.freeze({
     objective: 'SURVIVE',
     record: 'HIGHEST WAVE',
     status: 'MODE LOGIC LATER'
+  }),
+  [MODES.TFT_SHOP]: Object.freeze({
+    kicker: 'TFT SHOP',
+    title: 'ROLL. BENCH. BUILD.',
+    description: 'Shop-driven survival using random tower copies.',
+    fronts: '1 FRONT',
+    objective: 'SURVIVE',
+    record: 'HIGHEST WAVE',
+    status: 'READY TO INITIALIZE'
   }),
   [MODES.LAST_BASTION]: Object.freeze({
     kicker: 'LAST BASTION',
@@ -164,6 +175,7 @@ const BASE_TOWER_COMBAT_FIXTURE = Object.freeze(getBaseTowerCombatFixtures(BASE_
 const SUPPORT_STACKING_FIXTURE = Object.freeze(getSupportStackingFixtures());
 const EVOLUTION_FIXTURE = Object.freeze(getEvolutionFixtures());
 const TOWER_ART_FIXTURE = Object.freeze(getTowerArtFixtures());
+const TFT_SHOP_FIXTURE = Object.freeze(getTftShopFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -449,6 +461,13 @@ function ModeSelect({ onBack, onSelect }) {
           <em>SELECT MODE</em>
         </button>
 
+        <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.TFT_SHOP)}>
+          <span className="mode-card__players">SHOP SURVIVAL</span>
+          <strong>TFT SHOP</strong>
+          <small>Roll tower copies, build from a bench, survive.</small>
+          <em>SELECT MODE</em>
+        </button>
+
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.LAST_BASTION)}>
           <span className="mode-card__players">COMPETITIVE SURVIVAL</span>
           <strong>LAST BASTION</strong>
@@ -608,11 +627,11 @@ function ModePreRun({ mode, onBack, onStart }) {
         <p>Status: <strong>{contract.status}</strong></p>
         <button
           className="pre-run-start"
-          disabled={mode !== MODES.SINGLE_GATE}
-          onClick={() => mode === MODES.SINGLE_GATE && onStart(mode)}
+          disabled={mode !== MODES.SINGLE_GATE && mode !== MODES.TFT_SHOP}
+          onClick={() => (mode === MODES.SINGLE_GATE || mode === MODES.TFT_SHOP) && onStart(mode)}
         >
           START RUN
-          <small>{mode === MODES.SINGLE_GATE ? 'Initialize Single Gate run' : contract.status}</small>
+          <small>{mode === MODES.SINGLE_GATE || mode === MODES.TFT_SHOP ? 'Initialize run' : contract.status}</small>
         </button>
       </div>
     </Shell>
@@ -630,6 +649,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
+  const [tftRollIndex, setTftRollIndex] = useState(0);
+  const [tftShopLocked, setTftShopLocked] = useState(false);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
@@ -653,6 +674,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const blessingCanReroll = canRerollBlessings(run?.gold ?? 0, blessingRerollCount);
   const blessingChoiceVisible = run?.phase === RUN_PHASES.RESOLVING && isBossWave(waveScaling.waveNumber);
   const activeWorldModifiers = getActiveWorldModifiers(run?.seed ?? 'run', waveScaling.waveNumber);
+  const tftShopOffers = createTftShopOffers(run?.seed ?? 'run', tftRollIndex);
   const worldModifierEffects = getWorldModifierEffects(activeWorldModifiers);
   const threatWave = composeWaveByThreatBudget(
     waveScaling.waveNumber,
@@ -1343,6 +1365,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
+            data-tft-shop-version={TFT_SHOP.version}
+            data-tft-shop-mode={run?.mode === MODES.TFT_SHOP}
+            data-tft-shop-pass={TFT_SHOP_FIXTURE.slotCountExpected === TFT_SHOP_FIXTURE.slotCountActual && TFT_SHOP_FIXTURE.humanExpected === TFT_SHOP_FIXTURE.humanActual && TFT_SHOP_FIXTURE.insectExpected === TFT_SHOP_FIXTURE.insectActual && TFT_SHOP_FIXTURE.alienExpected === TFT_SHOP_FIXTURE.alienActual && TFT_SHOP_FIXTURE.neutralExpected === TFT_SHOP_FIXTURE.neutralActual && TFT_SHOP_FIXTURE.everyCopyCostsTwo === true && TFT_SHOP_FIXTURE.rerollCostExpected === TFT_SHOP_FIXTURE.rerollCostActual && TFT_SHOP_FIXTURE.deterministic === true && TFT_SHOP_FIXTURE.rerollChangesSeededOffer === true}
             data-tower-art-version={TOWER_ART_SYSTEM.version}
             data-tower-art-pass={TOWER_ART_FIXTURE.expectedEvolutionCount === TOWER_ART_FIXTURE.actualEvolutionCount && TOWER_ART_FIXTURE.everyEvolutionMapped === true && TOWER_ART_FIXTURE.uniqueFrames === true && TOWER_ART_FIXTURE.humanPaletteDistinct === true && TOWER_ART_FIXTURE.alienNeutralDistinct === true && TOWER_ART_FIXTURE.everyBaseTowerHasRepresentativeArt === true}
             data-evolution-count={TOWER_EVOLUTIONS.length}
@@ -1389,7 +1414,50 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-placed-defense-count={placedDefenses.length}
             data-run-gold={run?.gold ?? 0}
           >
-          <p className="main-menu__kicker">DEFENSES</p>
+          {run?.mode === MODES.TFT_SHOP ? (
+          <>
+            <p className="main-menu__kicker">SHOP</p>
+            <h3>TFT SHOP</h3>
+            <div className="tft-shop-grid" data-shop-slots={tftShopOffers.length}>
+              {tftShopOffers.map((offer) => (
+                <button
+                  key={offer.slotId}
+                  type="button"
+                  className={`tft-shop-card tft-shop-card--${offer.faction}`}
+                  disabled
+                  data-shop-slot={offer.slotId}
+                  data-shop-faction={offer.faction}
+                  data-shop-tower-id={offer.towerId}
+                >
+                  <strong>{offer.name}</strong>
+                  <span>{offer.cost}G</span>
+                  <small>{offer.faction.toUpperCase()} · {offer.role.replaceAll('-', ' ').toUpperCase()}</small>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="tft-shop-roll"
+              disabled={tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost}
+              onClick={() => {
+                if (tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost) return;
+                onSpendGold(TFT_SHOP.rerollCost);
+                setTftRollIndex((value) => value + 1);
+              }}
+            >
+              ROLL — {TFT_SHOP.rerollCost} GOLD
+            </button>
+            <button
+              type="button"
+              className={`tft-shop-lock ${tftShopLocked ? 'tft-shop-lock--active' : ''}`}
+              onClick={() => setTftShopLocked((locked) => !locked)}
+            >
+              {tftShopLocked ? 'UNLOCK SHOP' : 'LOCK SHOP'} · FREE
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
           <div className="normal-build-roster" data-normal-build-count={NORMAL_MODE_TOWERS.length}>
             {['human', 'insect', 'alien', 'neutral'].map((faction) => (
@@ -1414,6 +1482,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               </section>
             ))}
           </div>
+
+          
+          </>
+        )}
 
           <section className="defense-inspector" aria-label="Selected defense inspection">
             <div className="defense-inspector__header">
@@ -2067,8 +2139,10 @@ function App() {
         mode={selectedMode}
         onBack={() => setScreen(SCREENS.PLAY)}
         onStart={async (mode) => {
-          if (mode !== MODES.SINGLE_GATE) return;
-          const started = await startServerMatch(session, mode);
+          if (mode !== MODES.SINGLE_GATE && mode !== MODES.TFT_SHOP) return;
+          const started = mode === MODES.TFT_SHOP
+            ? { ok: true, match: { id: null, token: null, startedAt: null, seed: `${MODES.TFT_SHOP}:${Date.now()}` } }
+            : await startServerMatch(session, mode);
           if (!started.ok) return;
           const nextRun = createInitialRunState(mode, started.match.seed, started.match);
           if (!nextRun) return;
