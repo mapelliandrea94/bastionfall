@@ -24,6 +24,7 @@ import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counte
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
+import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
 import { ENEMY_BASE_MODEL, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
@@ -109,6 +110,8 @@ const THREAT_MODEL_FIXTURE = Object.freeze(getThreatModelFixtures());
 const DIFFICULTY_BAND_FIXTURE = Object.freeze(getDifficultyBandFixtures());
 
 const RUN_TIMER_FIXTURE = Object.freeze(getRunTimerFixtures());
+
+const RUN_SCORE_FIXTURE = Object.freeze(getRunScoreFixtures());
 
 const ENEMY_BASE_FIXTURE = Object.freeze(getEnemyBaseFixtures());
 
@@ -346,6 +349,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
   const queuedWaveRef = useRef(null);
   const waveScaling = getWaveScaling(run?.wave ?? 0);
   const threatWave = composeWaveByThreatBudget(waveScaling.waveNumber);
+  const runScore = calculateRunScore(run ?? {});
   const defenseDefinitions = Object.freeze({
     archer: ARCHER_TOWER,
     cannon: CANNON_TOWER,
@@ -542,6 +546,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
               <span className="run-hud__label">SURVIVAL</span>
               <strong>{formatSurvivalTime(run?.elapsedMs ?? 0)}</strong>
             </div>
+            <div>
+              <span className="run-hud__label">SCORE</span>
+              <strong>{runScore.totalScore.toLocaleString()}</strong>
+            </div>
             <button className="run-exit" onClick={onExit}>EXIT RUN</button>
           </header>
           <svg
@@ -679,6 +687,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
             data-run-timer-version={RUN_TIMER.version}
             data-run-timer-pass={RUN_TIMER_FIXTURE.tenSecondsExpected === RUN_TIMER_FIXTURE.tenSecondsActual && RUN_TIMER_FIXTURE.minuteFormatExpected === RUN_TIMER_FIXTURE.minuteFormatActual && RUN_TIMER_FIXTURE.hourFormatExpected === RUN_TIMER_FIXTURE.hourFormatActual && RUN_TIMER_FIXTURE.frozenExpected === RUN_TIMER_FIXTURE.frozenActual}
             data-run-elapsed-ms={run?.elapsedMs ?? 0}
+            data-run-score-version={RUN_SCORE.version}
+            data-run-score={runScore.totalScore}
+            data-run-score-wave={runScore.waveScore}
+            data-run-score-survival={runScore.survivalScore}
+            data-run-score-kills={runScore.killScore}
+            data-run-score-core={runScore.coreScore}
+            data-run-score-pass={RUN_SCORE_FIXTURE.baselineExpected === RUN_SCORE_FIXTURE.baselineActual && RUN_SCORE_FIXTURE.flawlessExpected === RUN_SCORE_FIXTURE.flawlessActual && RUN_SCORE_FIXTURE.baselineNotFlawless === true && RUN_SCORE_FIXTURE.flawlessDetected === true}
             data-wave-threat-budget={threatWave.budget}
             data-wave-threat-spent={threatWave.spentThreat}
             data-wave-threat-unused={threatWave.unusedThreat}
