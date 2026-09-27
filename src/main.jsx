@@ -45,6 +45,7 @@ import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } 
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, getTriGateWaveScaling } from './game/balance/triGatePacing.js';
 import { getLateGameSoakPass, getLateGameSoakQa } from './game/balance/lateGameSoakQa.js';
+import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/balance/performanceTelemetryQa.js';
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
@@ -228,6 +229,8 @@ const TRI_GATE_ECONOMY_FIXTURE = Object.freeze(getTriGateEconomyFixtures());
 const TRI_GATE_BALANCE_SMOKE = Object.freeze(getTriGateBalanceSmokeTest());
 const LATE_GAME_SOAK_QA = Object.freeze(getLateGameSoakQa());
 const LATE_GAME_SOAK_PASS = getLateGameSoakPass();
+const PERFORMANCE_TELEMETRY_QA = Object.freeze(getPerformanceTelemetryQa());
+const PERFORMANCE_TELEMETRY_PASS = getPerformanceTelemetryPass();
 const EVOLUTION_POWER_BUDGET_QA = Object.freeze(getEvolutionPowerBudgetQa());
 const EVOLUTION_POWER_BUDGET_PASS = getEvolutionPowerBudgetPass();
 const BOSS_SCHEDULE_FIXTURE = Object.freeze(getBossScheduleFixtures());
@@ -1793,6 +1796,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             className={`run-sidebar ${run?.mode === MODES.TFT_SHOP ? 'run-sidebar--tft' : ''}`}
             aria-label="Tower management"
             data-balance-version={COMBAT_BALANCE_MODEL.version}
+            data-performance-telemetry-pass={PERFORMANCE_TELEMETRY_PASS}
+            data-performance-telemetry-checks={Object.keys(PERFORMANCE_TELEMETRY_QA).length}
             data-archer-power={COMBAT_BALANCE_BY_ID.archer?.powerIndex}
             data-cannon-power={COMBAT_BALANCE_BY_ID.cannon?.powerIndex}
             data-frost-power={COMBAT_BALANCE_BY_ID.frost?.powerIndex}
