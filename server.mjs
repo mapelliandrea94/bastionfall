@@ -244,7 +244,7 @@ app.get('/api/profile', requireUser, async (req, res) => {
       .order('mode', { ascending: true }),
     req.db
       .from('last_bastion_stats')
-      .select('runs,best_wave,best_survival_ms,best_score,lifetime_kills,total_survival_ms,updated_at')
+      .select('runs,wins,top3,best_placement,best_wave,best_survival_ms,best_score,lifetime_kills,total_survival_ms,updated_at')
       .maybeSingle()
   ]);
 
@@ -383,7 +383,7 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
   if (!Number.isInteger(coreHp) || coreHp < 0 || coreHp > coreMaxHp) {
     return res.status(400).json({ error: 'invalid_core_hp' });
   }
-  if (!['bastion-destroyed', 'player-exit'].includes(resultReason)) {
+  if (!['bastion-destroyed', 'player-exit', 'last-bastion-win'].includes(resultReason)) {
     return res.status(400).json({ error: 'invalid_result_reason' });
   }
 
@@ -397,6 +397,7 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
   }
 
   let persistedRecord = null;
+
   if (mode === 'single-gate' || mode === 'tri-gate') {
     const serverDb = clientForToken(req.accessToken, {
       'x-bastionfall-server-secret': matchTokenSecret
@@ -425,14 +426,33 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
       return res.status(500).json({ error: 'record_persist_failed' });
     }
 
+    persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
+  }
+
   if (mode === 'last-bastion') {
+    const authoritativeMatch = getLastBastionMatchStatus(req.user.id, identity.matchId);
+    if (!authoritativeMatch.ok || authoritativeMatch.match?.status !== 'finished') {
+      return res.status(409).json({ error: 'last_bastion_match_not_finished' });
+    }
+
+    const placement = Number(authoritativeMatch.match?.selfPlacement);
+    const won = authoritativeMatch.match?.selfWon === true;
+    const expectedReason = won ? 'last-bastion-win' : 'bastion-destroyed';
+
+    if (!Number.isInteger(placement) || placement < 1 || placement > 8) {
+      return res.status(409).json({ error: 'last_bastion_placement_missing' });
+    }
+    if (resultReason !== expectedReason) {
+      return res.status(400).json({ error: 'last_bastion_result_mismatch' });
+    }
+
     const serverDb = clientForToken(req.accessToken, {
       'x-bastionfall-server-secret': matchTokenSecret
     });
     const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
 
     const { data: statRows, error: statError } = await serverDb.rpc(
-      'persist_verified_last_bastion_result',
+      'persist_verified_last_bastion_result_v2',
       {
         p_result_reason: resultReason,
         p_wave: wave,
@@ -443,7 +463,9 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
         p_core_max_hp: coreMaxHp,
         p_kills: kills,
         p_started_at: identity.startedAt,
-        p_ended_at: endedAt
+        p_ended_at: endedAt,
+        p_placement: placement,
+        p_won: won
       }
     );
 
@@ -453,9 +475,6 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
     }
 
     persistedRecord = Array.isArray(statRows) ? statRows[0] ?? null : statRows;
-  }
-
-    persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
   }
 
   const { data: current, error: profileError } = await req.db
