@@ -21,7 +21,7 @@ function Shell({ title, kicker, subtitle, onBack, children }) {
   );
 }
 
-function ModeSelect({ onBack }) {
+function ModeSelect({ onBack, onSolo }) {
   return (
     <Shell
       onBack={onBack}
@@ -30,7 +30,7 @@ function ModeSelect({ onBack }) {
       subtitle="Everyone starts equal. Every run begins from zero."
     >
       <div className="mode-grid">
-        <button className="mode-card mode-card--ready">
+        <button className="mode-card mode-card--ready" onClick={onSolo}>
           <span className="mode-card__players">1 PLAYER</span>
           <strong>SOLO</strong>
           <small>Pure endless survival.</small>
@@ -56,6 +56,46 @@ function ModeSelect({ onBack }) {
           <strong>SQUAD</strong>
           <small>Maximum chaos. Maximum survival.</small>
           <em>COMING SOON</em>
+        </button>
+      </div>
+    </Shell>
+  );
+}
+
+
+function SoloPreRun({ onBack }) {
+  return (
+    <Shell
+      onBack={onBack}
+      kicker="SOLO ENDLESS"
+      title="PREPARE THE BASTION"
+      subtitle="No permanent power. No head start. Every defender begins equal."
+    >
+      <div className="pre-run-grid">
+        <section className="pre-run-card">
+          <span className="pre-run-card__eyebrow">MODE</span>
+          <strong>SOLO</strong>
+          <small>One defender. Endless waves.</small>
+        </section>
+
+        <section className="pre-run-card">
+          <span className="pre-run-card__eyebrow">STARTING RULES</span>
+          <strong>STANDARD</strong>
+          <small>Same gold, same towers, same conditions every run.</small>
+        </section>
+
+        <section className="pre-run-card">
+          <span className="pre-run-card__eyebrow">OBJECTIVE</span>
+          <strong>SURVIVE</strong>
+          <small>Your record is the highest wave reached.</small>
+        </section>
+      </div>
+
+      <div className="pre-run-footer">
+        <p>Map: <strong>First Bastion</strong></p>
+        <button className="pre-run-start" disabled>
+          START RUN
+          <small>Gameplay unlocks next</small>
         </button>
       </div>
     </Shell>
@@ -225,7 +265,8 @@ function App() {
     await supabase?.auth.signOut();
   }
 
-  if (screen === 'play') return <ModeSelect onBack={() => setScreen('menu')} />;
+  if (screen === 'play') return <ModeSelect onBack={() => setScreen('menu')} onSolo={() => setScreen('solo-prep')} />;
+  if (screen === 'solo-prep') return <SoloPreRun onBack={() => setScreen('play')} />;
   if (screen === 'leaderboard') return <Leaderboard onBack={() => setScreen('menu')} />;
   if (screen === 'profile') return <Profile onBack={() => setScreen('menu')} />;
   if (screen === 'settings') return <Settings onBack={() => setScreen('menu')} />;
