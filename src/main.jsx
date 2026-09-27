@@ -14,6 +14,7 @@ import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/
 import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
 import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyleForTower } from './game/towers/towerArt.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
+import { TFT_BENCH, addCopyToBench, createEmptyBench, getTftBenchFixtures, removeCopyFromBench } from './game/tft/tftBench.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -176,6 +177,7 @@ const SUPPORT_STACKING_FIXTURE = Object.freeze(getSupportStackingFixtures());
 const EVOLUTION_FIXTURE = Object.freeze(getEvolutionFixtures());
 const TOWER_ART_FIXTURE = Object.freeze(getTowerArtFixtures());
 const TFT_SHOP_FIXTURE = Object.freeze(getTftShopFixtures());
+const TFT_BENCH_FIXTURE = Object.freeze(getTftBenchFixtures());
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -651,6 +653,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
   const [tftRollIndex, setTftRollIndex] = useState(0);
   const [tftShopLocked, setTftShopLocked] = useState(false);
+  const [tftBench, setTftBench] = useState(() => createEmptyBench());
+  const [tftFeedback, setTftFeedback] = useState('');
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
@@ -1365,6 +1369,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tower-roster-version={TOWER_ROSTER.version}
             data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
             data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
+            data-tft-bench-version={TFT_BENCH.version}
+            data-tft-bench-pass={TFT_BENCH_FIXTURE.slotCountExpected === TFT_BENCH_FIXTURE.slotCountActual && TFT_BENCH_FIXTURE.buyToBenchWorks === true && TFT_BENCH_FIXTURE.fullBlocksPurchase === true && TFT_BENCH_FIXTURE.sellRemovesCopy === true && TFT_BENCH_FIXTURE.noAutoMerge === true}
             data-tft-shop-version={TFT_SHOP.version}
             data-tft-shop-mode={run?.mode === MODES.TFT_SHOP}
             data-tft-shop-pass={TFT_SHOP_FIXTURE.slotCountExpected === TFT_SHOP_FIXTURE.slotCountActual && TFT_SHOP_FIXTURE.humanExpected === TFT_SHOP_FIXTURE.humanActual && TFT_SHOP_FIXTURE.insectExpected === TFT_SHOP_FIXTURE.insectActual && TFT_SHOP_FIXTURE.alienExpected === TFT_SHOP_FIXTURE.alienActual && TFT_SHOP_FIXTURE.neutralExpected === TFT_SHOP_FIXTURE.neutralActual && TFT_SHOP_FIXTURE.everyCopyCostsTwo === true && TFT_SHOP_FIXTURE.rerollCostExpected === TFT_SHOP_FIXTURE.rerollCostActual && TFT_SHOP_FIXTURE.deterministic === true && TFT_SHOP_FIXTURE.rerollChangesSeededOffer === true}
@@ -1424,10 +1430,28 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   key={offer.slotId}
                   type="button"
                   className={`tft-shop-card tft-shop-card--${offer.faction}`}
-                  disabled
+                  disabled={(run?.gold ?? 0) < offer.cost || tftBench.every(Boolean)}
                   data-shop-slot={offer.slotId}
                   data-shop-faction={offer.faction}
                   data-shop-tower-id={offer.towerId}
+                  onClick={() => {
+                    if ((run?.gold ?? 0) < offer.cost) return;
+                    const result = addCopyToBench(tftBench, {
+                      copyId: `${run?.seed ?? 'run'}:${tftRollIndex}:${offer.slotId}:${Date.now()}`,
+                      towerId: offer.towerId,
+                      name: offer.name,
+                      faction: offer.faction,
+                      role: offer.role,
+                      cost: offer.cost
+                    });
+                    if (!result.ok) {
+                      setTftFeedback('BENCH FULL');
+                      return;
+                    }
+                    setTftBench(result.bench);
+                    onSpendGold(offer.cost);
+                    setTftFeedback('');
+                  }}
                 >
                   <strong>{offer.name}</strong>
                   <span>{offer.cost}G</span>
@@ -1454,6 +1478,44 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             >
               {tftShopLocked ? 'UNLOCK SHOP' : 'LOCK SHOP'} · FREE
             </button>
+            <div className="tft-bench">
+              <div className="tft-bench__header">
+                <span>BENCH</span>
+                <strong>{tftBench.filter(Boolean).length}/{TFT_BENCH.slotCount}</strong>
+              </div>
+              <div className="tft-bench__grid" data-bench-slots={TFT_BENCH.slotCount}>
+                {tftBench.map((copy, index) => (
+                  <div
+                    key={index}
+                    className={`tft-bench-slot ${copy ? 'tft-bench-slot--occupied' : ''}`}
+                    data-bench-slot={index + 1}
+                    data-bench-tower-id={copy?.towerId ?? ''}
+                  >
+                    {copy ? (
+                      <>
+                        <strong>{copy.name}</strong>
+                        <small>{copy.faction.toUpperCase()}</small>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const result = removeCopyFromBench(tftBench, index);
+                            if (!result.ok) return;
+                            setTftBench(result.bench);
+                            onSpendGold(-TFT_BENCH.copySellRefund);
+                            setTftFeedback('');
+                          }}
+                        >
+                          SELL {TFT_BENCH.copySellRefund}G
+                        </button>
+                      </>
+                    ) : (
+                      <span>EMPTY</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {tftFeedback && <div className="tft-bench-feedback">{tftFeedback}</div>}
+            </div>
           </>
         ) : (
           <>
