@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { getLastBastionMatchmakingFixtures, getLastBastionQueueStatus, joinLastBastionQueue, leaveLastBastionQueue } from './server/lastBastionMatchmaking.js';
+import { getLastBastionMatchmakingFixtures, getLastBastionQueueStatus, joinLastBastionQueue, leaveLastBastionQueue, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -129,6 +129,12 @@ app.post('/api/last-bastion/matchmaking/join', requireUser, (req, res) => {
 
 app.post('/api/last-bastion/matchmaking/leave', requireUser, (req, res) => {
   return res.json(leaveLastBastionQueue(req.user.id));
+});
+
+app.post('/api/last-bastion/matchmaking/ready', requireUser, (req, res) => {
+  const result = setLastBastionReady(req.user.id, req.body?.ready !== false);
+  if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_ready_failed' });
+  return res.json(result);
 });
 
 app.get('/api/last-bastion/matchmaking/status', requireUser, (req, res) => {
