@@ -32,7 +32,7 @@ export function createTftRunSnapshot({
       Object.fromEntries(
         activeWallIds.slice(0, 4).map((id) => [
           id,
-          clampInt(wallHpById?.[id] ?? 1000, 0, 1000, 1000)
+          clampInt(wallHpById?.[id] ?? 6000, 0, 6000, 6000)
         ])
       )
     ),
@@ -63,7 +63,7 @@ export function normalizeTftRunSnapshot(snapshot) {
   const wallHpById = Object.fromEntries(
     activeWallIds.map((id) => [
       id,
-      clampInt(snapshot.wallHpById?.[id] ?? 1000, 0, 1000, 1000)
+      clampInt(snapshot.wallHpById?.[id] ?? 6000, 0, 6000, 6000)
     ])
   );
 
@@ -129,7 +129,7 @@ export function getTftPersistenceFixtures() {
       { id: 'tower-b', defenseId: 'alien-aa', copyProgress: 7, level: 4, evolution: 'prism-beam-array' }
     ],
     activeWallIds: ['wall-01', 'wall-03'],
-    wallHpById: { 'wall-01': 760, 'wall-03': 1000 },
+    wallHpById: { 'wall-01': 4560, 'wall-03': 6000 },
     tftBench: [{ copyId: 'copy-a', towerId: 'human-aa' }, null, null, null, null, null, null],
     selectedTftBenchIndex: 0,
     tftRollIndex: 4,
@@ -147,8 +147,8 @@ export function getTftPersistenceFixtures() {
     benchPersists: restored?.tftBench?.[0]?.copyId === 'copy-a' && restored?.tftBench?.length === 7,
     wallsPersist:
       restored?.activeWallIds?.join(',') === 'wall-01,wall-03' &&
-      restored?.wallHpById?.['wall-01'] === 760 &&
-      restored?.wallHpById?.['wall-03'] === 1000,
+      restored?.wallHpById?.['wall-01'] === 4560 &&
+      restored?.wallHpById?.['wall-03'] === 6000,
     rollLockPersist: restored?.tftRollIndex === 4 && restored?.tftShopLocked === true,
     purchasedSlotsPersist:
       restored?.tftPurchasedSlotIds?.join(',') === 'human-1,alien-2',
