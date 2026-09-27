@@ -7,6 +7,22 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 const supabase = SUPABASE_URL && SUPABASE_KEY ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
+const SCREENS = Object.freeze({
+  MENU: 'menu',
+  PLAY: 'play',
+  SINGLE_GATE_PREP: 'single-gate-prep',
+  SINGLE_GATE_RUN: 'single-gate-run',
+  LEADERBOARD: 'leaderboard',
+  PROFILE: 'profile',
+  SETTINGS: 'settings'
+});
+
+const MODES = Object.freeze({
+  SINGLE_GATE: 'single-gate',
+  TRI_GATE: 'tri-gate',
+  LAST_BASTION: 'last-bastion'
+});
+
 function Shell({ title, kicker, subtitle, onBack, children }) {
   return (
     <main className="main-menu">
@@ -311,7 +327,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
 }
 
 function App() {
-  const [screen, setScreen] = useState('menu');
+  const [screen, setScreen] = useState(SCREENS.MENU);
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
 
@@ -326,12 +342,12 @@ function App() {
     await supabase?.auth.signOut();
   }
 
-  if (screen === 'play') return <ModeSelect onBack={() => setScreen('menu')} onSolo={() => setScreen('solo-prep')} />;
-  if (screen === 'solo-prep') return <SoloPreRun onBack={() => setScreen('play')} onStart={() => setScreen('solo-run')} />;
-  if (screen === 'solo-run') return <SoloRun onExit={() => setScreen('solo-prep')} />;
-  if (screen === 'leaderboard') return <Leaderboard onBack={() => setScreen('menu')} />;
-  if (screen === 'profile') return <Profile onBack={() => setScreen('menu')} />;
-  if (screen === 'settings') return <Settings onBack={() => setScreen('menu')} />;
+  if (screen === SCREENS.PLAY) return <ModeSelect onBack={() => setScreen(SCREENS.MENU)} onSolo={() => setScreen(SCREENS.SINGLE_GATE_PREP)} />;
+  if (screen === SCREENS.SINGLE_GATE_PREP) return <SoloPreRun onBack={() => setScreen(SCREENS.PLAY)} onStart={() => setScreen(SCREENS.SINGLE_GATE_RUN)} />;
+  if (screen === SCREENS.SINGLE_GATE_RUN) return <SoloRun onExit={() => setScreen(SCREENS.SINGLE_GATE_PREP)} />;
+  if (screen === SCREENS.LEADERBOARD) return <Leaderboard onBack={() => setScreen(SCREENS.MENU)} />;
+  if (screen === SCREENS.PROFILE) return <Profile onBack={() => setScreen(SCREENS.MENU)} />;
+  if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
 
   return (
     <main className="main-menu">
@@ -357,13 +373,13 @@ function App() {
         <nav className="main-menu__actions" aria-label="Primary navigation">
           <button
             className="main-menu__button main-menu__button--primary"
-            onClick={() => setScreen('play')}
+            onClick={() => setScreen(SCREENS.PLAY)}
           >
             PLAY
           </button>
-          <button className="main-menu__button" onClick={() => setScreen('leaderboard')}>LEADERBOARD</button>
-          <button className="main-menu__button" onClick={() => setScreen('profile')}>PROFILE</button>
-          <button className="main-menu__button" onClick={() => setScreen('settings')}>SETTINGS</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.LEADERBOARD)}>LEADERBOARD</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.PROFILE)}>PROFILE</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.SETTINGS)}>SETTINGS</button>
         </nav>
 
         <p className="main-menu__version">Prototype v0.1.0</p>
