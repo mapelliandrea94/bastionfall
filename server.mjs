@@ -125,6 +125,8 @@ app.get('/api/health', (_req, res) => res.json({
   ok: true,
   game: 'Bastionfall',
   version: '0.1.1',
+  revision: process.env.RAILWAY_GIT_COMMIT_SHA || null,
+  deploymentId: process.env.RAILWAY_DEPLOYMENT_ID || null,
   matchIdentityConfigured: Boolean(matchTokenSecret)
 }));
 app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35 }));
