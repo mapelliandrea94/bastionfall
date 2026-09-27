@@ -3234,3 +3234,149 @@ body { background:#1c3f61; }
     height: calc(100% - 52px);
   }
 }
+
+
+/* BATCH 115 — accessibility & responsive polish */
+.battlefield-map__tower-slot:focus {
+  outline: none;
+}
+
+.battlefield-map__tower-slot:focus-visible .tower-slot__stone {
+  stroke: #ffe2a0;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 12px rgba(255, 226, 160, .75));
+}
+
+.battlefield-map__tower-slot[aria-disabled="true"] {
+  opacity: .55;
+}
+
+button,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid #f4cc76;
+  outline-offset: 3px;
+}
+
+.last-bastion-status__player--dead strong,
+.last-bastion-status__player--offline small {
+  text-decoration: line-through;
+}
+
+@media (max-width: 760px) {
+  .run-screen {
+    min-height: 100dvh;
+  }
+
+  .run-hud {
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .last-bastion-status {
+    top: 74px;
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 9px;
+  }
+
+  .last-bastion-status__players {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .last-bastion-status__player {
+    min-height: 44px;
+  }
+
+  .run-sidebar {
+    max-height: min(34dvh, 250px);
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .run-sidebar button,
+  .run-exit,
+  .run-prep-start,
+  .run-wave,
+  .run-damage-test,
+  .run-spawn-test,
+  .run-phase-test {
+    min-height: 44px;
+  }
+
+  .last-bastion-spectate-banner {
+    width: min(92vw, 520px);
+    padding: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .run-hud {
+    left: 4px;
+    right: 4px;
+    margin: 4px;
+    padding: 8px;
+  }
+
+  .run-hud__label {
+    font-size: 9px;
+  }
+
+  .run-hud strong {
+    font-size: 11px;
+  }
+
+  .last-bastion-status {
+    right: 4px;
+    left: 4px;
+    top: 70px;
+  }
+
+  .last-bastion-status__header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .last-bastion-status__players {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .run-sidebar {
+    right: 4px;
+    bottom: 4px;
+    left: 4px;
+    max-height: min(31dvh, 220px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .run-hud,
+  .run-sidebar,
+  .last-bastion-status,
+  .last-bastion-spectate-banner,
+  .mode-screen,
+  .main-menu__content {
+    border-color: rgba(255,255,255,.48);
+  }
+
+  .run-hud__label,
+  .last-bastion-status__header span,
+  .stat-card span {
+    color: #ffd982;
+  }
+}
