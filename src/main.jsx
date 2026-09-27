@@ -1790,7 +1790,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </svg>
 
           <aside
-            className="run-sidebar"
+            className={`run-sidebar ${run?.mode === MODES.TFT_SHOP ? 'run-sidebar--tft' : ''}`}
             data-balance-version={COMBAT_BALANCE_MODEL.version}
             data-archer-power={COMBAT_BALANCE_BY_ID.archer?.powerIndex}
             data-cannon-power={COMBAT_BALANCE_BY_ID.cannon?.powerIndex}
@@ -1998,25 +1998,39 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     setTftFeedback('');
                   }}
                 >
-                  <strong>{offer.name}</strong>
-                  <span>{offer.cost}G</span>
-                  <small>{offer.faction.toUpperCase()} · {offer.role.replaceAll('-', ' ').toUpperCase()}</small>
+                  <div
+                    className="tft-shop-card__art"
+                    style={getTowerArtStyleForTower(offer.towerId)}
+                    aria-hidden="true"
+                  />
+                  <div className="tft-shop-card__copy">
+                    <strong>{offer.name}</strong>
+                    <small>{offer.faction.toUpperCase()} · {offer.role.replaceAll('-', ' ').toUpperCase()}</small>
+                  </div>
+                  <span className="tft-shop-card__cost">{offer.cost}G</span>
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              className="tft-shop-roll"
-              disabled={tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost}
-              onClick={() => {
-                if (tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost) return;
-                onSpendGold(TFT_SHOP.rerollCost);
-                setTftPurchasedSlotIds([]);
-                setTftRollIndex((value) => value + 1);
-              }}
-            >
-              ROLL — {TFT_SHOP.rerollCost} GOLD
-            </button>
+            <div className="tft-shop-economy">
+              <div className="tft-shop-gold" aria-label={`${run?.gold ?? 0} gold available`}>
+                <span>GOLD</span>
+                <strong>{run?.gold ?? 0}</strong>
+              </div>
+              <button
+                type="button"
+                className="tft-shop-roll"
+                disabled={tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost}
+                onClick={() => {
+                  if (tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost) return;
+                  onSpendGold(TFT_SHOP.rerollCost);
+                  setTftPurchasedSlotIds([]);
+                  setTftRollIndex((value) => value + 1);
+                }}
+              >
+                <span>ROLL</span>
+                <small>{TFT_SHOP.rerollCost}G</small>
+              </button>
+            </div>
             <button
               type="button"
               className={`tft-shop-lock ${tftShopLocked ? 'tft-shop-lock--active' : ''}`}
