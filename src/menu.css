@@ -330,3 +330,139 @@ button { font: inherit; }
     min-height: 190px;
   }
 }
+
+
+.table-card,
+.settings-card {
+  margin-top: 26px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.025);
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 160px 120px;
+  gap: 12px;
+  padding: 16px 18px;
+  text-align: left;
+}
+
+.table-row--head {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: #d7b66a;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.empty-state {
+  padding: 42px 18px;
+  color: #7f8994;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.stat-card {
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.025);
+}
+
+.stat-card span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: #d7b66a;
+}
+
+.stat-card strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  color: #f5e8c4;
+}
+
+.stat-card small {
+  color: #7f8994;
+}
+
+.settings-card {
+  padding: 10px 20px;
+}
+
+.settings-card label,
+.setting-line {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 190px 1fr;
+  align-items: center;
+  gap: 18px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.settings-card label:last-of-type {
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.setting-line {
+  border-bottom: 0;
+}
+
+.settings-card span,
+.setting-line span {
+  color: #d7b66a;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.settings-card input[type="range"] {
+  width: 100%;
+  accent-color: #c59235;
+}
+
+.setting-line strong {
+  color: #e9edf1;
+  text-align: right;
+}
+
+@media (max-width: 800px) {
+  .profile-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-row {
+    grid-template-columns: 48px 1fr 90px;
+  }
+
+  .table-row span:nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-card label,
+  .setting-line {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 0;
+  }
+
+  .setting-line strong {
+    text-align: left;
+  }
+}
