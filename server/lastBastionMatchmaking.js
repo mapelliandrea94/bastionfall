@@ -12,7 +12,7 @@ export const LAST_BASTION_MATCHMAKING = Object.freeze({
   abandonTimeoutMs: 60000,
   heartbeatMinIntervalMs: 750,
   maxWave: 9999,
-  maxCoreHp: 100000,
+  maxCoreHp: 28,
   desyncWaveSpreadTolerance: 1
 });
 
