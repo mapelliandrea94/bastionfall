@@ -10,6 +10,7 @@ import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
 import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.js';
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
+import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
@@ -26,6 +27,7 @@ import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/c
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
 import { FACTION_COUNTER_ENGINE, getFactionCounterFixtures } from './game/combat/factionCounters.js';
+import { getBaseTowerCombatFixtures, getEffectiveTowerAttackInterval, getTowerHitDamage, getTowerTargets } from './game/combat/baseTowerCombat.js';
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
 import { TRI_GATE_PACING, getTriGateEconomyFixtures, getTriGateWaveClearReward, getTriGateWaveScaling } from './game/balance/triGatePacing.js';
@@ -42,7 +44,7 @@ import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } f
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
-import { ENEMY_BASE_MODEL, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
+import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures } from './game/enemies/enemyBase.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
@@ -159,6 +161,8 @@ const ENEMY_TAG_FIXTURE = Object.freeze({
 const TOWER_ROSTER_FIXTURE = Object.freeze(getTowerRosterFixtures());
 const NORMAL_BUILD_ROSTER_FIXTURE = Object.freeze(getNormalBuildRosterFixtures());
 const NORMAL_BUILD_PURCHASE_FIXTURE = Object.freeze(getTowerSlotPurchaseFixtures(NORMAL_MODE_TOWERS, 10000));
+const BASE_TOWER_GAMEPLAY_FIXTURE = Object.freeze(getBaseTowerGameplayFixtures());
+const BASE_TOWER_COMBAT_FIXTURE = Object.freeze(getBaseTowerCombatFixtures(BASE_TOWER_GAMEPLAY_BY_ID));
 const ELITE_MODIFIER_FIXTURE = Object.freeze(getEliteModifierFoundationFixtures());
 const WORLD_MODIFIER_FIXTURE = Object.freeze(getWorldModifierFoundationFixtures());
 
@@ -624,6 +628,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
   const bossSummonTimeoutsRef = useRef([]);
+  const towerAttackTimesRef = useRef({});
   const waveScaling = getWaveScaling(run?.wave ?? 0, run?.mode);
   const nextWaveNumber = Math.max(1, (run?.wave ?? 0) + 1);
   const upcomingBossWave = getUpcomingBossWave(nextWaveNumber);
@@ -797,6 +802,144 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
   }, [activeEnemies.length, run?.phase]);
+
+  useEffect(() => {
+    if (run?.phase !== RUN_PHASES.ACTIVE || placedDefenses.length === 0 || activeEnemies.length === 0) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      const now = performance.now();
+
+      setActiveEnemies((currentEnemies) => {
+        let working = currentEnemies.map((enemy) => ({
+          ...enemy,
+          position: getPathPosition(SINGLE_GATE_MAP.path.waypoints, enemy.progress)
+        }));
+
+        for (const placed of placedDefenses) {
+          const definition = defenseDefinitions[placed.defenseId];
+          if (!definition) continue;
+
+          const attackInterval = getEffectiveTowerAttackInterval(definition, placed, placedDefenses, defenseDefinitions);
+          const lastAttackAt = Number(towerAttackTimesRef.current[placed.id] ?? 0);
+          if (now - lastAttackAt < attackInterval) continue;
+
+          const candidates = getTowerTargets(definition, placed, working.filter((enemy) => enemy.hp > 0));
+          const primary = candidates[0];
+          if (!primary) continue;
+
+          towerAttackTimesRef.current[placed.id] = now;
+
+          const primaryIndex = working.findIndex((enemy) => enemy.id === primary.id);
+          if (primaryIndex < 0) continue;
+
+          const hitEnemyAtIndex = (enemyIndex, damageScale = 1) => {
+            const enemy = working[enemyIndex];
+            if (!enemy || enemy.hp <= 0) return;
+
+            let target = enemy;
+            if (definition.armorShred) {
+              target = {
+                ...target,
+                armor: Math.max(0, Number(target.armor ?? 0) - Number(definition.armorShred)),
+                statusEffects: {
+                  ...(target.statusEffects ?? {}),
+                  armorShred: Math.max(Number(target.statusEffects?.armorShred ?? 0), Number(definition.armorShred)),
+                  armorShredUntilMs: Math.max(Number(target.statusEffects?.armorShredUntilMs ?? 0), now + Number(definition.armorShredDurationMs ?? 0))
+                }
+              };
+            }
+
+            const damage = getTowerHitDamage(definition, placed, target, placedDefenses, defenseDefinitions) * damageScale;
+            let damaged = applyEnemyDamage(target, damage, definition.damageType);
+
+            const statusEffects = { ...(damaged.statusEffects ?? {}) };
+            if (definition.slowPercent) {
+              statusEffects.slowPercent = Math.max(Number(statusEffects.slowPercent ?? 0), Number(definition.slowPercent));
+              statusEffects.slowUntilMs = Math.max(Number(statusEffects.slowUntilMs ?? 0), now + Number(definition.slowDurationMs ?? 0));
+            }
+            if (definition.vulnerabilityPercent) {
+              statusEffects.vulnerabilityPercent = Math.max(Number(statusEffects.vulnerabilityPercent ?? 0), Number(definition.vulnerabilityPercent));
+              statusEffects.vulnerabilityUntilMs = Math.max(Number(statusEffects.vulnerabilityUntilMs ?? 0), now + Number(definition.vulnerabilityDurationMs ?? 0));
+            }
+            if (definition.poisonDamagePerSecond) {
+              statusEffects.poisonDamagePerSecond = Math.max(Number(statusEffects.poisonDamagePerSecond ?? 0), Number(definition.poisonDamagePerSecond));
+              statusEffects.poisonUntilMs = Math.max(Number(statusEffects.poisonUntilMs ?? 0), now + Number(definition.poisonDurationMs ?? 0));
+            }
+
+            damaged = { ...damaged, statusEffects };
+            working[enemyIndex] = damaged;
+          };
+
+          hitEnemyAtIndex(primaryIndex, 1);
+
+          if (definition.splashRadius) {
+            working.forEach((enemy, index) => {
+              if (enemy.id === primary.id || enemy.hp <= 0) return;
+              const dx = Number(enemy.position?.x ?? 0) - Number(primary.position?.x ?? 0);
+              const dy = Number(enemy.position?.y ?? 0) - Number(primary.position?.y ?? 0);
+              if (Math.hypot(dx, dy) <= definition.splashRadius) hitEnemyAtIndex(index, 0.72);
+            });
+          }
+
+          if (definition.chainTargets && definition.chainTargets > 1) {
+            const chained = working
+              .filter((enemy) => enemy.id !== primary.id && enemy.hp > 0)
+              .sort((a, b) => {
+                const da = Math.hypot(Number(a.position?.x ?? 0) - Number(primary.position?.x ?? 0), Number(a.position?.y ?? 0) - Number(primary.position?.y ?? 0));
+                const db = Math.hypot(Number(b.position?.x ?? 0) - Number(primary.position?.x ?? 0), Number(b.position?.y ?? 0) - Number(primary.position?.y ?? 0));
+                return da - db;
+              })
+              .slice(0, definition.chainTargets - 1);
+
+            chained.forEach((enemy, chainIndex) => {
+              const index = working.findIndex((entry) => entry.id === enemy.id);
+              if (index >= 0) hitEnemyAtIndex(index, Math.pow(definition.chainFalloff ?? 0.65, chainIndex + 1));
+            });
+          }
+        }
+
+        return working.filter((enemy) => enemy.hp > 0).map(({ position, ...enemy }) => enemy);
+      });
+    }, 100);
+
+    return () => window.clearInterval(intervalId);
+  }, [run?.phase, placedDefenses, activeEnemies.length]);
+
+  useEffect(() => {
+    if (run?.phase !== RUN_PHASES.ACTIVE || activeEnemies.length === 0) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      const now = performance.now();
+      setActiveEnemies((current) => current
+        .map((enemy) => {
+          const status = { ...(enemy.statusEffects ?? {}) };
+          let next = enemy;
+
+          if (Number(status.poisonUntilMs ?? 0) > now && Number(status.poisonDamagePerSecond ?? 0) > 0) {
+            next = applyEnemyDamage(next, Number(status.poisonDamagePerSecond) * 0.25, 'physical');
+          }
+
+          if (Number(status.vulnerabilityUntilMs ?? 0) <= now) {
+            status.vulnerabilityPercent = 0;
+            status.vulnerabilityUntilMs = 0;
+          }
+          if (Number(status.armorShredUntilMs ?? 0) <= now && Number(status.armorShred ?? 0) > 0) {
+            next = { ...next, armor: Number(next.armor ?? 0) + Number(status.armorShred) };
+            status.armorShred = 0;
+            status.armorShredUntilMs = 0;
+          }
+          if (Number(status.poisonUntilMs ?? 0) <= now) {
+            status.poisonDamagePerSecond = 0;
+            status.poisonUntilMs = 0;
+          }
+
+          return { ...next, statusEffects: status };
+        })
+        .filter((enemy) => enemy.hp > 0));
+    }, 250);
+
+    return () => window.clearInterval(intervalId);
+  }, [run?.phase, activeEnemies.length]);
 
   useEffect(() => {
     const queueInitialized = queuedWaveRef.current === run?.wave;
@@ -1149,7 +1292,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
             data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
             data-tower-roster-version={TOWER_ROSTER.version}
-            data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
+            data-normal-build-roster-pass={NORMAL_BUILD_ROSTER_FIXTURE.countExpected === NORMAL_BUILD_ROSTER_FIXTURE.countActual && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCost === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveRole === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveFaction === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCounterType === true && NORMAL_BUILD_ROSTER_FIXTURE.allHaveCombatStats === true && NORMAL_BUILD_ROSTER_FIXTURE.uniqueIds === true && NORMAL_BUILD_PURCHASE_FIXTURE.every((entry) => entry.actual === entry.expected && entry.deductedCorrectly)}
+            data-base-tower-gameplay-pass={BASE_TOWER_GAMEPLAY_FIXTURE.towerCount === 12 && BASE_TOWER_GAMEPLAY_FIXTURE.offensiveCount === 9 && BASE_TOWER_GAMEPLAY_FIXTURE.slowWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.debuffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.buffWorks === true && BASE_TOWER_GAMEPLAY_FIXTURE.utilityBelowBurst === true && BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageExpected === BASE_TOWER_COMBAT_FIXTURE.perfectCounterDamageActual && BASE_TOWER_COMBAT_FIXTURE.buffRaisesDamage === true && BASE_TOWER_COMBAT_FIXTURE.buffRaisesAttackSpeed === true && BASE_TOWER_COMBAT_FIXTURE.targetInRange === true}
             data-tower-roster-count={TOWER_ROSTER.towers.length}
             data-tower-roster-pass={TOWER_ROSTER_FIXTURE.towerCountExpected === TOWER_ROSTER_FIXTURE.towerCountActual && TOWER_ROSTER_FIXTURE.humanCount === 3 && TOWER_ROSTER_FIXTURE.insectCount === 3 && TOWER_ROSTER_FIXTURE.alienCount === 3 && TOWER_ROSTER_FIXTURE.neutralCount === 3 && TOWER_ROSTER_FIXTURE.airCounterCount === 3 && TOWER_ROSTER_FIXTURE.armoredCounterCount === 3 && TOWER_ROSTER_FIXTURE.infantryCounterCount === 3 && TOWER_ROSTER_FIXTURE.supportCounterCount === 3 && TOWER_ROSTER_FIXTURE.neutralFlagsValid === true && TOWER_ROSTER_FIXTURE.legacyArcherResolves === true && TOWER_ROSTER_FIXTURE.legacySaveNormalizes === true}
             data-tri-gate-map-version={TRI_GATE_MAP.version}
