@@ -1,25 +1,25 @@
 const freezePoint = (point) => Object.freeze(point);
 
 const BASE_WAYPOINTS = Object.freeze([
-  freezePoint({ id: 'p0', x: 90, y: 730 }),
-  freezePoint({ id: 'p1', x: 260, y: 730 }),
-  freezePoint({ id: 'p2', x: 260, y: 170 }),
-  freezePoint({ id: 'p3', x: 520, y: 170 }),
-  freezePoint({ id: 'p4', x: 520, y: 730 }),
-  freezePoint({ id: 'p5', x: 820, y: 730 }),
-  freezePoint({ id: 'p6', x: 820, y: 170 }),
-  freezePoint({ id: 'p7', x: 1110, y: 170 }),
-  freezePoint({ id: 'p8', x: 1110, y: 730 }),
-  freezePoint({ id: 'p9', x: 1360, y: 730 }),
-  freezePoint({ id: 'p10', x: 1360, y: 450 }),
-  freezePoint({ id: 'p11', x: 1490, y: 450 })
+  freezePoint({ id: 'p0', x: 205, y: 680 }),
+  freezePoint({ id: 'p1', x: 350, y: 680 }),
+  freezePoint({ id: 'p2', x: 350, y: 155 }),
+  freezePoint({ id: 'p3', x: 590, y: 155 }),
+  freezePoint({ id: 'p4', x: 590, y: 680 }),
+  freezePoint({ id: 'p5', x: 810, y: 680 }),
+  freezePoint({ id: 'p6', x: 810, y: 155 }),
+  freezePoint({ id: 'p7', x: 1030, y: 155 }),
+  freezePoint({ id: 'p8', x: 1030, y: 680 }),
+  freezePoint({ id: 'p9', x: 1220, y: 680 }),
+  freezePoint({ id: 'p10', x: 1220, y: 475 }),
+  freezePoint({ id: 'p11', x: 1375, y: 475 })
 ]);
 
 const WALL_SLOTS = Object.freeze([
   Object.freeze({
     id: 'wall-01',
-    x: 260,
-    y: 450,
+    x: 350,
+    y: 440,
     closesSegment: Object.freeze(['p1', 'p2']),
     detour: Object.freeze([
       freezePoint({ x: 110, y: 620 }),
@@ -28,8 +28,8 @@ const WALL_SLOTS = Object.freeze([
   }),
   Object.freeze({
     id: 'wall-02',
-    x: 520,
-    y: 450,
+    x: 590,
+    y: 440,
     closesSegment: Object.freeze(['p3', 'p4']),
     detour: Object.freeze([
       freezePoint({ x: 670, y: 280 }),
@@ -38,8 +38,8 @@ const WALL_SLOTS = Object.freeze([
   }),
   Object.freeze({
     id: 'wall-03',
-    x: 820,
-    y: 450,
+    x: 810,
+    y: 440,
     closesSegment: Object.freeze(['p5', 'p6']),
     detour: Object.freeze([
       freezePoint({ x: 970, y: 620 }),
@@ -48,8 +48,8 @@ const WALL_SLOTS = Object.freeze([
   }),
   Object.freeze({
     id: 'wall-04',
-    x: 1110,
-    y: 450,
+    x: 1030,
+    y: 440,
     closesSegment: Object.freeze(['p7', 'p8']),
     detour: Object.freeze([
       freezePoint({ x: 1260, y: 280 }),
@@ -71,13 +71,13 @@ export const SINGLE_GATE_MAP = Object.freeze({
   anchors: Object.freeze({
     enemySpawn: Object.freeze({
       id: 'enemy-spawn',
-      x: 90,
-      y: 730
+      x: 205,
+      y: 680
     }),
     bastion: Object.freeze({
       id: 'bastion-core',
-      x: 1490,
-      y: 450
+      x: 1375,
+      y: 475
     })
   }),
   path: Object.freeze({
@@ -89,39 +89,34 @@ export const SINGLE_GATE_MAP = Object.freeze({
     footprintRadius: 34,
     minimumPathCenterDistance: 104,
     slots: Object.freeze([
-      Object.freeze({ id: 'slot-01', x: 390, y: 290 }),
-      Object.freeze({ id: 'slot-02', x: 390, y: 410 }),
-      Object.freeze({ id: 'slot-03', x: 390, y: 530 }),
-      Object.freeze({ id: 'slot-04', x: 390, y: 650 }),
-      Object.freeze({ id: 'slot-05', x: 390, y: 800 }),
-
-      Object.freeze({ id: 'slot-06', x: 670, y: 110 }),
-      Object.freeze({ id: 'slot-07', x: 670, y: 300 }),
-      Object.freeze({ id: 'slot-08', x: 670, y: 450 }),
-      Object.freeze({ id: 'slot-09', x: 670, y: 600 }),
-
-      Object.freeze({ id: 'slot-10', x: 965, y: 300 }),
-      Object.freeze({ id: 'slot-11', x: 965, y: 430 }),
-      Object.freeze({ id: 'slot-12', x: 965, y: 560 }),
-      Object.freeze({ id: 'slot-13', x: 965, y: 690 }),
-      Object.freeze({ id: 'slot-14', x: 965, y: 800 }),
-
-      Object.freeze({ id: 'slot-15', x: 1235, y: 110 }),
-      Object.freeze({ id: 'slot-16', x: 1235, y: 300 }),
-      Object.freeze({ id: 'slot-17', x: 1235, y: 430 }),
-      Object.freeze({ id: 'slot-18', x: 1235, y: 580 }),
-
-      Object.freeze({ id: 'slot-19', x: 100, y: 110 }),
-      Object.freeze({ id: 'slot-20', x: 100, y: 300 }),
-      Object.freeze({ id: 'slot-21', x: 100, y: 450 }),
-      Object.freeze({ id: 'slot-22', x: 100, y: 580 }),
-
-      Object.freeze({ id: 'slot-23', x: 1480, y: 110 }),
-      Object.freeze({ id: 'slot-24', x: 1480, y: 230 }),
-      Object.freeze({ id: 'slot-25', x: 1480, y: 320 }),
-      Object.freeze({ id: 'slot-26', x: 1480, y: 560 }),
-      Object.freeze({ id: 'slot-27', x: 1480, y: 680 }),
-      Object.freeze({ id: 'slot-28', x: 1480, y: 800 })
+      Object.freeze({ id: 'slot-01', x: 480, y: 270 }),
+      Object.freeze({ id: 'slot-02', x: 480, y: 405 }),
+      Object.freeze({ id: 'slot-03', x: 480, y: 545 }),
+      Object.freeze({ id: 'slot-04', x: 480, y: 770 }),
+      Object.freeze({ id: 'slot-05', x: 700, y: 105 }),
+      Object.freeze({ id: 'slot-06', x: 700, y: 300 }),
+      Object.freeze({ id: 'slot-07', x: 700, y: 455 }),
+      Object.freeze({ id: 'slot-08', x: 700, y: 565 }),
+      Object.freeze({ id: 'slot-09', x: 920, y: 270 }),
+      Object.freeze({ id: 'slot-10', x: 920, y: 405 }),
+      Object.freeze({ id: 'slot-11', x: 920, y: 545 }),
+      Object.freeze({ id: 'slot-12', x: 920, y: 770 }),
+      Object.freeze({ id: 'slot-13', x: 1140, y: 85 }),
+      Object.freeze({ id: 'slot-14', x: 1140, y: 280 }),
+      Object.freeze({ id: 'slot-15', x: 1140, y: 400 }),
+      Object.freeze({ id: 'slot-16', x: 1140, y: 790 }),
+      Object.freeze({ id: 'slot-17', x: 100, y: 105 }),
+      Object.freeze({ id: 'slot-18', x: 100, y: 280 }),
+      Object.freeze({ id: 'slot-19', x: 100, y: 440 }),
+      Object.freeze({ id: 'slot-20', x: 100, y: 570 }),
+      Object.freeze({ id: 'slot-21', x: 1465, y: 105 }),
+      Object.freeze({ id: 'slot-22', x: 1465, y: 250 }),
+      Object.freeze({ id: 'slot-23', x: 1465, y: 360 }),
+      Object.freeze({ id: 'slot-24', x: 1465, y: 610 }),
+      Object.freeze({ id: 'slot-25', x: 1465, y: 755 }),
+      Object.freeze({ id: 'slot-26', x: 1330, y: 105 }),
+      Object.freeze({ id: 'slot-27', x: 1305, y: 260 }),
+      Object.freeze({ id: 'slot-28', x: 1325, y: 755 })
     ])
   }),
   wallSlots: Object.freeze({

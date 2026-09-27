@@ -1685,7 +1685,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           <svg
             className="battlefield-map"
             viewBox={`0 0 ${SINGLE_GATE_MAP.size.width} ${SINGLE_GATE_MAP.size.height}`}
-            preserveAspectRatio="xMidYMid meet"
+            preserveAspectRatio="none"
             role="img"
             aria-labelledby="battlefield-title battlefield-desc"
           >
@@ -1698,16 +1698,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <radialGradient id="bf-meadow"><stop stopColor="#a9ce66"/><stop offset=".7" stopColor="#70a451"/><stop offset="1" stopColor="#416d49"/></radialGradient>
               <pattern id="bf-grass-texture" width="112" height="94" patternUnits="userSpaceOnUse"><path d="M12 25l4-5m2 5 3-6M77 67l3-5m3 5 4-7M51 12l3-4M100 36l4-6" stroke="#d9e5a1" strokeWidth="2" opacity=".43"/><circle cx="38" cy="61" r="2" fill="#f2eac8"/><circle cx="94" cy="14" r="2" fill="#e8d9a0"/></pattern>
             </defs>
-            <g className="battlefield-map__scenery" aria-hidden="true">
-              <rect width="1600" height="900" fill="url(#bf-meadow)" />
-              <rect width="1600" height="900" fill="url(#bf-grass-texture)" />
-              <path className="battlefield-map__cliff" d="M0 0H1600V92Q1410 135 1280 84T940 104Q780 154 630 100T280 115Q110 80 0 132Z M0 805Q170 764 310 815T680 795Q820 747 1000 813T1350 792Q1500 760 1600 812V900H0Z" />
-              <path className="battlefield-map__river" d="M390 0Q510 76 470 142T500 275M1070 900Q1020 820 1060 740T1030 660" />
-              <path className="battlefield-map__waterfall" d="M407 3Q440 82 435 142M1080 898Q1043 832 1078 770" />
-              {[ [95,150],[730,85],[1280,130],[145,740],[695,805],[1390,750] ].map(([x,y]) => <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}><path className="battlefield-map__pine-shadow" d="M-33 19H34L0-72Z"/><path className="battlefield-map__pine" d="M0-82L-20-35H-12L-30 5H-21L-38 25H38L21 5H30L12-35H20Z"/><path className="battlefield-map__pine-light" d="M0-82L-20-35H-12L-30 5H-21L-38 25H0Z"/></g>)}
-              {[ [270,125],[905,116],[400,755],[1230,796] ].map(([x,y]) => <path key={`${x}-${y}`} className="battlefield-map__crystal" d={`M${x} ${y-35}l18 27-18 25-18-25Z`}/>)}
-            </g>
-            <g className="battlefield-map__road" aria-hidden="true">
+            <image className="battlefield-map__art" href="/assets/maps/bastionfall-field.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
+            <g className={`battlefield-map__road ${activeWallIds.length ? 'battlefield-map__road--detour' : ''}`} aria-hidden="true">
               <polyline className="battlefield-map__road-edge" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
               <polyline className="battlefield-map__road-sand" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
               <polyline className="battlefield-map__road-wear" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />

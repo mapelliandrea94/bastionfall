@@ -3896,3 +3896,20 @@ button:focus-visible,
 .battlefield-map__tower-slot--hovered .tower-slot__stone,
 .battlefield-map__tower-slot:focus-visible .tower-slot__stone { fill: #fff0c4; stroke: #fff2a8; filter: drop-shadow(0 0 13px #fce185); }
 .battlefield-map__bastion-core { filter: drop-shadow(0 0 14px #48e7ff); }
+
+/* Illustrated field: occupy the entire playable area without SVG letterboxing. */
+.battlefield-map__art { pointer-events: none; }
+.battlefield-map__road { opacity: 0; }
+.battlefield-map__road--detour { opacity: 1; }
+.battlefield-map__spawn, .battlefield-map__label { opacity: 0; }
+.battlefield-map__bastion-shadow,
+.battlefield-map__bastion-base,
+.battlefield-map__bastion-keep,
+.battlefield-map__bastion-tower,
+.battlefield-map__bastion-roof,
+.battlefield-map__bastion-core,
+.battlefield-map__bastion-gate { opacity: 0; }
+@media (min-width: 901px) {
+  .battlefield-map { top: 0; bottom: 0; left: 0; right: 330px; width: calc(100% - 330px); height: 100%; }
+  .run-screen:has(.run-sidebar--tft) .battlefield-map { right: 455px; width: calc(100% - 455px); }
+}
