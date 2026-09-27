@@ -1,4 +1,5 @@
 import {
+  advanceLastBastionMatchmaking,
   clearLastBastionMatchForUser,
   getLastBastionActiveMatchPersistenceSnapshot,
   getLastBastionMatchmakingFixtures,
@@ -6,6 +7,7 @@ import {
   getLastBastionMatchStatus,
   hydrateLastBastionActiveMatches,
   hydrateLastBastionQueue,
+  LAST_BASTION_MATCHMAKING,
   resolveLastBastionAbandons,
   setLastBastionReady
 } from '../server/lastBastionMatchmaking.js';
@@ -21,7 +23,10 @@ assert(fixture.joinCreatesTicket, 'Last Bastion join must create a ticket');
 assert(fixture.duplicateJoinIsIdempotent, 'Duplicate queue join must be idempotent');
 assert(fixture.queuePositionTracksOrder, 'Queue order must remain deterministic');
 assert(fixture.firstReadyWaitsForMinimum, 'One ready player must not start a match');
-assert(fixture.secondReadyCreatesMatch, 'Two ready players must create a match');
+assert(fixture.secondReadyCreatesMatch, 'Two ready players must create a match after the fill window');
+assert(fixture.fillWindowWaitsBeforeStarting, 'Two ready players must wait inside the fill window');
+assert(fixture.fillWindowDoesNotStartEarly, 'Fill window must not start the match before its deadline');
+assert(fixture.fillWindowStartsAtDeadline, 'Fill window must start the match at its deadline');
 assert(fixture.sharedSeed, 'Matched players must receive the same seed');
 assert(fixture.sharedStart, 'Matched players must receive the same synchronized start');
 assert(fixture.participantCountCorrect, 'Matched participant count must be consistent');
@@ -37,6 +42,62 @@ assert(fixture.desyncDetected, 'Wave spread beyond tolerance must flag desync');
 assert(fixture.eliminationMarksDead, 'Eliminated participant must be marked dead');
 assert(fixture.lastAliveWins, 'Last alive participant must resolve as winner');
 assert(fixture.placementsResolve, 'Last Bastion winner/loser placements must resolve deterministically');
+
+const fillRestartA = 'fill-restart-a';
+const fillRestartB = 'fill-restart-b';
+const fillRestartBaseMs = Date.parse('2026-09-27T19:50:00.000Z');
+
+hydrateLastBastionQueue([
+  {
+    ticketId: 'fill-restart-ticket-a',
+    userId: fillRestartA,
+    joinedAt: new Date(fillRestartBaseMs - 10000).toISOString(),
+    ready: true,
+    updated_at: new Date(fillRestartBaseMs).toISOString()
+  },
+  {
+    ticketId: 'fill-restart-ticket-b',
+    userId: fillRestartB,
+    joinedAt: new Date(fillRestartBaseMs - 9000).toISOString(),
+    ready: true,
+    updated_at: new Date(fillRestartBaseMs + 1000).toISOString()
+  }
+]);
+
+const fillRestartStatus = getLastBastionQueueStatus(fillRestartA, fillRestartBaseMs + 5000);
+assert(fillRestartStatus.matched === false, 'Restarted fill window must not start early');
+assert(fillRestartStatus.readyPlayers === 2, 'Restarted fill window must restore ready player count');
+assert(
+  fillRestartStatus.fillWindowEndsAt === new Date(fillRestartBaseMs + 1000 + LAST_BASTION_MATCHMAKING.fillWindowMs).toISOString(),
+  'Restarted fill window must preserve the original deadline'
+);
+
+const fillRestartAdvance = advanceLastBastionMatchmaking(
+  fillRestartBaseMs + 1000 + LAST_BASTION_MATCHMAKING.fillWindowMs
+);
+assert(fillRestartAdvance.matched === true, 'Restarted fill window must create the match at the original deadline');
+
+clearLastBastionMatchForUser(fillRestartA);
+clearLastBastionMatchForUser(fillRestartB);
+hydrateLastBastionActiveMatches([], []);
+hydrateLastBastionQueue([]);
+
+const maxReadyBaseMs = Date.parse('2026-09-27T19:55:00.000Z');
+const maxReadyEntries = Array.from({ length: LAST_BASTION_MATCHMAKING.maxPlayers }, (_, index) => ({
+  ticketId: `max-ready-ticket-${index + 1}`,
+  userId: `max-ready-user-${index + 1}`,
+  joinedAt: new Date(maxReadyBaseMs - 10000 + index).toISOString(),
+  ready: true,
+  updated_at: new Date(maxReadyBaseMs + index).toISOString()
+}));
+hydrateLastBastionQueue(maxReadyEntries);
+const maxReadyAdvance = advanceLastBastionMatchmaking(maxReadyBaseMs + LAST_BASTION_MATCHMAKING.maxPlayers);
+assert(maxReadyAdvance.matched === true, 'Eight ready players must bypass the remaining fill window');
+assert(maxReadyAdvance.participantIds?.length === LAST_BASTION_MATCHMAKING.maxPlayers, 'Immediate full lobby must contain eight players');
+
+for (const entry of maxReadyEntries) clearLastBastionMatchForUser(entry.userId);
+hydrateLastBastionActiveMatches([], []);
+hydrateLastBastionQueue([]);
 
 const persistedA = 'persisted-fixture-a';
 const persistedB = 'persisted-fixture-b';
