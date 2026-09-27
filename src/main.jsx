@@ -229,6 +229,50 @@ function Settings({ onBack }) {
   );
 }
 
+function HowToPlay({ onBack }) {
+  return (
+    <Shell
+      onBack={onBack}
+      kicker="FIELD MANUAL"
+      title="HOW TO PLAY"
+      subtitle="Build a defense, survive endless waves, and push your record as far as possible."
+    >
+      <div className="how-to-grid">
+        <section className="how-to-card">
+          <span>1</span>
+          <strong>CHOOSE A MODE</strong>
+          <small>Single Gate, Tri-Gate, and Last Bastion each test survival in a different format.</small>
+        </section>
+        <section className="how-to-card">
+          <span>2</span>
+          <strong>BUILD YOUR DEFENSE</strong>
+          <small>Spend run gold on towers and support structures. Every run starts from equal combat power.</small>
+        </section>
+        <section className="how-to-card">
+          <span>3</span>
+          <strong>HOLD THE BASTION</strong>
+          <small>Enemies follow their lanes toward your bastion. Survive wave after wave without losing the core.</small>
+        </section>
+        <section className="how-to-card">
+          <span>4</span>
+          <strong>ADAPT AS WAVES SCALE</strong>
+          <small>Enemy types, elites, bosses, blessings, and later modifiers increase the pressure over time.</small>
+        </section>
+        <section className="how-to-card">
+          <span>5</span>
+          <strong>CHASE RECORDS</strong>
+          <small>Single Gate and Tri-Gate keep separate records. Last Bastion also contributes to the matching survival record.</small>
+        </section>
+        <section className="how-to-card">
+          <span>6</span>
+          <strong>NO PAY-TO-WIN POWER</strong>
+          <small>Permanent account progress is prestige, cosmetic, and statistical only. Combat power resets every run.</small>
+        </section>
+      </div>
+    </Shell>
+  );
+}
+
 function AuthModal({ mode, onClose, onSuccess }) {
   const [authMode, setAuthMode] = useState(mode);
   const [name, setName] = useState('');
@@ -344,7 +388,7 @@ function App() {
   if (screen === SCREENS.LEADERBOARD) return <Leaderboard onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.PROFILE) return <Profile onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
-  if (screen === SCREENS.HOW_TO_PLAY) return <Shell onBack={() => setScreen(SCREENS.MENU)} kicker="FIELD MANUAL" title="HOW TO PLAY" subtitle="Guide coming in the next batch." />;
+  if (screen === SCREENS.HOW_TO_PLAY) return <HowToPlay onBack={() => setScreen(SCREENS.MENU)} />;
 
   return (
     <main className="main-menu">
