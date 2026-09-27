@@ -22,8 +22,9 @@ export const WAVE_THREAT_MODEL = Object.freeze({
   ])
 });
 
-export function getWaveThreatBudget(waveNumber) {
+export function getWaveThreatBudget(waveNumber, budgetMultiplier = 1) {
   const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
+  const multiplier = Math.max(0, Number(budgetMultiplier) || 0);
   const band = Math.floor((wave - 1) / WAVE_THREAT_MODEL.bandSize);
   const difficultyBand = getDifficultyBand(wave);
   const rawThreat =
@@ -31,7 +32,7 @@ export function getWaveThreatBudget(waveNumber) {
     (wave - 1) * WAVE_THREAT_MODEL.threatPerWave +
     band * WAVE_THREAT_MODEL.bandBonusThreat;
 
-  return Number((rawThreat * difficultyBand.threatMultiplier).toFixed(2));
+  return Number((rawThreat * difficultyBand.threatMultiplier * multiplier).toFixed(2));
 }
 
 function addEnemy(composition, definition) {
@@ -41,9 +42,9 @@ function addEnemy(composition, definition) {
   }));
 }
 
-export function composeWaveByThreatBudget(waveNumber) {
+export function composeWaveByThreatBudget(waveNumber, budgetMultiplier = 1) {
   const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
-  const budget = getWaveThreatBudget(wave);
+  const budget = getWaveThreatBudget(wave, budgetMultiplier);
   const composition = [];
   let spentThreat = 0;
 
