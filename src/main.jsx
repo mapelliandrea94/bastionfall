@@ -19,6 +19,7 @@ import { ENEMY_BASE_MODEL, getEnemyBaseFixtures } from './game/enemies/enemyBase
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
+import { ARMORED_ENEMY, createArmoredEnemyState, getArmoredEnemyBudget } from './game/enemies/armored.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -97,6 +98,8 @@ const NORMAL_ENEMY_BUDGET = Object.freeze(getNormalEnemyBudget());
 const RUNNER_ENEMY_BUDGET = Object.freeze(getRunnerEnemyBudget());
 
 const TANK_ENEMY_BUDGET = Object.freeze(getTankEnemyBudget());
+
+const ARMORED_ENEMY_BUDGET = Object.freeze(getArmoredEnemyBudget());
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -337,15 +340,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
     queuedWaveRef.current = run?.wave;
     setSpawnQueue(
       Array.from({ length: waveScaling.enemyCount }, (_, index) => {
-        const isTank = waveScaling.waveNumber >= 5 && (index + 1) % 6 === 0;
-        const isRunner = !isTank && waveScaling.waveNumber >= 3 && (index + 1) % 4 === 0;
+        const isArmored = waveScaling.waveNumber >= 7 && (index + 1) % 8 === 0;
+        const isTank = !isArmored && waveScaling.waveNumber >= 5 && (index + 1) % 6 === 0;
+        const isRunner = !isArmored && !isTank && waveScaling.waveNumber >= 3 && (index + 1) % 4 === 0;
         return {
           id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`,
-          archetype: isTank
-            ? TANK_ENEMY.archetype
-            : isRunner
-              ? RUNNER_ENEMY.archetype
-              : NORMAL_ENEMY.archetype
+          archetype: isArmored
+            ? ARMORED_ENEMY.archetype
+            : isTank
+              ? TANK_ENEMY.archetype
+              : isRunner
+                ? RUNNER_ENEMY.archetype
+                : NORMAL_ENEMY.archetype
         };
       })
     );
@@ -360,23 +366,29 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
         const [nextEnemy, ...remaining] = current;
         setActiveEnemies((active) => [
           ...active,
-          (nextEnemy.archetype === TANK_ENEMY.archetype
-          ? createTankEnemyState({
+          (nextEnemy.archetype === ARMORED_ENEMY.archetype
+          ? createArmoredEnemyState({
               ...nextEnemy,
               progress: 0,
               spawnedAt: performance.now()
             })
-          : nextEnemy.archetype === RUNNER_ENEMY.archetype
-            ? createRunnerEnemyState({
+          : nextEnemy.archetype === TANK_ENEMY.archetype
+            ? createTankEnemyState({
                 ...nextEnemy,
                 progress: 0,
                 spawnedAt: performance.now()
               })
-            : createNormalEnemyState({
-                ...nextEnemy,
-                progress: 0,
-                spawnedAt: performance.now()
-              }))
+            : nextEnemy.archetype === RUNNER_ENEMY.archetype
+              ? createRunnerEnemyState({
+                  ...nextEnemy,
+                  progress: 0,
+                  spawnedAt: performance.now()
+                })
+              : createNormalEnemyState({
+                  ...nextEnemy,
+                  progress: 0,
+                  spawnedAt: performance.now()
+                }))
         ]);
         return remaining;
       });
@@ -573,6 +585,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-tank-enemy-threat={TANK_ENEMY.threatValue}
             data-tank-enemy-hp-per-threat={TANK_ENEMY_BUDGET.hpPerThreat}
             data-tank-enemy-speed={TANK_ENEMY_BUDGET.speedIndex}
+            data-armored-enemy={ARMORED_ENEMY.name}
+            data-armored-enemy-threat={ARMORED_ENEMY.threatValue}
+            data-armored-enemy-effective-hp={ARMORED_ENEMY_BUDGET.effectiveHp}
+            data-armored-enemy-effective-hp-per-threat={ARMORED_ENEMY_BUDGET.effectiveHpPerThreat}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
