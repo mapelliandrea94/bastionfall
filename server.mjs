@@ -403,22 +403,47 @@ app.get('/api/last-bastion/match/status', requireUser, async (req, res) => {
   return res.json(attachLastBastionMatchToken(result, req.user.id));
 });
 
-app.post('/api/last-bastion/match/eliminate', requireUser, rateLimitUser('lb-eliminate', { windowMs: 10000, max: 6 }), (req, res) => {
+app.post('/api/last-bastion/match/eliminate', requireUser, rateLimitUser('lb-eliminate', { windowMs: 10000, max: 6 }), async (req, res) => {
   const matchToken = String(req.body?.matchToken || '');
   const identity = verifyMatchIdentity(matchToken);
   if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
   if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
   if (identity.mode !== 'last-bastion') return res.status(400).json({ error: 'match_mode_mismatch' });
 
-  const result = eliminateLastBastionParticipant(req.user.id, identity.matchId, {
-    wave: req.body?.wave
-  });
-
-  if (!result.ok) {
-    if (result.error === 'invalid_wave') return res.status(400).json({ error: result.error });
-    return res.status(404).json({ error: result.error || 'elimination_failed' });
+  const wave = Number(req.body?.wave);
+  if (!Number.isInteger(wave) || wave < 0 || wave > 9999) {
+    return res.status(400).json({ error: 'invalid_wave' });
   }
-  return res.json(result);
+
+  const hydrated = await hydratePersistentLastBastionState(req);
+  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+
+  const eliminatedAt = new Date().toISOString();
+  const { error } = await hydrated.serverDb.rpc(
+    'persist_last_bastion_elimination',
+    {
+      p_match_id: identity.matchId,
+      p_user_id: req.user.id,
+      p_wave: wave,
+      p_eliminated_at: eliminatedAt
+    }
+  );
+
+  if (error) {
+    const message = String(error.message || '');
+    if (message.includes('invalid_wave')) return res.status(400).json({ error: 'invalid_wave' });
+    if (message.includes('match_not_found')) return res.status(404).json({ error: 'match_not_found' });
+    if (message.includes('elimination_user_mismatch')) return res.status(403).json({ error: 'match_user_mismatch' });
+    console.error('Last Bastion elimination persistence failed:', error.message);
+    return res.status(500).json({ error: 'elimination_persistence_failed' });
+  }
+
+  const refreshed = await hydratePersistentLastBastionState(req);
+  if (!refreshed.ok) return res.status(503).json({ error: refreshed.error });
+
+  const result = getLastBastionMatchStatus(req.user.id, identity.matchId);
+  if (!result.ok) return res.status(404).json({ error: result.error || 'elimination_failed' });
+  return res.json(attachLastBastionMatchToken(result, req.user.id));
 });
 
 app.get('/api/last-bastion/matchmaking/health', (_req, res) => {
