@@ -28,6 +28,7 @@ assert(fixture.waveRegressionRejected, 'Participant wave must not move backwards
 assert(fixture.desyncDetected, 'Wave spread beyond tolerance must flag desync');
 assert(fixture.eliminationMarksDead, 'Eliminated participant must be marked dead');
 assert(fixture.lastAliveWins, 'Last alive participant must resolve as winner');
+assert(fixture.placementsResolve, 'Last Bastion winner/loser placements must resolve deterministically');
 
 const seed = 'last-bastion:sync-fixture';
 const playerA = generateWavePlan({ seed, waveNumber: 18, mode: 'last-bastion' });
