@@ -448,6 +448,28 @@ async function lastBastionMatchHeartbeat(session, run) {
   return { ok: true, payload };
 }
 
+async function lastBastionEliminate(session, run) {
+  if (!session?.access_token || !run?.matchToken || run?.mode !== MODES.LAST_BASTION) {
+    return { ok: false, error: 'elimination_not_ready' };
+  }
+
+  const response = await fetch('/api/last-bastion/match/eliminate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({
+      matchToken: run.matchToken,
+      wave: run.wave ?? 0
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: payload?.error || 'elimination_failed' };
+  return { ok: true, payload };
+}
+
 async function fetchLeaderboardData(session, mode) {
   if (!session?.access_token) {
     return { ok: false, error: 'authentication_required' };
@@ -2548,6 +2570,44 @@ function App() {
   async function logout() {
     await supabase?.auth.signOut();
   }
+
+  useEffect(() => {
+    if (
+      screen !== SCREENS.SINGLE_GATE_RUN ||
+      runState?.mode !== MODES.LAST_BASTION ||
+      runState?.phase !== RUN_PHASES.ENDED ||
+      !runState?.matchToken ||
+      runState?.lastBastionEliminationSent
+    ) return;
+
+    let cancelled = false;
+
+    lastBastionEliminate(session, runState).then((result) => {
+      if (cancelled || !result.ok) return;
+      setRunState((current) => {
+        if (!current || current.matchId !== runState.matchId) return current;
+        return {
+          ...current,
+          lastBastionEliminationSent: true,
+          lastBastionParticipants: result.payload?.match?.participants ?? current.lastBastionParticipants ?? [],
+          lastBastionWinnerSlot: result.payload?.match?.winnerSlot ?? null,
+          lastBastionMatchStatus: result.payload?.match?.status ?? current.lastBastionMatchStatus ?? 'active'
+        };
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    screen,
+    session,
+    runState?.mode,
+    runState?.phase,
+    runState?.matchToken,
+    runState?.matchId,
+    runState?.lastBastionEliminationSent
+  ]);
 
   useEffect(() => {
     if (
