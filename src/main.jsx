@@ -919,6 +919,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [tftFeedback, setTftFeedback] = useState(() => matchingTftSnapshot ? 'RUN RESTORED' : '');
   const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
+  const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
@@ -986,6 +987,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const isLastBastionFinished =
     run?.mode === MODES.LAST_BASTION &&
     run?.lastBastionMatchStatus === 'finished';
+  const tftSetupKey = run?.mode === MODES.TFT_SHOP
+    ? JSON.stringify({
+        wave: run?.wave ?? 0,
+        bench: tftBench.map((copy) => copy?.copyId ?? null),
+        placed: placedDefenses
+          .map((tower) => [tower.id, tower.defenseId, tower.slotId ?? null, tower.level ?? 1, tower.copyProgress ?? 1, tower.evolution ?? null])
+          .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+      })
+    : '';
+  const tftSetupConfirmed = run?.mode === MODES.TFT_SHOP && confirmedTftSetupKey === tftSetupKey;
 
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
@@ -1029,6 +1040,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
 
+    if (run?.mode === MODES.TFT_SHOP && !tftSetupConfirmed) {
+      setPreparationRemaining(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
+      return undefined;
+    }
+
     if (run?.syncWaveStartsAtMs && run.wave === 0) {
       const sync = () => {
         const remainingMs = run.syncWaveStartsAtMs - Date.now();
@@ -1061,7 +1077,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [run?.phase, run?.wave, run?.syncWaveStartsAtMs]);
+  }, [run?.phase, run?.wave, run?.mode, run?.syncWaveStartsAtMs, tftSetupConfirmed]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || queuedWaveRef.current === run?.wave) return;
@@ -1324,6 +1340,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       onPhaseChange(RUN_PHASES.RESOLVING);
     }
   }, [run?.phase, run?.wave, spawnQueue.length, activeEnemies.length]);
+
+  useEffect(() => {
+    if (run?.phase !== RUN_PHASES.RESOLVING) return undefined;
+    if (blessingChoiceVisible && !selectedBlessingPreviewId) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      const blessingId = selectedBlessingPreviewId;
+      setSelectedBlessingPreviewId(null);
+      setBlessingRerollCount(0);
+      onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true, blessingId });
+    }, 350);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [run?.phase, run?.wave, blessingChoiceVisible, selectedBlessingPreviewId]);
 
   const positionedEnemies = activeEnemies.map((enemy) => ({
     ...enemy,
@@ -2126,6 +2156,26 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 ))}
               </div>
               {tftFeedback && <div className="tft-bench-feedback">{tftFeedback}</div>}
+              <div className="tft-wave-controls" aria-label="Wave controls">
+                <button
+                  type="button"
+                  className={`tft-confirm-setup ${tftSetupConfirmed ? 'tft-confirm-setup--active' : ''}`}
+                  disabled={!run || run.phase !== RUN_PHASES.PREPARATION}
+                  onClick={() => setConfirmedTftSetupKey(tftSetupKey)}
+                >
+                  <span>{tftSetupConfirmed ? 'CONFIGURATION CONFIRMED' : 'CONFIRM SETUP'}</span>
+                  <small>{tftSetupConfirmed ? 'Current setup locked in' : 'Confirm towers and bench'}</small>
+                </button>
+                <button
+                  type="button"
+                  className="tft-start-wave"
+                  disabled={!run || run.phase !== RUN_PHASES.PREPARATION || !tftSetupConfirmed}
+                  onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
+                >
+                  <span>START WAVE</span>
+                  <small>{tftSetupConfirmed ? 'Launch immediately' : 'Confirm setup first'}</small>
+                </button>
+              </div>
             </div>
             </div>
           </>
@@ -2333,46 +2383,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </section>
           )}
 
-          <button
-            className="run-prep-start"
-            onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
-            disabled={!run || run.phase !== RUN_PHASES.PREPARATION}
-          >
-            START NOW
-            <small>Skip the preparation countdown</small>
-          </button>
-
-          <div className="run-queue-status">
-            <span>QUEUE</span>
-            <strong>{spawnQueue.length} pending · {activeEnemies.length} active</strong>
-          </div>
-
-          <button
-            className="run-phase-test"
-            onClick={() => {
-              setSelectedBlessingPreviewId(null);
-              setBlessingRerollCount(0);
-              onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true, blessingId: selectedBlessingPreviewId });
-            }}
-            disabled={!run || run.phase !== RUN_PHASES.RESOLVING || (blessingChoiceVisible && !selectedBlessingPreviewId)}
-          >
-            FINISH RESOLUTION
-            <small>{blessingChoiceVisible && !selectedBlessingPreviewId ? 'Choose a blessing first' : 'Resolving → Preparation'}</small>
-          </button>
-
-          <button
-            className="run-damage-test"
-            onClick={() => onDamageBastion(5)}
-            disabled={!run || run.coreHp <= 0}
-          >
-            TEST BASTION HIT
-            <small>−5 HP · temporary QA control</small>
-          </button>
-
-          <button className="run-wave" disabled>
-            AUTO COMPLETION ACTIVE
-            <small>Resolves when queue and battlefield are empty</small>
-          </button>
+          {run?.mode !== MODES.TFT_SHOP && (
+            <button
+              className="run-prep-start"
+              onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
+              disabled={!run || run.phase !== RUN_PHASES.PREPARATION}
+            >
+              START WAVE
+              <small>Skip the preparation countdown</small>
+            </button>
+          )}
           </aside>
         </div>
       </section>
