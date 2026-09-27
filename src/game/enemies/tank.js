@@ -3,6 +3,8 @@ import { createEnemyBaseState } from './enemyBase.js';
 export const TANK_ENEMY = Object.freeze({
   id: 'tank',
   name: 'Bulwark',
+  faction: 'alien',
+  unitType: 'armored',
   archetype: 'tank',
   maxHp: 260,
   moveSpeed: 0.72,
