@@ -13,10 +13,14 @@ import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtu
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
 import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyleForTower } from './game/towers/towerArt.js';
+import { getTowerEvolutionIntegrityPass, getTowerEvolutionIntegrityQa } from './game/towers/towerEvolutionIntegrityQa.js';
+import { getNormalModeEvolutionFlowPass, getNormalModeEvolutionFlowQa } from './game/towers/normalModeEvolutionFlowQa.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
 import { TFT_BENCH, addCopyToBench, createEmptyBench, getTftBenchFixtures, removeCopyFromBench } from './game/tft/tftBench.js';
 import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftCopyProgressionFixtures, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
 import { TFT_PERSISTENCE, clearTftRunSnapshot, createTftRunSnapshot, getTftPersistenceFixtures, loadTftRunSnapshot, saveTftRunSnapshot } from './game/tft/tftPersistence.js';
+import { getTftEvolutionFlowPass, getTftEvolutionFlowQa } from './game/tft/tftEvolutionFlowQa.js';
+import { getEvolutionPersistenceSellReconnectPass, getEvolutionPersistenceSellReconnectQa } from './game/tft/evolutionPersistenceSellReconnectQa.js';
 import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
