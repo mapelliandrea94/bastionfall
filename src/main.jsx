@@ -63,7 +63,7 @@ function ModeSelect({ onBack, onSolo }) {
 }
 
 
-function SoloPreRun({ onBack }) {
+function SoloPreRun({ onBack, onStart }) {
   return (
     <Shell
       onBack={onBack}
@@ -93,12 +93,73 @@ function SoloPreRun({ onBack }) {
 
       <div className="pre-run-footer">
         <p>Map: <strong>First Bastion</strong></p>
-        <button className="pre-run-start" disabled>
+        <button className="pre-run-start" onClick={onStart}>
           START RUN
-          <small>Gameplay unlocks next</small>
+          <small>Enter First Bastion</small>
         </button>
       </div>
     </Shell>
+  );
+}
+
+
+function SoloRun({ onExit }) {
+  return (
+    <main className="run-screen">
+      <header className="run-hud">
+        <div>
+          <span className="run-hud__label">MODE</span>
+          <strong>SOLO ENDLESS</strong>
+        </div>
+        <div>
+          <span className="run-hud__label">WAVE</span>
+          <strong>0</strong>
+        </div>
+        <div>
+          <span className="run-hud__label">GOLD</span>
+          <strong>240</strong>
+        </div>
+        <div>
+          <span className="run-hud__label">CORE</span>
+          <strong>20 / 20</strong>
+        </div>
+        <button className="run-exit" onClick={onExit}>EXIT RUN</button>
+      </header>
+
+      <section className="run-layout">
+        <div className="battlefield">
+          <div className="battlefield__lane battlefield__lane--a" />
+          <div className="battlefield__lane battlefield__lane--b" />
+          <div className="battlefield__spawn">SPAWN</div>
+          <div className="battlefield__core">BASTION CORE</div>
+
+          <div className="build-slot build-slot--1">+</div>
+          <div className="build-slot build-slot--2">+</div>
+          <div className="build-slot build-slot--3">+</div>
+          <div className="build-slot build-slot--4">+</div>
+          <div className="build-slot build-slot--5">+</div>
+          <div className="build-slot build-slot--6">+</div>
+        </div>
+
+        <aside className="run-sidebar">
+          <p className="main-menu__kicker">DEFENSES</p>
+          <h3>BUILD</h3>
+          <button disabled>ARCHER <span>70g</span></button>
+          <button disabled>CANNON <span>110g</span></button>
+          <button disabled>FROST <span>90g</span></button>
+
+          <div className="run-sidebar__status">
+            <span>PREPARATION</span>
+            <strong>Ready for Wave 1</strong>
+          </div>
+
+          <button className="run-wave" disabled>
+            START WAVE 1
+            <small>Wave system comes next</small>
+          </button>
+        </aside>
+      </section>
+    </main>
   );
 }
 
@@ -266,7 +327,8 @@ function App() {
   }
 
   if (screen === 'play') return <ModeSelect onBack={() => setScreen('menu')} onSolo={() => setScreen('solo-prep')} />;
-  if (screen === 'solo-prep') return <SoloPreRun onBack={() => setScreen('play')} />;
+  if (screen === 'solo-prep') return <SoloPreRun onBack={() => setScreen('play')} onStart={() => setScreen('solo-run')} />;
+  if (screen === 'solo-run') return <SoloRun onExit={() => setScreen('solo-prep')} />;
   if (screen === 'leaderboard') return <Leaderboard onBack={() => setScreen('menu')} />;
   if (screen === 'profile') return <Profile onBack={() => setScreen('menu')} />;
   if (screen === 'settings') return <Settings onBack={() => setScreen('menu')} />;
