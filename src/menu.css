@@ -2834,3 +2834,85 @@ body { background:#1c3f61; }
 .battlefield-map__tower-slot--selected .tower-art-sprite {
   filter: drop-shadow(0 0 8px rgba(255, 220, 120, .72)) drop-shadow(0 5px 5px rgba(0,0,0,.28));
 }
+
+
+/* HOTFIX H9 — TFT shop mode */
+.tft-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .42rem;
+  margin-bottom: .6rem;
+}
+
+.tft-shop-card {
+  min-height: 72px;
+  display: grid;
+  gap: .18rem;
+  padding: .5rem;
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.035);
+  color: #eef4f8;
+}
+
+.tft-shop-card:nth-child(7) {
+  grid-column: 1 / -1;
+}
+
+.tft-shop-card strong {
+  font-size: .73rem;
+  line-height: 1.1;
+}
+
+.tft-shop-card span {
+  font-size: .68rem;
+  font-weight: 950;
+  color: #f1d477;
+}
+
+.tft-shop-card small {
+  font-size: .52rem;
+  line-height: 1.1;
+  color: #aeb8c5;
+}
+
+.tft-shop-card--human { border-color: rgba(88,158,221,.4); }
+.tft-shop-card--insect { border-color: rgba(142,201,101,.4); }
+.tft-shop-card--alien { border-color: rgba(80,206,213,.4); }
+.tft-shop-card--neutral { border-color: rgba(217,184,118,.45); }
+
+.tft-shop-roll {
+  width: 100%;
+  min-height: 58px;
+  margin: .25rem 0 .45rem;
+  border: 2px solid rgba(240,200,92,.72);
+  background: linear-gradient(180deg, rgba(170,113,26,.95), rgba(105,63,15,.95));
+  color: #fff2bd;
+  font-size: 1rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(224,168,61,.18);
+}
+
+.tft-shop-roll:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.tft-shop-lock {
+  width: 100%;
+  padding: .48rem;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.035);
+  color: #bec9d4;
+  font-weight: 850;
+  letter-spacing: .05em;
+  cursor: pointer;
+}
+
+.tft-shop-lock--active {
+  border-color: rgba(94,184,236,.65);
+  color: #b9e7ff;
+  background: rgba(47,111,153,.18);
+}
