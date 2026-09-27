@@ -1,5 +1,6 @@
 import {
   clearLastBastionMatchForUser,
+  getLastBastionActiveMatchPersistenceSnapshot,
   getLastBastionMatchmakingFixtures,
   getLastBastionQueueStatus,
   hydrateLastBastionQueue,
@@ -59,6 +60,12 @@ assert(restoredA.ticket?.position === 1, 'Persisted queue hydration must preserv
 const restoredMatch = setLastBastionReady(persistedB, true);
 assert(restoredMatch.matched === true, 'Hydrated ready player must participate in matchmaking after restart');
 assert(restoredMatch.match?.participantCount === 2, 'Hydrated queue must restore enough state to create a match');
+
+const persistenceSnapshot = getLastBastionActiveMatchPersistenceSnapshot(persistedB);
+assert(Boolean(persistenceSnapshot?.id), 'Matched Last Bastion state must expose a persistence match id');
+assert(persistenceSnapshot?.seed === restoredMatch.match?.seed, 'Persistence snapshot must preserve shared match seed');
+assert(persistenceSnapshot?.startedAt === restoredMatch.match?.startedAt, 'Persistence snapshot must preserve synchronized start');
+assert(persistenceSnapshot?.participantIds?.length === 2, 'Persistence snapshot must contain every matched participant');
 
 clearLastBastionMatchForUser(persistedA);
 clearLastBastionMatchForUser(persistedB);
