@@ -2198,3 +2198,58 @@ button { font: inherit; }
     flex-direction: column;
   }
 }
+
+/* Bright heroic fantasy visual layer. Gameplay geometry stays in the map data. */
+:root { color:#f8f4e7; background:#1c3f61; }
+body { background:#1c3f61; }
+.main-menu { background:radial-gradient(ellipse at 50% 72%,rgba(255,230,160,.62),transparent 40%),linear-gradient(165deg,#8ed5f0 0%,#5aadd4 38%,#376eac 66%,#244472 100%); }
+.main-menu::before { background:radial-gradient(ellipse at 50% 100%,#e8d39b 0 12%,transparent 55%),linear-gradient(140deg,transparent 42%,rgba(255,255,255,.35) 43%,transparent 48%); }
+.main-menu::after { background:radial-gradient(ellipse at 12% 110%,#628888 0 24%,transparent 25%),radial-gradient(ellipse at 40% 112%,#87a78b 0 26%,transparent 27%),radial-gradient(ellipse at 75% 110%,#5d8389 0 27%,transparent 28%),radial-gradient(ellipse at 100% 110%,#406a85 0 25%,transparent 26%); filter:none; opacity:.92; }
+.main-menu__content,.mode-screen,.pre-run-card,.mode-card,.how-to-card,.results-hero { border-color:rgba(247,211,129,.62); background:linear-gradient(155deg,rgba(32,71,113,.96),rgba(15,43,78,.96)); box-shadow:inset 0 1px rgba(255,255,255,.28),0 16px 38px rgba(17,47,76,.35); }
+.main-menu__content::before,.main-menu__content::after { opacity:.45; }
+.mode-card:hover,.pre-run-start:hover,.results-actions button:hover { filter:brightness(1.14); transform:translateY(-2px); }
+.main-menu__kicker,.pre-run-card__eyebrow,.run-hud__label { color:#ffe39a; }
+.main-menu h1,.mode-screen h1,.run-sidebar h3,.results-hero strong { color:#fff2c9; text-shadow:0 2px 0 #174267,0 5px 17px rgba(0,0,0,.32); }
+.run-screen { background:linear-gradient(155deg,#a9e7f2,#427fb2); }
+.battlefield { background:radial-gradient(ellipse at 63% 28%,rgba(255,244,176,.62),transparent 48%),radial-gradient(ellipse at 48% 65%,rgba(83,152,99,.63),transparent 75%),linear-gradient(140deg,#b2d89f,#7cb68b 58%,#4e93a2); background-size:auto; }
+.battlefield::after { pointer-events:none; opacity:.28; }
+.battlefield-map__scenery { pointer-events:none; }
+.battlefield-map__cliff { fill:url(#bf-cliff); stroke:#eee2bd; stroke-width:7; filter:drop-shadow(0 13px 7px #35597588); }
+.battlefield-map__river { fill:none; stroke:url(#bf-river); stroke-width:66; stroke-linecap:round; opacity:.9; }
+.battlefield-map__waterfall { fill:none; stroke:#e4ffff; stroke-width:17; stroke-linecap:round; opacity:.85; filter:drop-shadow(4px 2px 6px #32b6e5); }
+.battlefield-map__pine-shadow { fill:#31587299; }
+.battlefield-map__pine { fill:#27665d; stroke:#20575c; stroke-width:3; }
+.battlefield-map__pine-light { fill:#61ae72; }
+.battlefield-map__crystal { fill:#a4f5fb; stroke:#4f8bc8; stroke-width:5; filter:drop-shadow(0 0 12px #a5f5ff); }
+.battlefield-map__build-zone { fill:#f3e6b52b; stroke:#fbe5a7; stroke-width:4; stroke-dasharray:12 9; filter:drop-shadow(0 2px 3px #446755); }
+.battlefield-map__path { stroke:url(#bf-path); stroke-width:96; filter:drop-shadow(0 10px 5px #496e6580); }
+.battlefield-map__spawn { fill:#486d94; stroke:#f8d694; stroke-width:7; filter:drop-shadow(0 0 16px #f2d89a); }
+.battlefield-map__label { fill:#fff8d7; paint-order:stroke; stroke:#24476b; stroke-width:5; }
+.battlefield-map__bastion-base,.battlefield-map__bastion-keep,.battlefield-map__bastion-tower { fill:#9cbcd2; stroke:#f8d995; stroke-width:6; }
+.battlefield-map__bastion-keep { fill:#4b83af; }
+.battlefield-map__bastion-roof { fill:#215586; stroke:#fbd78b; stroke-width:6; }
+.battlefield-map__bastion-gate { fill:#234674; stroke:#f6d48c; }
+.battlefield-map__bastion-core { fill:#b8f5ff; stroke:#ffdf81; filter:drop-shadow(0 0 17px #a6f4ff); }
+.battlefield-map__enemy circle { filter:drop-shadow(0 7px 3px #284c6580); }
+.battlefield-map__enemy--runner circle { fill:#eaa04f; stroke:#fff0a1; }
+.battlefield-map__enemy--tank circle { fill:#57657b; stroke:#d6cbac; }
+.battlefield-map__enemy--armored circle { fill:#697d9a; stroke:#f3d18d; }
+.battlefield-map__enemy--shielded circle { fill:#3e9fae; stroke:#b4f6ff; }
+.battlefield-map__enemy--flying circle { fill:#9377ba; stroke:#f1d5ff; }
+.enemy-status__hp-fill { fill:#f05c5a; }
+.enemy-status__shield-fill { fill:#7fe9ff; }
+.run-hud,.run-sidebar { border:1px solid #f6d58d; background:linear-gradient(135deg,rgba(28,75,120,.96),rgba(17,47,84,.96)); box-shadow:inset 0 1px #ffffff44,0 9px 28px #17375755; }
+.run-hud strong,.run-sidebar strong { color:#fff5d7; }
+.run-exit,.run-sidebar button,.mode-card,.pre-run-start,.results-actions button { border-color:#eac982; box-shadow:inset 0 1px #ffffff44,0 5px 12px #17375755; }
+.run-exit { background:#245486; color:#fff5d7; }
+.run-sidebar > button:not(.run-wave),.run-wave { background:linear-gradient(#397bb1,#1d4e80); color:#fff5d7; }
+.tower-card--archer { border-color:#83d39b; }
+.tower-card--cannon { border-color:#f8b77c; }
+.tower-card--frost { border-color:#a4ebff; }
+.tower-card--mage { border-color:#dcb4ff; }
+.tower-card--ballista { border-color:#f4d994; }
+.tower-card--barracks { border-color:#a9c8ed; }
+.tower-card--selected { outline-color:#ffe99e; box-shadow:0 0 18px #ffe99e88,inset 0 1px #ffffff88; }
+.results-hero { background:radial-gradient(circle at 50% 10%,#679ac5,#225386 75%); }
+:where(button,a):focus-visible { outline:3px solid #ffdc7a; outline-offset:3px; }
+@media (prefers-reduced-motion:reduce) { .mode-card:hover,.pre-run-start:hover,.results-actions button:hover { transform:none; } }
