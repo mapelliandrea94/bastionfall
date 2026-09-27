@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { eliminateLastBastionParticipant, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { eliminateLastBastionParticipant, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -150,6 +150,39 @@ function attachLastBastionMatchToken(result, userId) {
   };
 }
 
+async function hydratePersistentLastBastionQueue(req) {
+  const serverDb = clientForToken(req.accessToken, {
+    'x-bastionfall-server-secret': matchTokenSecret
+  });
+  const { data, error } = await serverDb
+    .from('last_bastion_queue')
+    .select('user_id,ticket_id,joined_at,ready')
+    .order('joined_at', { ascending: true });
+
+  if (error) {
+    console.error('Last Bastion queue hydrate failed:', error.message);
+    return { ok: false, error: 'queue_persistence_read_failed', serverDb };
+  }
+
+  hydrateLastBastionQueue(data || []);
+  return { ok: true, serverDb };
+}
+
+async function persistLastBastionQueueTicket(serverDb, ticket) {
+  if (!ticket) return { ok: true };
+  const { error } = await serverDb
+    .from('last_bastion_queue')
+    .upsert({
+      user_id: ticket.userId,
+      ticket_id: ticket.ticketId,
+      joined_at: ticket.joinedAt,
+      ready: Boolean(ticket.ready),
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' });
+
+  return error ? { ok: false, error } : { ok: true };
+}
+
 app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowMs: 10000, max: 6 }), (req, res) => {
   if (!matchTokenSecret) {
     return res.status(503).json({ error: 'match_identity_not_configured' });
@@ -184,23 +217,72 @@ app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowM
   });
 });
 
-app.post('/api/last-bastion/matchmaking/join', requireUser, rateLimitUser('lb-join', { windowMs: 10000, max: 8 }), (req, res) => {
+app.post('/api/last-bastion/matchmaking/join', requireUser, rateLimitUser('lb-join', { windowMs: 10000, max: 8 }), async (req, res) => {
+  const hydrated = await hydratePersistentLastBastionQueue(req);
+  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+
   const result = joinLastBastionQueue(req.user.id);
   if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_join_failed' });
+
+  const persisted = await persistLastBastionQueueTicket(hydrated.serverDb, result.ticket);
+  if (!persisted.ok) {
+    console.error('Last Bastion queue join persistence failed:', persisted.error.message);
+    return res.status(500).json({ error: 'queue_persistence_write_failed' });
+  }
+
   return res.status(result.created ? 201 : 200).json(result);
 });
 
-app.post('/api/last-bastion/matchmaking/leave', requireUser, rateLimitUser('lb-leave', { windowMs: 10000, max: 8 }), (req, res) => {
-  return res.json(leaveLastBastionQueue(req.user.id));
+app.post('/api/last-bastion/matchmaking/leave', requireUser, rateLimitUser('lb-leave', { windowMs: 10000, max: 8 }), async (req, res) => {
+  const hydrated = await hydratePersistentLastBastionQueue(req);
+  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+
+  const result = leaveLastBastionQueue(req.user.id);
+  if (!result.ok) return res.status(409).json({ error: result.error });
+
+  const { error } = await hydrated.serverDb
+    .from('last_bastion_queue')
+    .delete()
+    .eq('user_id', req.user.id);
+
+  if (error) {
+    console.error('Last Bastion queue leave persistence failed:', error.message);
+    return res.status(500).json({ error: 'queue_persistence_write_failed' });
+  }
+
+  return res.json(result);
 });
 
-app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-ready', { windowMs: 10000, max: 10 }), (req, res) => {
+app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-ready', { windowMs: 10000, max: 10 }), async (req, res) => {
+  const hydrated = await hydratePersistentLastBastionQueue(req);
+  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+
   const result = setLastBastionReady(req.user.id, req.body?.ready !== false);
   if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_ready_failed' });
+
+  if (result.matched && result.match) {
+    const participantIds = (result.match.participants || [])
+      .map((participant) => participant.self ? req.user.id : null)
+      .filter(Boolean);
+    const { error } = await hydrated.serverDb
+      .from('last_bastion_queue')
+      .delete()
+      .in('user_id', participantIds.length ? participantIds : [req.user.id]);
+    if (error) console.error('Last Bastion matched queue cleanup failed:', error.message);
+  } else {
+    const persisted = await persistLastBastionQueueTicket(hydrated.serverDb, result.ticket);
+    if (!persisted.ok) {
+      console.error('Last Bastion ready persistence failed:', persisted.error.message);
+      return res.status(500).json({ error: 'queue_persistence_write_failed' });
+    }
+  }
+
   return res.json(attachLastBastionMatchToken(result, req.user.id));
 });
 
-app.get('/api/last-bastion/matchmaking/status', requireUser, (req, res) => {
+app.get('/api/last-bastion/matchmaking/status', requireUser, async (req, res) => {
+  const hydrated = await hydratePersistentLastBastionQueue(req);
+  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
   return res.json(attachLastBastionMatchToken(getLastBastionQueueStatus(req.user.id), req.user.id));
 });
 
