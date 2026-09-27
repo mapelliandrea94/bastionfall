@@ -5,6 +5,7 @@ import { normalizeRunSeed } from './lib/runSeed.js';
 import { SINGLE_GATE_MAP, getSingleGatePathForWalls } from './game/maps/singleGate.js';
 import { TRI_GATE_MAP, getTriGateMapFixtures } from './game/maps/triGate.js';
 import { TRI_GATE_SPAWN, getTriGateSpawnFixtures } from './game/spawning/triGateSpawn.js';
+import { WAVE_DIRECTOR, generateWavePlan, getWaveDirectorFixtures } from './game/spawning/waveDirector.js';
 import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
@@ -59,7 +60,7 @@ import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/ru
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
 import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
-import { ENEMY_ROSTER, getEnemyRosterFixtures } from './game/enemies/enemyRoster.js';
+import { ENEMY_ROSTER, createRosterEnemyState, getEnemyRosterFixtures } from './game/enemies/enemyRoster.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
@@ -154,6 +155,7 @@ const COUNTERPLAY_FIXTURE = Object.freeze(getCounterplayFixtures());
 const FACTION_COUNTER_FIXTURE = Object.freeze(getFactionCounterFixtures());
 
 const THREAT_MODEL_FIXTURE = Object.freeze(getThreatModelFixtures());
+const WAVE_DIRECTOR_FIXTURE = Object.freeze(getWaveDirectorFixtures());
 
 const DIFFICULTY_BAND_FIXTURE = Object.freeze(getDifficultyBandFixtures());
 
@@ -834,10 +836,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const activeWorldModifiers = getActiveWorldModifiers(run?.seed ?? 'run', waveScaling.waveNumber);
   const tftShopOffers = createTftShopOffers(run?.seed ?? 'run', tftRollIndex);
   const worldModifierEffects = getWorldModifierEffects(activeWorldModifiers);
-  const threatWave = composeWaveByThreatBudget(
-    waveScaling.waveNumber,
-    (run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1) * worldModifierEffects.threatMultiplier
-  );
+  const threatWave = generateWavePlan({
+    seed: run?.seed ?? 'run',
+    waveNumber: waveScaling.waveNumber,
+    mode: run?.mode ?? MODES.SINGLE_GATE,
+    budgetMultiplier:
+      (run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1) *
+      worldModifierEffects.threatMultiplier
+  });
   const runScore = calculateRunScore(run ?? {});
   const activePath = getSingleGatePathForWalls(activeWallIds);
   const basePathLength = getPathLength(SINGLE_GATE_MAP.path.waypoints);
@@ -920,9 +926,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     queuedWaveRef.current = run?.wave;
     setSpawnQueue(
       threatWave.composition.map((enemy, index) => attachEliteModifierFoundation({
-        id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`,
-        archetype: enemy.archetype,
-        threatValue: enemy.threatValue
+        ...enemy,
+        id: `wave-${waveScaling.waveNumber}-enemy-${index + 1}`
       }, {
         seed: run?.seed ?? 'run',
         waveNumber: waveScaling.waveNumber,
@@ -956,17 +961,23 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       setSpawnQueue((current) => {
         if (current.length === 0) return current;
         const [nextEnemy, ...remaining] = current;
-        const baseEnemyState = nextEnemy.archetype === FLYING_ENEMY.archetype
-          ? createFlyingEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
-          : nextEnemy.archetype === SHIELDED_ENEMY.archetype
-            ? createShieldedEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
-            : nextEnemy.archetype === ARMORED_ENEMY.archetype
-              ? createArmoredEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
-              : nextEnemy.archetype === TANK_ENEMY.archetype
-                ? createTankEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
-                : nextEnemy.archetype === RUNNER_ENEMY.archetype
-                  ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
-                  : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() });
+        const baseEnemyState = nextEnemy.rosterId
+          ? createRosterEnemyState(nextEnemy.rosterId, {
+              ...nextEnemy,
+              progress: 0,
+              spawnedAt: performance.now()
+            })
+          : nextEnemy.archetype === FLYING_ENEMY.archetype
+            ? createFlyingEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+            : nextEnemy.archetype === SHIELDED_ENEMY.archetype
+              ? createShieldedEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+              : nextEnemy.archetype === ARMORED_ENEMY.archetype
+                ? createArmoredEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+                : nextEnemy.archetype === TANK_ENEMY.archetype
+                  ? createTankEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+                  : nextEnemy.archetype === RUNNER_ENEMY.archetype
+                    ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+                    : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() });
 
         setActiveEnemies((active) => [...active, applyEliteModifiers(baseEnemyState)]);
         return remaining;
