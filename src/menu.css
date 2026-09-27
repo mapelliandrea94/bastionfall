@@ -2065,3 +2065,16 @@ button { font: inherit; }
   transform-box: fill-box;
   transform-origin: center;
 }
+
+
+/* BATCH 49 — Shielded enemy archetype */
+.battlefield-map__enemy--shielded circle {
+  stroke-width: 5;
+  stroke-dasharray: 12 4;
+}
+
+.battlefield-map__enemy--shielded path {
+  transform: scale(.96);
+  transform-box: fill-box;
+  transform-origin: center;
+}
