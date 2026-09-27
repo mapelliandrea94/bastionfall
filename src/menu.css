@@ -2310,6 +2310,24 @@ body { background:#1c3f61; }
 
 
 /* HOTFIX — individual tower slots */
+.battlefield-map {
+  pointer-events: auto;
+}
+
+.battlefield-map__scenery,
+.battlefield-map__path,
+.battlefield-map__spawn,
+.battlefield-map__enemy,
+.battlefield-map__bastion,
+.battlefield-map__label {
+  pointer-events: none;
+}
+
+.battlefield-map__build-slots,
+.battlefield-map__tower-slot {
+  pointer-events: auto;
+}
+
 .battlefield-map__tower-slot {
   cursor: pointer;
   outline: none;
