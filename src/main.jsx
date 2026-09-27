@@ -626,6 +626,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick }) {
             preserveAspectRatio="xMidYMid meet"
             aria-label="Single Gate battlefield"
           >
+            <defs>
+              <linearGradient id="bf-river" x2="0" y2="1"><stop stopColor="#d2faff"/><stop offset=".5" stopColor="#42b9da"/><stop offset="1" stopColor="#177dbe"/></linearGradient>
+              <linearGradient id="bf-cliff" x2="0" y2="1"><stop stopColor="#e7d7af"/><stop offset=".22" stopColor="#a2a793"/><stop offset="1" stopColor="#4c7377"/></linearGradient>
+              <linearGradient id="bf-path" x2="0" y2="1"><stop stopColor="#e5d5aa"/><stop offset="1" stopColor="#b6a37d"/></linearGradient>
+            </defs>
+            <g className="battlefield-map__scenery" aria-hidden="true">
+              <path className="battlefield-map__cliff" d="M0 0H1600V92Q1410 135 1280 84T940 104Q780 154 630 100T280 115Q110 80 0 132Z M0 805Q170 764 310 815T680 795Q820 747 1000 813T1350 792Q1500 760 1600 812V900H0Z" />
+              <path className="battlefield-map__river" d="M390 0Q510 76 470 142T500 275M1070 900Q1020 820 1060 740T1030 660" />
+              <path className="battlefield-map__waterfall" d="M407 3Q440 82 435 142M1080 898Q1043 832 1078 770" />
+              {[ [95,150],[730,85],[1280,130],[145,740],[695,805],[1390,750] ].map(([x,y]) => <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}><path className="battlefield-map__pine-shadow" d="M-33 19H34L0-72Z"/><path className="battlefield-map__pine" d="M0-82L-20-35H-12L-30 5H-21L-38 25H38L21 5H30L12-35H20Z"/><path className="battlefield-map__pine-light" d="M0-82L-20-35H-12L-30 5H-21L-38 25H0Z"/></g>)}
+              {[ [270,125],[905,116],[400,755],[1230,796] ].map(([x,y]) => <path key={`${x}-${y}`} className="battlefield-map__crystal" d={`M${x} ${y-35}l18 27-18 25-18-25Z`}/>)}
+            </g>
             {SINGLE_GATE_MAP.buildZones.zones.map((zone) => (
               <rect
                 key={zone.id}
