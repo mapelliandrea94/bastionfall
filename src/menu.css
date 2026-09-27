@@ -3923,3 +3923,12 @@ button:focus-visible,
   .battlefield-map { top: 0; bottom: 0; left: 0; right: 330px; width: calc(100% - 330px); height: 100%; }
   .run-screen:has(.run-sidebar--tft) .battlefield-map { right: 455px; width: calc(100% - 455px); }
 }
+@media (min-width: 1501px) {
+  .run-screen:has(.run-sidebar--tft) .battlefield-map { right: 635px; width: calc(100% - 635px); }
+}
+@media (min-width: 901px) and (max-width: 1500px) {
+  .run-screen .run-sidebar--tft { width: 440px; }
+  .run-sidebar--tft .tft-shop-layout { display: flex; flex-direction: column; }
+  .run-sidebar--tft .tft-shop-layout > * { width: 100%; }
+  .run-sidebar--tft .tft-bench { order: -1; margin-bottom: .6rem; }
+}
