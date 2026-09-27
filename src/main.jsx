@@ -10,6 +10,7 @@ import { MAGE_TOWER } from './game/towers/mage.js';
 import { BALLISTA_TOWER } from './game/towers/ballista.js';
 import { BARRACKS } from './game/structures/barracks.js';
 import { COMBAT_BALANCE_MODEL, COMBAT_BALANCE_SNAPSHOT } from './game/balance/combatBalance.js';
+import { getPlacementValidationFixtures, validateSingleGatePlacement } from './game/placement/singleGatePlacement.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -61,6 +62,14 @@ const MODE_PRE_RUN = Object.freeze({
 
 const COMBAT_BALANCE_BY_ID = Object.freeze(
   Object.fromEntries(COMBAT_BALANCE_SNAPSHOT.map((entry) => [entry.id, entry]))
+);
+
+const PLACEMENT_VALIDATION_SNAPSHOT = Object.freeze(
+  getPlacementValidationFixtures().map((fixture) => ({
+    id: fixture.id,
+    expected: fixture.expectValid,
+    actual: validateSingleGatePlacement(fixture.point).valid
+  }))
 );
 
 const RUN_PHASES = Object.freeze({
@@ -480,6 +489,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-mage-power={COMBAT_BALANCE_BY_ID.mage?.powerIndex}
             data-ballista-power={COMBAT_BALANCE_BY_ID.ballista?.powerIndex}
             data-barracks-power={COMBAT_BALANCE_BY_ID.barracks?.powerIndex}
+            data-placement-validations={PLACEMENT_VALIDATION_SNAPSHOT.length}
+            data-placement-validation-pass={PLACEMENT_VALIDATION_SNAPSHOT.every((entry) => entry.expected === entry.actual)}
           >
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
