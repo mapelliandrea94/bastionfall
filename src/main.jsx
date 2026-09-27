@@ -133,14 +133,12 @@ function canTransitionWavePhase(from, to) {
 
 function getWaveScaling(completedWaves) {
   const waveNumber = Math.max(1, completedWaves + 1);
-  const enemyCount = 3 + Math.floor((waveNumber - 1) * 0.75);
   const travelDurationMs = Math.max(3000, 7000 - (waveNumber - 1) * 140);
   const spawnIntervalMs = Math.max(350, 900 - (waveNumber - 1) * 20);
   const bastionDamage = 1 + Math.floor((waveNumber - 1) / 10);
 
   return {
     waveNumber,
-    enemyCount,
     travelDurationMs,
     spawnIntervalMs,
     bastionDamage
@@ -739,7 +737,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
               <strong>WAVE {waveScaling.waveNumber}</strong>
             </div>
             <div className="run-wave-preview__grid">
-              <div><span>ENEMIES</span><strong>{waveScaling.enemyCount}</strong></div>
+              <div><span>ENEMIES</span><strong>{threatWave.enemyCount}</strong></div>
               <div><span>TRAVEL</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
               <div><span>SPAWN</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
               <div><span>CORE DMG</span><strong>{waveScaling.bastionDamage}</strong></div>
