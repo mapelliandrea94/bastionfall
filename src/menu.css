@@ -1296,3 +1296,57 @@ button { font: inherit; }
     margin-top: 8px;
   }
 }
+
+
+/* BATCH 13 — how to play */
+.how-to-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.how-to-card {
+  min-height: 170px;
+  padding: 18px;
+  display: grid;
+  align-content: center;
+  gap: 9px;
+  text-align: left;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.025);
+}
+
+.how-to-card > span {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  color: #d7b66a;
+}
+
+.how-to-card strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+  color: #f5e8c4;
+}
+
+.how-to-card small {
+  color: #8f9aa5;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .how-to-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .how-to-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .how-to-card {
+    min-height: 140px;
+  }
+}
