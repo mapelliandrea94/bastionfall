@@ -15,6 +15,7 @@ import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
 import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getWaveClearReward } from './game/economy/economyBaseline.js';
 import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOpportunityCost } from './game/structures/goldMine.js';
 import { WAR_FORGE, applyWarForgePreview, getWarForgeFixtures } from './game/structures/warForge.js';
+import { GUARDIAN_SHRINE, applyGuardianShrineRangePreview, applyGuardianShrineToBastionDamage, getGuardianShrineFixtures } from './game/structures/guardianShrine.js';
 import { UPGRADE_CURVE, getNextUpgradePreview } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
@@ -144,6 +145,10 @@ const GOLD_MINE_FIXTURE = Object.freeze(getGoldMineFixtures([
 
 const WAR_FORGE_FIXTURE = Object.freeze(getWarForgeFixtures(ARCHER_TOWER));
 const WAR_FORGE_ARCHER_PREVIEW = Object.freeze(applyWarForgePreview(ARCHER_TOWER, WAR_FORGE.auraRadius));
+
+const GUARDIAN_SHRINE_FIXTURE = Object.freeze(getGuardianShrineFixtures(ARCHER_TOWER));
+const GUARDIAN_SHRINE_RANGE_PREVIEW = Object.freeze(applyGuardianShrineRangePreview(ARCHER_TOWER, GUARDIAN_SHRINE.auraRadius));
+const GUARDIAN_SHRINE_DAMAGE_PREVIEW = Object.freeze(applyGuardianShrineToBastionDamage(10, GUARDIAN_SHRINE.auraRadius));
 
 const RUN_PHASES = Object.freeze({
   PREPARATION: 'preparation',
@@ -665,6 +670,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             data-war-forge-speed-multiplier={WAR_FORGE.attackSpeedMultiplier}
             data-war-forge-archer-dps={WAR_FORGE_ARCHER_PREVIEW.modifiedDps}
             data-war-forge-pass={WAR_FORGE_FIXTURE.activeExpected === WAR_FORGE_FIXTURE.activeActual && WAR_FORGE_FIXTURE.inactiveExpected === WAR_FORGE_FIXTURE.inactiveActual && WAR_FORGE_FIXTURE.damageBoosted === true && WAR_FORGE_FIXTURE.intervalReduced === true}
+            data-guardian-shrine-cost={GUARDIAN_SHRINE.cost}
+            data-guardian-shrine-radius={GUARDIAN_SHRINE.auraRadius}
+            data-guardian-shrine-damage-reduction={GUARDIAN_SHRINE.bastionDamageReduction}
+            data-guardian-shrine-range-multiplier={GUARDIAN_SHRINE.nearbyDefenseRangeMultiplier}
+            data-guardian-shrine-preview-damage={GUARDIAN_SHRINE_DAMAGE_PREVIEW.finalDamage}
+            data-guardian-shrine-preview-range={GUARDIAN_SHRINE_RANGE_PREVIEW.modifiedRange}
+            data-guardian-shrine-pass={GUARDIAN_SHRINE_FIXTURE.activeExpected === GUARDIAN_SHRINE_FIXTURE.activeActual && GUARDIAN_SHRINE_FIXTURE.mitigatedExpected === GUARDIAN_SHRINE_FIXTURE.mitigatedActual && GUARDIAN_SHRINE_FIXTURE.outOfRangeExpected === GUARDIAN_SHRINE_FIXTURE.outOfRangeActual && GUARDIAN_SHRINE_FIXTURE.rangeIncreased === true}
             data-enemy-base-version={ENEMY_BASE_MODEL.version}
             data-enemy-base-pass={ENEMY_BASE_FIXTURE.shieldExpected === ENEMY_BASE_FIXTURE.shieldActual && ENEMY_BASE_FIXTURE.hpExpected === ENEMY_BASE_FIXTURE.hpActual && ENEMY_BASE_FIXTURE.slowedSpeedExpected === ENEMY_BASE_FIXTURE.slowedSpeedActual && ENEMY_BASE_FIXTURE.expiredSlowSpeedExpected === ENEMY_BASE_FIXTURE.expiredSlowSpeedActual}
             data-normal-enemy={NORMAL_ENEMY.name}
