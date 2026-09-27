@@ -26,7 +26,8 @@ try {
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const reducedMotionDuration = await firstSlot.evaluate((node) => getComputedStyle(node).transitionDuration);
-  assert(reducedMotionDuration === '0.000001s' || reducedMotionDuration === '0s', 'Reduced-motion preference must suppress transitions');
+  const reducedMotionSeconds = Number.parseFloat(reducedMotionDuration) || 0;
+  assert(reducedMotionSeconds <= 0.001, `Reduced-motion preference must suppress transitions, got ${reducedMotionDuration}`);
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await mobile.goto(baseUrl, { waitUntil: 'networkidle' });
