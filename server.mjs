@@ -12,7 +12,52 @@ const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 const matchTokenSecret = process.env.MATCH_TOKEN_SECRET || '';
 
-app.use(express.json({ limit: '64kb' }));
+app.disable('x-powered-by');
+app.use(express.json({ limit: '32kb', strict: true }));
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  next();
+});
+
+const abuseBuckets = new Map();
+const consumedMatchCompletions = new Map();
+const ABUSE_BUCKET_TTL_MS = 10 * 60 * 1000;
+const COMPLETION_REPLAY_TTL_MS = 25 * 60 * 60 * 1000;
+
+function pruneTimedMap(map, nowMs, ttlMs) {
+  for (const [key, value] of map) {
+    const touchedAtMs = Number(value?.touchedAtMs ?? value ?? 0);
+    if (!Number.isFinite(touchedAtMs) || nowMs - touchedAtMs > ttlMs) map.delete(key);
+  }
+}
+
+function rateLimitUser(action, { windowMs, max }) {
+  return (req, res, next) => {
+    const userId = String(req.user?.id || '');
+    if (!userId) return res.status(401).json({ error: 'invalid_user' });
+
+    const nowMs = Date.now();
+    pruneTimedMap(abuseBuckets, nowMs, ABUSE_BUCKET_TTL_MS);
+    const key = action + ':' + userId;
+    const current = abuseBuckets.get(key);
+    const fresh = !current || nowMs - current.windowStartedAtMs >= windowMs;
+    const bucket = fresh
+      ? { windowStartedAtMs: nowMs, count: 0, touchedAtMs: nowMs }
+      : current;
+
+    bucket.count += 1;
+    bucket.touchedAtMs = nowMs;
+    abuseBuckets.set(key, bucket);
+
+    if (bucket.count > max) {
+      res.setHeader('Retry-After', String(Math.max(1, Math.ceil((windowMs - (nowMs - bucket.windowStartedAtMs)) / 1000))));
+      return res.status(429).json({ error: 'rate_limited' });
+    }
+    next();
+  };
+}
 
 function encodeBase64Url(value) {
   return Buffer.from(value).toString('base64url');
@@ -105,7 +150,7 @@ function attachLastBastionMatchToken(result, userId) {
   };
 }
 
-app.post('/api/match/start', requireUser, (req, res) => {
+app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowMs: 10000, max: 6 }), (req, res) => {
   if (!matchTokenSecret) {
     return res.status(503).json({ error: 'match_identity_not_configured' });
   }
@@ -139,17 +184,17 @@ app.post('/api/match/start', requireUser, (req, res) => {
   });
 });
 
-app.post('/api/last-bastion/matchmaking/join', requireUser, (req, res) => {
+app.post('/api/last-bastion/matchmaking/join', requireUser, rateLimitUser('lb-join', { windowMs: 10000, max: 8 }), (req, res) => {
   const result = joinLastBastionQueue(req.user.id);
   if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_join_failed' });
   return res.status(result.created ? 201 : 200).json(result);
 });
 
-app.post('/api/last-bastion/matchmaking/leave', requireUser, (req, res) => {
+app.post('/api/last-bastion/matchmaking/leave', requireUser, rateLimitUser('lb-leave', { windowMs: 10000, max: 8 }), (req, res) => {
   return res.json(leaveLastBastionQueue(req.user.id));
 });
 
-app.post('/api/last-bastion/matchmaking/ready', requireUser, (req, res) => {
+app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-ready', { windowMs: 10000, max: 10 }), (req, res) => {
   const result = setLastBastionReady(req.user.id, req.body?.ready !== false);
   if (!result.ok) return res.status(400).json({ error: result.error || 'matchmaking_ready_failed' });
   return res.json(attachLastBastionMatchToken(result, req.user.id));
@@ -195,7 +240,7 @@ app.get('/api/last-bastion/match/status', requireUser, (req, res) => {
   return res.json(result);
 });
 
-app.post('/api/last-bastion/match/eliminate', requireUser, (req, res) => {
+app.post('/api/last-bastion/match/eliminate', requireUser, rateLimitUser('lb-eliminate', { windowMs: 10000, max: 6 }), (req, res) => {
   const matchToken = String(req.body?.matchToken || '');
   const identity = verifyMatchIdentity(matchToken);
   if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
@@ -342,11 +387,18 @@ app.get('/api/leaderboards/:mode', requireUser, async (req, res) => {
   });
 });
 
-app.post('/api/run/complete', requireUser, async (req, res) => {
+app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windowMs: 30000, max: 5 }), async (req, res) => {
   const matchToken = String(req.body?.matchToken || '');
   const identity = verifyMatchIdentity(matchToken);
   if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
   if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
+
+  const completionKey = identity.matchId + ':' + req.user.id;
+  const completionNowMs = Date.now();
+  pruneTimedMap(consumedMatchCompletions, completionNowMs, COMPLETION_REPLAY_TTL_MS);
+  if (consumedMatchCompletions.has(completionKey)) {
+    return res.status(409).json({ error: 'completion_replay' });
+  }
 
   const mode = String(req.body?.mode || '').trim();
   if (!STARTABLE_MODES.has(mode) || identity.mode !== mode) {
@@ -502,6 +554,8 @@ app.post('/api/run/complete', requireUser, async (req, res) => {
     .single();
 
   if (saved.error) return res.status(500).json({ error: 'progress_save_failed' });
+
+  consumedMatchCompletions.set(completionKey, { touchedAtMs: Date.now() });
 
   res.json({
     accepted: true,
