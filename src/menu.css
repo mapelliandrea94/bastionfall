@@ -3803,3 +3803,49 @@ button:focus-visible,
     height: 64px;
   }
 }
+
+
+/* HOTFIX — compact TFT setup + wave controls below Bench */
+.tft-wave-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .5rem;
+  margin-top: .15rem;
+}
+
+.run-sidebar--tft .tft-wave-controls button {
+  min-height: 54px;
+  margin: 0;
+  padding: .52rem .55rem;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  border: 1px solid rgba(235, 203, 119, .65);
+  background: linear-gradient(180deg, rgba(51, 113, 163, .96), rgba(24, 67, 108, .98));
+  color: #fff5d7;
+  font-weight: 950;
+  letter-spacing: .045em;
+}
+
+.run-sidebar--tft .tft-wave-controls button small {
+  font-size: .56rem;
+  color: rgba(255, 245, 215, .68);
+  letter-spacing: .02em;
+}
+
+.run-sidebar--tft .tft-confirm-setup--active {
+  border-color: rgba(166, 226, 149, .88);
+  box-shadow: inset 0 0 0 1px rgba(166, 226, 149, .16), 0 0 14px rgba(166, 226, 149, .12);
+}
+
+.run-sidebar--tft .tft-wave-controls button:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .tft-wave-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+}
