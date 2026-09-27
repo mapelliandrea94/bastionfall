@@ -120,13 +120,60 @@ app.post('/api/match/start', requireUser, (req, res) => {
 });
 
 app.get('/api/profile', requireUser, async (req, res) => {
-  const { data, error } = await req.db.from('profiles').select('*').eq('user_id', req.user.id).maybeSingle();
-  if (error) return res.status(500).json({ error: 'profile_read_failed' });
-  if (data) return res.json({ profile: data });
-  const fresh = { user_id: req.user.id, display_name: req.user.user_metadata?.full_name || 'Defender' };
-  const created = await req.db.from('profiles').insert(fresh).select('*').single();
-  if (created.error) return res.status(500).json({ error: 'profile_create_failed' });
-  res.json({ profile: created.data });
+  const profileRead = await req.db
+    .from('profiles')
+    .select('*')
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (profileRead.error) return res.status(500).json({ error: 'profile_read_failed' });
+
+  let profile = profileRead.data;
+  if (!profile) {
+    const fresh = {
+      user_id: req.user.id,
+      display_name: req.user.user_metadata?.full_name || 'Defender'
+    };
+    const created = await req.db.from('profiles').insert(fresh).select('*').single();
+    if (created.error) return res.status(500).json({ error: 'profile_create_failed' });
+    profile = created.data;
+  }
+
+  const [modeRecordsResult, lastBastionResult] = await Promise.all([
+    req.db
+      .from('mode_records')
+      .select('mode,best_wave,best_survival_ms,best_score,best_kills,updated_at')
+      .order('mode', { ascending: true }),
+    req.db
+      .from('last_bastion_stats')
+      .select('runs,best_wave,best_survival_ms,best_score,lifetime_kills,total_survival_ms,updated_at')
+      .maybeSingle()
+  ]);
+
+  if (modeRecordsResult.error) {
+    return res.status(500).json({ error: 'mode_records_read_failed' });
+  }
+  if (lastBastionResult.error) {
+    return res.status(500).json({ error: 'last_bastion_stats_read_failed' });
+  }
+
+  const byMode = {
+    'single-gate': null,
+    'tri-gate': null,
+    'last-bastion': null
+  };
+
+  for (const record of modeRecordsResult.data || []) {
+    if (Object.prototype.hasOwnProperty.call(byMode, record.mode)) {
+      byMode[record.mode] = record;
+    }
+  }
+
+  return res.json({
+    profile,
+    modes: byMode,
+    lastBastion: lastBastionResult.data || null
+  });
 });
 
 app.post('/api/run/complete', requireUser, async (req, res) => {
