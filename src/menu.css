@@ -2078,3 +2078,24 @@ button { font: inherit; }
   transform-box: fill-box;
   transform-origin: center;
 }
+
+
+/* BATCH 50 — Flying enemy archetype */
+.battlefield-map__enemy--flying {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.battlefield-map__enemy--flying circle {
+  stroke-width: 4;
+  stroke-dasharray: 2 5;
+  transform: translateY(-8px) scale(.9);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.battlefield-map__enemy--flying path {
+  transform: translateY(-10px) scale(.86);
+  transform-box: fill-box;
+  transform-origin: center;
+}
