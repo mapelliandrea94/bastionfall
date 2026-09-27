@@ -1832,7 +1832,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <radialGradient id="bf-meadow"><stop stopColor="#a9ce66"/><stop offset=".7" stopColor="#70a451"/><stop offset="1" stopColor="#416d49"/></radialGradient>
               <pattern id="bf-grass-texture" width="112" height="94" patternUnits="userSpaceOnUse"><path d="M12 25l4-5m2 5 3-6M77 67l3-5m3 5 4-7M51 12l3-4M100 36l4-6" stroke="#d9e5a1" strokeWidth="2" opacity=".43"/><circle cx="38" cy="61" r="2" fill="#f2eac8"/><circle cx="94" cy="14" r="2" fill="#e8d9a0"/></pattern>
             </defs>
-            <image className="battlefield-map__art" href="/assets/maps/bastionfall-field.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
+            <image className="battlefield-map__art" href="/assets/maps/bastionfall-field-v2.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
             <g className="battlefield-map__road" aria-hidden="true">
               <polyline className="battlefield-map__road-edge" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
               <polyline className="battlefield-map__road-sand" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
