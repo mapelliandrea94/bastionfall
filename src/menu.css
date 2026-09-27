@@ -3849,3 +3849,22 @@ button:focus-visible,
     grid-template-columns: 1fr 1fr;
   }
 }
+
+
+/* HOTFIX — destructible wall durability */
+.wall-slot__hp-bg {
+  fill: rgba(30, 21, 15, .82);
+  stroke: rgba(255,255,255,.18);
+  stroke-width: 1;
+}
+.wall-slot__hp-fill {
+  fill: #f2cf67;
+}
+.wall-slot__hp-text {
+  fill: #fff1b4;
+  font-size: 11px;
+  font-weight: 950;
+  paint-order: stroke;
+  stroke: rgba(32, 22, 15, .95);
+  stroke-width: 3px;
+}
