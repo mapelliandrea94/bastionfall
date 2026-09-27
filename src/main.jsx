@@ -118,28 +118,27 @@ function SoloPreRun({ onBack, onStart }) {
 function SoloRun({ onExit }) {
   return (
     <main className="run-screen">
-      <header className="run-hud">
-        <div>
-          <span className="run-hud__label">MODE</span>
-          <strong>SOLO ENDLESS</strong>
-        </div>
-        <div>
-          <span className="run-hud__label">WAVE</span>
-          <strong>0</strong>
-        </div>
-        <div>
-          <span className="run-hud__label">GOLD</span>
-          <strong>240</strong>
-        </div>
-        <div>
-          <span className="run-hud__label">CORE</span>
-          <strong>20 / 20</strong>
-        </div>
-        <button className="run-exit" onClick={onExit}>EXIT RUN</button>
-      </header>
-
       <section className="run-layout">
         <div className="battlefield">
+          <header className="run-hud">
+            <div>
+              <span className="run-hud__label">MODE</span>
+              <strong>SOLO ENDLESS</strong>
+            </div>
+            <div>
+              <span className="run-hud__label">WAVE</span>
+              <strong>0</strong>
+            </div>
+            <div>
+              <span className="run-hud__label">GOLD</span>
+              <strong>240</strong>
+            </div>
+            <div>
+              <span className="run-hud__label">CORE</span>
+              <strong>20 / 20</strong>
+            </div>
+            <button className="run-exit" onClick={onExit}>EXIT RUN</button>
+          </header>
           <div className="battlefield__lane battlefield__lane--a" />
           <div className="battlefield__lane battlefield__lane--b" />
           <div className="battlefield__spawn">SPAWN</div>
