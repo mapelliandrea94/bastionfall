@@ -223,9 +223,11 @@ function ModePreRun({ mode, onBack, onStart }) {
 
 
 function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
-  const [testEnemy, setTestEnemy] = useState(null);
+  const [spawnQueue, setSpawnQueue] = useState([]);
+  const [activeEnemies, setActiveEnemies] = useState([]);
   const [preparationRemaining, setPreparationRemaining] = useState(RUN_DEFAULTS.preparationSeconds);
   const animationFrameRef = useRef(null);
+  const queuedWaveRef = useRef(null);
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
     ? 'battlefield-map__bastion--critical'
@@ -253,20 +255,58 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
   }, [run?.phase, run?.wave]);
 
   useEffect(() => {
-    if (!testEnemy || run?.phase === RUN_PHASES.ENDED) return undefined;
+    if (run?.phase !== RUN_PHASES.ACTIVE || queuedWaveRef.current === run?.wave) return;
 
-    const startedAt = performance.now();
+    const waveNumber = (run?.wave ?? 0) + 1;
+    queuedWaveRef.current = run?.wave;
+    setSpawnQueue([
+      { id: `wave-${waveNumber}-enemy-1` },
+      { id: `wave-${waveNumber}-enemy-2` },
+      { id: `wave-${waveNumber}-enemy-3` }
+    ]);
+  }, [run?.phase, run?.wave]);
+
+  useEffect(() => {
+    if (run?.phase !== RUN_PHASES.ACTIVE || spawnQueue.length === 0) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      setSpawnQueue((current) => {
+        if (current.length === 0) return current;
+        const [nextEnemy, ...remaining] = current;
+        setActiveEnemies((active) => [
+          ...active,
+          { ...nextEnemy, progress: 0, spawnedAt: performance.now() }
+        ]);
+        return remaining;
+      });
+    }, activeEnemies.length === 0 ? 150 : 900);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [run?.phase, spawnQueue.length, activeEnemies.length]);
+
+  useEffect(() => {
+    if (activeEnemies.length === 0 || run?.phase === RUN_PHASES.ENDED) return undefined;
+
     const durationMs = 7000;
 
     const tick = (now) => {
-      const progress = Math.min(1, (now - startedAt) / durationMs);
-      setTestEnemy((current) => current ? { ...current, progress } : current);
+      let reachedBastion = 0;
 
-      if (progress >= 1) {
-        setTestEnemy(null);
-        onDamageBastion(1);
-        onPhaseChange(RUN_PHASES.RESOLVING);
-        return;
+      setActiveEnemies((current) => current
+        .map((enemy) => ({
+          ...enemy,
+          progress: Math.min(1, (now - enemy.spawnedAt) / durationMs)
+        }))
+        .filter((enemy) => {
+          if (enemy.progress >= 1) {
+            reachedBastion += 1;
+            return false;
+          }
+          return true;
+        }));
+
+      if (reachedBastion > 0) {
+        onDamageBastion(reachedBastion);
       }
 
       animationFrameRef.current = requestAnimationFrame(tick);
@@ -277,11 +317,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [testEnemy?.id, run?.phase]);
+  }, [activeEnemies.length, run?.phase]);
 
-  const enemyPosition = testEnemy
-    ? getPathPosition(SINGLE_GATE_MAP.path.waypoints, testEnemy.progress)
-    : null;
+  const positionedEnemies = activeEnemies.map((enemy) => ({
+    ...enemy,
+    position: getPathPosition(SINGLE_GATE_MAP.path.waypoints, enemy.progress)
+  }));
 
 
   return (
@@ -334,16 +375,17 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
               cy={SINGLE_GATE_MAP.anchors.enemySpawn.y}
               r="42"
             />
-            {enemyPosition && (
+            {positionedEnemies.map((enemy) => (
               <g
+                key={enemy.id}
                 className="battlefield-map__enemy"
-                transform={`translate(${enemyPosition.x} ${enemyPosition.y})`}
-                aria-label="Test enemy"
+                transform={`translate(${enemy.position.x} ${enemy.position.y})`}
+                aria-label="Queued enemy"
               >
                 <circle r="24" />
                 <path d="M -10 -5 L 0 -18 L 10 -5 L 8 14 L -8 14 Z" />
               </g>
-            )}
+            ))}
             <g
               className={`battlefield-map__bastion ${bastionStateClass}`}
               transform={`translate(${SINGLE_GATE_MAP.anchors.bastion.x} ${SINGLE_GATE_MAP.anchors.bastion.y})`}
@@ -415,14 +457,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
             <small>Skip the preparation countdown</small>
           </button>
 
-          <button
-            className="run-spawn-test"
-            onClick={() => setTestEnemy({ id: Date.now(), progress: 0 })}
-            disabled={!run || run.coreHp <= 0 || Boolean(testEnemy) || run.phase !== RUN_PHASES.ACTIVE}
-          >
-            SPAWN TEST ENEMY
-            <small>QA movement control while Active</small>
-          </button>
+          <div className="run-queue-status">
+            <span>QUEUE</span>
+            <strong>{spawnQueue.length} pending · {activeEnemies.length} active</strong>
+          </div>
 
           <button
             className="run-phase-test"
@@ -443,8 +481,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange }) {
           </button>
 
           <button className="run-wave" disabled>
-            WAVE QUEUE LOCKED
-            <small>Spawn queue arrives in Batch 27</small>
+            WAVE COMPLETION LOCKED
+            <small>Completion detection arrives in Batch 28</small>
           </button>
           </aside>
         </div>
