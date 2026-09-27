@@ -2992,3 +2992,57 @@ body { background:#1c3f61; }
   border: 1px solid rgba(255,90,90,.35);
   background: rgba(120,20,20,.18);
 }
+
+
+/* Bastion Gauntlet — purchasable wall sockets */
+.battlefield-map__wall-slots,
+.battlefield-map__wall-slot {
+  pointer-events: auto;
+}
+.battlefield-map__wall-slot {
+  cursor: pointer;
+  outline: none;
+}
+.wall-slot__base {
+  fill: rgba(73,86,83,.9);
+  stroke: rgba(238,197,105,.82);
+  stroke-width: 3;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,.35));
+}
+.wall-slot__socket {
+  fill: none;
+  stroke: rgba(248,219,141,.86);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+.wall-slot__cost {
+  fill: #fff0b2;
+  font-size: 15px;
+  font-weight: 950;
+  paint-order: stroke;
+  stroke: rgba(40,31,20,.92);
+  stroke-width: 4px;
+}
+.wall-slot__wall {
+  fill: #8d8777;
+  stroke: #e6cf8e;
+  stroke-width: 4;
+}
+.wall-slot__battlement {
+  fill: none;
+  stroke: #f2dc9d;
+  stroke-width: 5;
+  stroke-linejoin: round;
+}
+.battlefield-map__wall-slot--ready .wall-slot__base,
+.battlefield-map__wall-slot--empty:focus-visible .wall-slot__base {
+  stroke: #ffe090;
+  filter: drop-shadow(0 0 12px rgba(255,209,104,.68)) drop-shadow(0 4px 6px rgba(0,0,0,.35));
+}
+.battlefield-map__wall-slot--built {
+  cursor: default;
+}
+.battlefield-map__wall-slot--built .wall-slot__base {
+  fill: rgba(91,79,59,.94);
+  stroke: rgba(216,190,123,.92);
+}
