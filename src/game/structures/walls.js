@@ -55,11 +55,11 @@ export function getWallSystemFixtures() {
     maximumActive: WALL_SYSTEM.maxActive,
     allSocketIdsUnique: new Set(ids).size === ids.length,
     allWallsKeepPathOpen:
-      allBuiltPath.length > SINGLE_GATE_MAP.path.waypoints.length &&
-      allBuiltPath[0].x === SINGLE_GATE_MAP.anchors.enemySpawn.x &&
-      allBuiltPath[0].y === SINGLE_GATE_MAP.anchors.enemySpawn.y &&
-      allBuiltPath.at(-1).x === SINGLE_GATE_MAP.anchors.bastion.x &&
-      allBuiltPath.at(-1).y === SINGLE_GATE_MAP.anchors.bastion.y,
+      allBuiltPath.length === SINGLE_GATE_MAP.path.waypoints.length &&
+      allBuiltPath.every((point, index) => {
+        const base = SINGLE_GATE_MAP.path.waypoints[index];
+        return point.x === base.x && point.y === base.y;
+      }),
     compatibleWithSingleGate: WALL_SYSTEM.compatibleModes.includes('single-gate'),
     compatibleWithTftShop: WALL_SYSTEM.compatibleModes.includes('tft-shop')
   });
