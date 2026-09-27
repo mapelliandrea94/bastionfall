@@ -81,7 +81,7 @@ app.get('/api/health', (_req, res) => res.json({
   version: '0.1.1',
   matchIdentityConfigured: Boolean(matchTokenSecret)
 }));
-app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35, towerCap: 32 }));
+app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35 }));
 
 const STARTABLE_MODES = new Set(['single-gate', 'tri-gate', 'last-bastion']);
 
