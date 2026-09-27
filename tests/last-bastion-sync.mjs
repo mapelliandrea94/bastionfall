@@ -6,6 +6,7 @@ import {
   getLastBastionMatchStatus,
   hydrateLastBastionActiveMatches,
   hydrateLastBastionQueue,
+  resolveLastBastionAbandons,
   setLastBastionReady
 } from '../server/lastBastionMatchmaking.js';
 import { generateWavePlan } from '../src/game/spawning/waveDirector.js';
@@ -206,6 +207,118 @@ clearLastBastionMatchForUser(finishedA);
 clearLastBastionMatchForUser(finishedB);
 hydrateLastBastionActiveMatches([], []);
 hydrateLastBastionQueue([]);
+
+const abandonA = 'abandon-a';
+const abandonB = 'abandon-b';
+const abandonMatchId = 'abandon-match-001';
+const abandonBaseMs = Date.parse('2026-09-27T21:00:00.000Z');
+
+hydrateLastBastionActiveMatches(
+  [{
+    id: abandonMatchId,
+    seed: 'last-bastion:abandon-match-001',
+    status: 'active',
+    created_at: new Date(abandonBaseMs).toISOString(),
+    started_at: new Date(abandonBaseMs + 5000).toISOString(),
+    wave_starts_at: new Date(abandonBaseMs + 5000).toISOString(),
+    winner_user_id: null,
+    ended_at: null
+  }],
+  [
+    {
+      match_id: abandonMatchId,
+      user_id: abandonA,
+      slot: 1,
+      alive: true,
+      last_seen_at: new Date(abandonBaseMs + 10000).toISOString(),
+      wave: 6,
+      core_hp: 12,
+      placement: null,
+      eliminated_at: null
+    },
+    {
+      match_id: abandonMatchId,
+      user_id: abandonB,
+      slot: 2,
+      alive: true,
+      last_seen_at: new Date(abandonBaseMs + 65000).toISOString(),
+      wave: 6,
+      core_hp: 17,
+      placement: null,
+      eliminated_at: null
+    }
+  ]
+);
+
+const beforeAbandon = getLastBastionMatchStatus(abandonB, abandonMatchId, abandonBaseMs + 70000);
+assert(
+  beforeAbandon.match?.participants?.find((p) => p.slot === 1)?.connected === false,
+  '15s heartbeat timeout must mark a stale player disconnected before abandonment'
+);
+
+const abandonResolution = resolveLastBastionAbandons(abandonBaseMs + 71000);
+const abandonWinnerStatus = getLastBastionMatchStatus(abandonB, abandonMatchId, abandonBaseMs + 71000);
+
+assert(abandonResolution.resolvedParticipants === 1, '60s abandon timeout must resolve one stale player');
+assert(abandonResolution.finishedMatches === 1, 'Abandon with one survivor must finish the match');
+assert(abandonWinnerStatus.match?.status === 'finished', 'Abandon resolution must finish the match');
+assert(abandonWinnerStatus.match?.selfWon === true, 'Connected survivor must win after opponent abandonment');
+assert(abandonWinnerStatus.match?.selfPlacement === 1, 'Connected survivor must receive placement #1');
+assert(abandonWinnerStatus.match?.participants?.find((p) => p.slot === 1)?.placement === 2, 'Abandoned player must receive placement #2');
+
+clearLastBastionMatchForUser(abandonA);
+clearLastBastionMatchForUser(abandonB);
+hydrateLastBastionActiveMatches([], []);
+
+const allGoneMatchId = 'abandon-match-all-gone';
+hydrateLastBastionActiveMatches(
+  [{
+    id: allGoneMatchId,
+    seed: 'last-bastion:all-gone',
+    status: 'active',
+    created_at: new Date(abandonBaseMs).toISOString(),
+    started_at: new Date(abandonBaseMs + 5000).toISOString(),
+    wave_starts_at: new Date(abandonBaseMs + 5000).toISOString(),
+    winner_user_id: null,
+    ended_at: null
+  }],
+  [
+    {
+      match_id: allGoneMatchId,
+      user_id: abandonA,
+      slot: 1,
+      alive: true,
+      last_seen_at: new Date(abandonBaseMs).toISOString(),
+      wave: 3,
+      core_hp: 10,
+      placement: null,
+      eliminated_at: null
+    },
+    {
+      match_id: allGoneMatchId,
+      user_id: abandonB,
+      slot: 2,
+      alive: true,
+      last_seen_at: new Date(abandonBaseMs + 1000).toISOString(),
+      wave: 3,
+      core_hp: 11,
+      placement: null,
+      eliminated_at: null
+    }
+  ]
+);
+
+const allGoneResolution = resolveLastBastionAbandons(abandonBaseMs + 70000);
+const allGoneStatus = getLastBastionMatchStatus(abandonA, allGoneMatchId, abandonBaseMs + 70000);
+
+assert(allGoneResolution.resolvedParticipants === 2, 'All stale participants must be resolved');
+assert(allGoneResolution.finishedMatches === 1, 'All-stale match must finish');
+assert(allGoneStatus.match?.status === 'finished', 'All-stale match must expose final status');
+assert(allGoneStatus.match?.winnerSlot === null, 'All-stale match must not award a free winner');
+
+clearLastBastionMatchForUser(abandonA);
+clearLastBastionMatchForUser(abandonB);
+hydrateLastBastionActiveMatches([], []);
 
 const seed = 'last-bastion:sync-fixture';
 const playerA = generateWavePlan({ seed, waveNumber: 18, mode: 'last-bastion' });
