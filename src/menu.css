@@ -1,0 +1,83 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f5f1e6;
+  background: #090d12;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body { min-height: 100vh; }
+
+button { font: inherit; }
+
+.main-menu {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(83, 118, 143, .18), transparent 34%),
+    linear-gradient(180deg, #111925 0%, #080b10 72%);
+}
+
+.main-menu__content {
+  width: min(100%, 520px);
+  text-align: center;
+}
+
+.main-menu__kicker {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .24em;
+  opacity: .62;
+}
+
+.main-menu h1 {
+  margin: 0;
+  font-size: clamp(54px, 9vw, 92px);
+  line-height: .92;
+  letter-spacing: .035em;
+}
+
+.main-menu__tagline {
+  margin: 20px 0 36px;
+  opacity: .72;
+}
+
+.main-menu__actions {
+  display: grid;
+  gap: 12px;
+}
+
+.main-menu__button {
+  min-height: 54px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.04);
+  color: inherit;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+
+.main-menu__button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.3);
+  background: rgba(255,255,255,.075);
+}
+
+.main-menu__button--primary {
+  border-color: rgba(230, 184, 88, .62);
+  background: rgba(190, 137, 42, .17);
+}
+
+.main-menu__version {
+  margin: 24px 0 0;
+  font-size: 12px;
+  opacity: .42;
+}
