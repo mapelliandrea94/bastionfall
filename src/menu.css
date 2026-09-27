@@ -920,3 +920,133 @@ button { font: inherit; }
     min-height: 64vh;
   }
 }
+
+
+/* Batch 8 polish */
+.mode-screen,
+.main-menu__content,
+.auth-modal,
+.run-sidebar {
+  border-radius: 2px;
+}
+
+.main-menu__button,
+.mode-card,
+.pre-run-start,
+.run-exit,
+.run-wave,
+.auth-submit,
+.account-strip button,
+.mode-screen__back {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.main-menu__button:focus-visible,
+.mode-card:focus-visible,
+.pre-run-start:focus-visible,
+.run-exit:focus-visible,
+.run-wave:focus-visible,
+.auth-submit:focus-visible,
+.mode-screen__back:focus-visible,
+.account-strip button:focus-visible,
+.auth-switch:focus-visible {
+  outline: 2px solid rgba(244,204,118,.9);
+  outline-offset: 2px;
+}
+
+.mode-card,
+.pre-run-start,
+.run-exit {
+  transition: transform .15s ease, border-color .15s ease, background .15s ease, opacity .15s ease;
+}
+
+.pre-run-start:hover,
+.run-exit:hover {
+  transform: translateY(-1px);
+  border-color: rgba(244,204,118,.9);
+}
+
+.run-screen {
+  overflow-x: hidden;
+}
+
+@media (max-width: 760px) {
+  .run-hud {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px 12px;
+  }
+
+  .run-exit {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .battlefield {
+    min-height: 58vh;
+  }
+
+  .build-slot {
+    width: 48px;
+    height: 48px;
+  }
+
+  .run-sidebar {
+    padding: 18px 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-menu {
+    padding: 12px;
+  }
+
+  .main-menu__content,
+  .mode-screen,
+  .auth-modal {
+    width: 100%;
+  }
+
+  .main-menu__content {
+    padding: 28px 16px 22px;
+  }
+
+  .main-menu h1 {
+    font-size: clamp(44px, 17vw, 64px);
+  }
+
+  .mode-screen {
+    padding: 20px 14px;
+  }
+
+  .mode-screen h2 {
+    font-size: clamp(36px, 12vw, 54px);
+  }
+
+  .pre-run-card {
+    min-height: 140px;
+  }
+
+  .table-row {
+    grid-template-columns: 42px 1fr 70px;
+    padding: 14px 10px;
+    font-size: 12px;
+  }
+
+  .run-hud {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .battlefield__spawn,
+  .battlefield__core {
+    min-width: 88px;
+    padding: 10px;
+    font-size: 8px;
+  }
+
+  .build-slot--1 { left: 14%; top: 25%; }
+  .build-slot--2 { left: 29%; top: 56%; }
+  .build-slot--3 { left: 43%; top: 27%; }
+  .build-slot--4 { left: 54%; top: 59%; }
+  .build-slot--5 { right: 18%; top: 23%; }
+  .build-slot--6 { right: 12%; top: 57%; }
+}
