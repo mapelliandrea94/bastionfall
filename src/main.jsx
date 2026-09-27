@@ -150,9 +150,8 @@ function SoloRun({ onExit }) {
           <div className="build-slot build-slot--4">+</div>
           <div className="build-slot build-slot--5">+</div>
           <div className="build-slot build-slot--6">+</div>
-        </div>
 
-        <aside className="run-sidebar">
+          <aside className="run-sidebar">
           <p className="main-menu__kicker">DEFENSES</p>
           <h3>BUILD</h3>
           <button disabled>ARCHER <span>70g</span></button>
@@ -168,7 +167,8 @@ function SoloRun({ onExit }) {
             START WAVE 1
             <small>Wave system comes next</small>
           </button>
-        </aside>
+          </aside>
+        </div>
       </section>
     </main>
   );
