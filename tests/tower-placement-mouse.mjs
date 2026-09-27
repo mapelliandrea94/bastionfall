@@ -15,7 +15,7 @@ const defenses = [
   { id: 'debuff', cost: 86, name: 'Debuff Tower' },
   { id: 'buff', cost: 90, name: 'Buff Tower' }
 ];
-const slots = Array.from({ length: 15 }, (_, index) => `slot-${String(index + 1).padStart(2, '0')}`);
+const slots = Array.from({ length: 28 }, (_, index) => `slot-${String(index + 1).padStart(2, '0')}`);
 const startingGold = 240;
 
 function assert(condition, message) {
