@@ -2036,3 +2036,19 @@ button { font: inherit; }
   transform-box: fill-box;
   transform-origin: center;
 }
+
+
+/* BATCH 47 — Tank enemy archetype */
+.battlefield-map__enemy--tank circle {
+  stroke-width: 6;
+  stroke-dasharray: none;
+  transform: scale(1.18);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.battlefield-map__enemy--tank path {
+  transform: scale(1.12);
+  transform-box: fill-box;
+  transform-origin: center;
+}
