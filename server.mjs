@@ -198,6 +198,9 @@ app.get('/api/leaderboards/:mode', requireUser, async (req, res) => {
     .order('best_wave', { ascending: false })
     .order('best_survival_ms', { ascending: false })
     .order('best_score', { ascending: false })
+    .order('best_kills', { ascending: false })
+    .order('updated_at', { ascending: true })
+    .order('user_id', { ascending: true })
     .limit(limit);
 
   if (recordsResult.error) {
