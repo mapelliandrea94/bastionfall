@@ -4,6 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { advanceLastBastionMatchmaking, eliminateLastBastionParticipant, getLastBastionActiveMatchPersistenceSnapshot, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionActiveMatches, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { calculateRunScore } from './src/game/run/runScore.js';
+import { generateWavePlan } from './src/game/spawning/waveDirector.js';
+import { getBandWaveScaling } from './src/game/balance/difficultyBands.js';
+import { getTriGateWaveScaling } from './src/game/balance/triGatePacing.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -26,6 +30,31 @@ const consumedMatchCompletions = new Map();
 const ABUSE_BUCKET_TTL_MS = 10 * 60 * 1000;
 const COMPLETION_REPLAY_TTL_MS = 25 * 60 * 60 * 1000;
 const LAST_BASTION_ABANDON_TIMEOUT_SECONDS = 60;
+
+function getStandardRunValidationBounds(mode, matchId, completedWave) {
+  const seed = `${mode}:${matchId}`;
+  const safeWave = Math.max(0, Math.floor(Number(completedWave) || 0));
+  let maxKills = 0;
+  let minElapsedMs = 0;
+
+  for (let waveNumber = 1; waveNumber <= safeWave + 1; waveNumber += 1) {
+    const plan = generateWavePlan({ seed, waveNumber, mode });
+    maxKills += Math.max(0, Number(plan.enemyCount) || 0);
+
+    if (waveNumber <= safeWave) {
+      const scaling = mode === 'tri-gate'
+        ? getTriGateWaveScaling(waveNumber)
+        : getBandWaveScaling(waveNumber);
+      const enemyCount = Math.max(1, Number(plan.enemyCount) || 1);
+      minElapsedMs += Math.max(0, (enemyCount - 1) * Math.max(0, Number(scaling.spawnIntervalMs) || 0));
+    }
+  }
+
+  return Object.freeze({
+    maxKills,
+    minElapsedMs: Math.floor(minElapsedMs)
+  });
+}
 
 function pruneTimedMap(map, nowMs, ttlMs) {
   for (const [key, value] of map) {
@@ -703,7 +732,10 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
   const completionKey = identity.matchId + ':' + req.user.id;
   const completionNowMs = Date.now();
   pruneTimedMap(consumedMatchCompletions, completionNowMs, COMPLETION_REPLAY_TTL_MS);
-  if (consumedMatchCompletions.has(completionKey) && identity.mode !== 'last-bastion') {
+  if (
+    consumedMatchCompletions.has(completionKey) &&
+    !['last-bastion', 'single-gate', 'tri-gate'].includes(identity.mode)
+  ) {
     return res.status(409).json({ error: 'completion_replay' });
   }
 
@@ -780,23 +812,54 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     if (wave !== Number(checkpoint.last_wave)) {
       return res.status(400).json({ error: 'final_wave_checkpoint_mismatch' });
     }
-    if (kills < Number(checkpoint.last_kills)) {
+    if (kills !== Number(checkpoint.last_kills)) {
       return res.status(400).json({ error: 'final_kills_checkpoint_mismatch' });
     }
-    if (coreMaxHp !== Number(checkpoint.last_core_max_hp)) {
+    if (gold !== Number(checkpoint.last_gold)) {
+      return res.status(400).json({ error: 'final_gold_checkpoint_mismatch' });
+    }
+    if (
+      coreHp !== Number(checkpoint.last_core_hp) ||
+      coreMaxHp !== Number(checkpoint.last_core_max_hp)
+    ) {
       return res.status(400).json({ error: 'final_core_checkpoint_mismatch' });
+    }
+    if (!['bastion-destroyed', 'player-exit'].includes(resultReason)) {
+      return res.status(400).json({ error: 'invalid_standard_result_reason' });
+    }
+
+    const validationBounds = getStandardRunValidationBounds(mode, identity.matchId, wave);
+    if (kills > validationBounds.maxKills) {
+      return res.status(400).json({ error: 'kills_exceed_wave_capacity' });
+    }
+
+    const minElapsedToleranceMs = 1500;
+    if (elapsedMs + minElapsedToleranceMs < validationBounds.minElapsedMs) {
+      return res.status(400).json({ error: 'elapsed_time_below_wave_minimum' });
+    }
+
+    const expectedScore = calculateRunScore({
+      wave,
+      elapsedMs,
+      kills,
+      coreHp,
+      coreMaxHp
+    }).totalScore;
+    if (Math.floor(score) !== expectedScore) {
+      return res.status(400).json({ error: 'score_mismatch' });
     }
 
     const endedAt = new Date(startedAtMs + elapsedMs).toISOString();
 
     const { data: recordRows, error: recordError } = await serverDb.rpc(
-      'persist_verified_standard_result',
+      'persist_verified_standard_result_v2',
       {
+        p_match_id: identity.matchId,
         p_mode: mode,
         p_result_reason: resultReason,
         p_wave: wave,
         p_elapsed_ms: Math.floor(elapsedMs),
-        p_score: Math.floor(score),
+        p_score: expectedScore,
         p_gold: gold,
         p_core_hp: coreHp,
         p_core_max_hp: coreMaxHp,
@@ -812,39 +875,18 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     }
 
     persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
+    earnedShards = Number(persistedRecord?.earned_shards ?? 0);
 
-    await serverDb
-      .from('standard_run_sessions')
-      .update({ status: 'completed', completed_at: endedAt, updated_at: new Date().toISOString() })
-      .eq('match_id', identity.matchId)
-      .eq('user_id', req.user.id);
-
-    const { data: current, error: profileError } = await req.db
+    const profileRead = await req.db
       .from('profiles')
       .select('*')
       .eq('user_id', req.user.id)
       .single();
 
-    if (profileError || !current) return res.status(404).json({ error: 'profile_missing' });
-
-    earnedShards = Math.max(1, Math.floor(wave / 2));
-    const patch = {
-      best_wave: Math.max(current.best_wave || 0, wave),
-      shards: (current.shards || 0) + earnedShards,
-      runs: (current.runs || 0) + 1,
-      lifetime_kills: (current.lifetime_kills || 0) + kills,
-      updated_at: new Date().toISOString()
-    };
-
-    const saved = await req.db
-      .from('profiles')
-      .update(patch)
-      .eq('user_id', req.user.id)
-      .select('*')
-      .single();
-
-    if (saved.error) return res.status(500).json({ error: 'progress_save_failed' });
-    savedProfile = saved.data;
+    if (profileRead.error || !profileRead.data) {
+      return res.status(404).json({ error: 'profile_missing' });
+    }
+    savedProfile = profileRead.data;
   }
 
   if (mode === 'last-bastion') {
