@@ -5860,3 +5860,34 @@ button:focus-visible,
   from { transform: translateY(0); box-shadow: 0 12px 30px rgba(0, 0, 0, .28); }
   to { transform: translateY(-1px); box-shadow: 0 12px 34px rgba(214, 171, 76, .24); }
 }
+
+
+.audio-mute {
+  justify-self: end;
+  min-width: 120px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(225,176,77,.45);
+  background: rgba(225,176,77,.08);
+  color: #f1d99b;
+  font-weight: 900;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+.audio-mute:hover {
+  border-color: rgba(244,204,118,.9);
+  background: rgba(225,176,77,.14);
+}
+
+.audio-mute--active {
+  border-color: rgba(194,74,74,.6);
+  background: rgba(120,36,36,.18);
+  color: #efb4b4;
+}
+
+@media (max-width: 560px) {
+  .audio-mute {
+    justify-self: start;
+  }
+}
