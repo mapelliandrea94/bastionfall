@@ -1654,13 +1654,30 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             0.48 *
             blessingModifiers.enemyMoveSpeedMultiplier *
             worldModifierEffects.enemyMoveSpeedMultiplier;
+          const previousEffectiveSpeed = Number(enemy.movementSpeedApplied);
+          let movementSpawnedAt = Number(enemy.spawnedAt);
+
+          if (
+            Number.isFinite(previousEffectiveSpeed) &&
+            Math.abs(previousEffectiveSpeed - effectiveSpeed) > 0.0001 &&
+            effectiveSpeed > 0
+          ) {
+            movementSpawnedAt =
+              now - ((Math.max(0, Math.min(1, Number(enemy.progress ?? 0))) * durationMs) / effectiveSpeed);
+          }
+
           const naturalProgress = Math.min(
             1,
-            ((now - enemy.spawnedAt) / durationMs) * effectiveSpeed
+            ((now - movementSpawnedAt) / durationMs) * effectiveSpeed
           );
 
           if (enemy.airborne || activeWallIds.length === 0) {
-            return { ...enemy, progress: naturalProgress };
+            return {
+              ...enemy,
+              progress: naturalProgress,
+              spawnedAt: movementSpawnedAt,
+              movementSpeedApplied: effectiveSpeed
+            };
           }
 
           const blockingWall = Object.entries(WALL_PROGRESS_BY_ID)
@@ -1680,6 +1697,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             ...enemy,
             progress: wallProgress,
             spawnedAt: rebasedSpawnedAt,
+            movementSpeedApplied: effectiveSpeed,
             blockedByWallId: wallId
           };
         }));
