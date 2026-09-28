@@ -1,4 +1,5 @@
 import { chromium } from 'playwright';
+import { ECONOMY_BASELINE } from '../src/game/economy/economyBaseline.js';
 
 const baseUrl = 'http://127.0.0.1:4173/?qa=tower-placement';
 const defenses = [
@@ -16,7 +17,7 @@ const defenses = [
   { id: 'buff', cost: 90, name: 'Buff Tower' }
 ];
 const slots = Array.from({ length: 28 }, (_, index) => `slot-${String(index + 1).padStart(2, '0')}`);
-const startingGold = 240;
+const startingGold = ECONOMY_BASELINE.startingGold;
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
