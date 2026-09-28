@@ -76,6 +76,12 @@ function getFactionOrder(random, wave) {
   return factions.slice(0, allowedFactionCount(wave));
 }
 
+export function getWaveQuantityMultiplier(waveNumber) {
+  const wave = normalizeWaveNumber(waveNumber);
+  const completedTenWaveBlocks = Math.floor(wave / 10);
+  return Number((1.2 ** completedTenWaveBlocks).toFixed(6));
+}
+
 function getCandidateWeight(enemy, wave, eliteMilestone) {
   let weight = 1;
 
@@ -136,7 +142,9 @@ export function generateWavePlan({
   const random = createSeededRandom(deterministicSeed);
   const eliteMilestone = wave % WAVE_DIRECTOR.eliteInterval === 0;
   const bossMilestone = isBossWave(wave);
-  const budget = getWaveThreatBudget(wave, budgetMultiplier);
+  const quantityMultiplier = getWaveQuantityMultiplier(wave);
+  const baseBudget = getWaveThreatBudget(wave, budgetMultiplier);
+  const budget = Number((baseBudget * quantityMultiplier).toFixed(4));
   const factionOrder = getFactionOrder(random, wave);
   const allowedFactions = new Set(factionOrder);
 
@@ -196,6 +204,8 @@ export function generateWavePlan({
     sourceSeed: normalizeRunSeed(seed),
     waveNumber: wave,
     mode: normalizedMode,
+    baseBudget,
+    quantityMultiplier,
     budget,
     spentThreat: Number(spentThreat.toFixed(2)),
     unusedThreat: Number(Math.max(0, budget - spentThreat).toFixed(2)),
@@ -251,6 +261,10 @@ export function getWaveDirectorFixtures() {
     allFactionPoolAvailable31Plus: late.factions.length >= 1 && allowedFactionCount(late.waveNumber) === 3,
     eliteMilestone15: generateWavePlan({ seed: 'elite', waveNumber: 15 }).eliteMilestone === true,
     bossMilestone10: generateWavePlan({ seed: 'boss', waveNumber: 10 }).bossMilestone === true,
+    quantityWave9: getWaveQuantityMultiplier(9) === 1,
+    quantityWave10: getWaveQuantityMultiplier(10) === 1.2,
+    quantityWave20: getWaveQuantityMultiplier(20) === 1.44,
+    quantityWave30: getWaveQuantityMultiplier(30) === 1.728,
     budgetRespected: [sameA, early, airIntro, mixed, late, triA].every((plan) => plan.spentThreat <= plan.budget + 0.001),
     triGateDeterministic: fingerprint(triA) === fingerprint(triB),
     triGateHasThreeLanes: triA.laneDistribution?.lanes?.length === 3,
