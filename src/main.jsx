@@ -1773,7 +1773,11 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
           }
 
           const blockingWall = Object.entries(WALL_PROGRESS_BY_ID)
-            .filter(([wallId, progress]) => activeWallIds.includes(wallId) && naturalProgress >= progress)
+            .filter(([wallId, progress]) =>
+              activeWallIds.includes(wallId) &&
+              previousProgress <= progress &&
+              naturalProgress >= progress
+            )
             .sort((a, b) => a[1] - b[1])[0];
 
           if (!blockingWall) {
@@ -1790,7 +1794,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
           return {
             ...enemy,
-            progress: Math.min(previousProgress, wallProgress),
+            progress: wallProgress,
             lastMovementAt: now,
             movementSpeedApplied: effectiveSpeed,
             blockedByWallId: wallId
