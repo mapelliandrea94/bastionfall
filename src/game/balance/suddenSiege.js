@@ -66,6 +66,22 @@ export function getSuddenSiegeTelemetry(waveNumber) {
   });
 }
 
+export function getSuddenSiegeBattlefieldVisual(waveNumber) {
+  const telemetry = getSuddenSiegeTelemetry(waveNumber);
+  const byStage = Object.freeze({
+    OPENING: Object.freeze({ intensity: 0.16, pulseMs: 2400, label: 'THREAT RISING' }),
+    ESCALATION: Object.freeze({ intensity: 0.28, pulseMs: 1900, label: 'ESCALATION' }),
+    ONSLAUGHT: Object.freeze({ intensity: 0.42, pulseMs: 1400, label: 'ONSLAUGHT' }),
+    ENDLESS: Object.freeze({ intensity: 0.58, pulseMs: 1000, label: 'ENDLESS PRESSURE' })
+  });
+  const visual = byStage[telemetry.stage] ?? byStage.OPENING;
+  return Object.freeze({
+    ...visual,
+    stage: telemetry.stage,
+    className: telemetry.stage.toLowerCase()
+  });
+}
+
 export function getSuddenSiegeFixtures() {
   const early = getSuddenSiegeWaveScaling(3);
   const mid = getSuddenSiegeWaveScaling(10);
@@ -73,6 +89,9 @@ export function getSuddenSiegeFixtures() {
   const endless = getSuddenSiegeWaveScaling(25);
   const telemetry10 = getSuddenSiegeTelemetry(10);
   const telemetry25 = getSuddenSiegeTelemetry(25);
+  const visual3 = getSuddenSiegeBattlefieldVisual(3);
+  const visual18 = getSuddenSiegeBattlefieldVisual(18);
+  const visual25 = getSuddenSiegeBattlefieldVisual(25);
   return Object.freeze({
     gradualThreat: early.suddenThreatMultiplier < mid.suddenThreatMultiplier && mid.suddenThreatMultiplier < late.suddenThreatMultiplier && late.suddenThreatMultiplier < endless.suddenThreatMultiplier,
     gradualHp: early.enemyHpMultiplier < mid.enemyHpMultiplier && mid.enemyHpMultiplier < late.enemyHpMultiplier && late.enemyHpMultiplier < endless.enemyHpMultiplier,
@@ -82,6 +101,8 @@ export function getSuddenSiegeFixtures() {
     rewardWave15: getSuddenSiegeWaveReward(15),
     telemetryStage10: telemetry10.stage === 'ESCALATION',
     telemetryStage25: telemetry25.stage === 'ENDLESS',
-    telemetryUsesWaveReward: telemetry10.waveReward === getSuddenSiegeWaveReward(10)
+    telemetryUsesWaveReward: telemetry10.waveReward === getSuddenSiegeWaveReward(10),
+    battlefieldVisualEscalates: visual3.intensity < visual18.intensity && visual18.intensity < visual25.intensity,
+    battlefieldPulseAccelerates: visual3.pulseMs > visual18.pulseMs && visual18.pulseMs > visual25.pulseMs
   });
 }
