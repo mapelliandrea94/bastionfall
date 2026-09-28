@@ -1158,6 +1158,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     (matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE && (matchingOnlineSnapshot?.activeEnemies?.length ?? 0) > 0 ? restoredWaveNumber : null)
   );
   const towerAttackTimesRef = useRef({});
+  const towerAttackChargeRef = useRef({});
+  const combatClockRef = useRef(null);
   const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
   const previousSuddenStageRef = useRef(null);
   const bossSummonFiredRef = useRef(new Set(matchingOnlineSnapshot?.bossSummonFiredKeys ?? []));
@@ -1741,6 +1743,11 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
     const intervalId = window.setInterval(() => {
       const now = getWaveNow();
+      const previousCombatAt = Number(combatClockRef.current);
+      const combatDeltaMs = Number.isFinite(previousCombatAt)
+        ? Math.min(150, Math.max(0, now - previousCombatAt))
+        : 100;
+      combatClockRef.current = now;
 
       setActiveEnemies((currentEnemies) => {
         let working = currentEnemies.map((enemy) => ({
@@ -1765,22 +1772,22 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
           );
 
           const attackInterval = getEffectiveTowerAttackInterval(definition, placed, combatPlacedDefenses, defenseDefinitions);
-          const lastAttackAt = Number(towerAttackTimesRef.current[placed.id] ?? 0);
-          const elapsedSinceAttack = lastAttackAt > 0 ? Math.max(0, now - lastAttackAt) : attackInterval;
-          if (elapsedSinceAttack < attackInterval) continue;
+          const previousCharge = Math.max(0, Number(towerAttackChargeRef.current[placed.id] ?? attackInterval));
+          const attackCharge = Math.min(attackInterval * 2, previousCharge + combatDeltaMs);
+          towerAttackChargeRef.current[placed.id] = attackCharge;
+          if (attackCharge < attackInterval) continue;
 
-          const attacksDue = Math.max(1, Math.min(6, Math.floor(elapsedSinceAttack / attackInterval)));
+          const attacksDue = Math.max(1, Math.min(2, Math.floor(attackCharge / attackInterval)));
           const candidates = getTowerTargets(definition, placed, working.filter((enemy) => enemy.hp > 0));
           const primary = candidates[0];
           if (!primary) {
-            // Do not bank an unlimited burst while the tower has no valid target.
-            towerAttackTimesRef.current[placed.id] = now - attackInterval;
+            // Keep at most one ready shot while idle; never bank a burst.
+            towerAttackChargeRef.current[placed.id] = Math.min(attackCharge, attackInterval);
             continue;
           }
 
-          towerAttackTimesRef.current[placed.id] = lastAttackAt > 0
-            ? Math.min(now, lastAttackAt + attacksDue * attackInterval)
-            : now;
+          towerAttackChargeRef.current[placed.id] = Math.max(0, attackCharge - attacksDue * attackInterval);
+          towerAttackTimesRef.current[placed.id] = now;
           playTowerAttackSound(definition);
 
           const primaryIndex = working.findIndex((enemy) => enemy.id === primary.id);
@@ -2218,7 +2225,10 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
         }
         return tower;
       }));
-    if (residualProgress === 0) towerAttackTimesRef.current[sourceTower.id] = 0;
+    if (residualProgress === 0) {
+      towerAttackTimesRef.current[sourceTower.id] = 0;
+      towerAttackChargeRef.current[sourceTower.id] = 0;
+    }
     setSelectedPlacedDefenseId(targetTower.id);
     setMergingPlacedDefenseId(null);
     setTftFeedback(
@@ -2244,6 +2254,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     setSwappingPlacedDefenseId(null);
     setMergingPlacedDefenseId(null);
     towerAttackTimesRef.current[selectedPlacedDefense.id] = 0;
+    towerAttackChargeRef.current[selectedPlacedDefense.id] = 0;
     if (refund > 0) onGainGold(refund);
     if (isShopMode(run.mode)) setTftFeedback(`TOWER SOLD · +${refund}G`);
   };
