@@ -15,7 +15,7 @@ import { applyTowerSynergy, getNewlyActivatedTowerSynergies, getTowerSynergyStat
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { getTowerAttackVisual } from './game/towers/attackVisuals.js';
-import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
+import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getEvolutionVisualCue, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
 import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyle, getTowerArtStyleForTower } from './game/towers/towerArt.js';
 import { getEffectiveTowerRange, getTowerRangeKind } from './game/towers/towerRange.js';
 import { getTowerEvolutionIntegrityPass, getTowerEvolutionIntegrityQa } from './game/towers/towerEvolutionIntegrityQa.js';
@@ -2360,6 +2360,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 const blessingVisual = placedRuntimeDefense
                   ? getBlessingIdentityVisualCue(placedRuntimeDefense, run?.blessings ?? [])
                   : null;
+                const evolutionVisual = placed ? getEvolutionVisualCue(placed) : null;
                 const towerLevel = Math.max(1, Math.min(4, Number(placed?.level ?? 1)));
                 const copyProgress = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(placed?.copyProgress ?? 1)));
                 const towerActionOffsetX = slot.x > SINGLE_GATE_MAP.size.width - 190 ? -160 : 54;
@@ -2468,6 +2469,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
                     {placed && (
                       <>
+                        {evolutionVisual?.active && (
+                          <g
+                            className={`tower-evolution-aura tower-evolution-aura--${evolutionVisual.branch.toLowerCase()}`}
+                            data-evolution-active="true"
+                            data-evolution-id={evolutionVisual.id ?? ''}
+                            data-evolution-branch={evolutionVisual.branch ?? ''}
+                            aria-hidden="true"
+                          >
+                            <circle className="tower-evolution-aura__outer" cx="0" cy="0" r="49" />
+                            <circle className="tower-evolution-aura__inner" cx="0" cy="0" r="41" />
+                            <circle className="tower-evolution-aura__badge" cx="0" cy="-55" r="13" />
+                            <text className="tower-evolution-aura__letter" x="0" y="-50" textAnchor="middle">
+                              {evolutionVisual.branch}
+                            </text>
+                          </g>
+                        )}
                         {blessingVisual?.active && (
                           <g
                             className={`tower-blessing-aura tower-blessing-aura--${blessingVisual.faction}`}
@@ -2492,7 +2509,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                           </g>
                         )}
                         <g
-                          className={`tower-visual tower-visual--${placed.defenseId}${synergyVisual?.active ? ` tower-visual--synergy-active tower-visual--synergy-${synergyVisual.faction}` : ''}${blessingVisual?.active ? ` tower-visual--identity-blessing tower-visual--identity-${blessingVisual.faction}` : ''}`}
+                          className={`tower-visual tower-visual--${placed.defenseId}${synergyVisual?.active ? ` tower-visual--synergy-active tower-visual--synergy-${synergyVisual.faction}` : ''}${blessingVisual?.active ? ` tower-visual--identity-blessing tower-visual--identity-${blessingVisual.faction}` : ''}${evolutionVisual?.active ? ` tower-visual--evolved tower-visual--evolution-${evolutionVisual.branch.toLowerCase()}` : ''}`}
                           data-evolution={placed.evolution ?? ''}
                           data-synergy-active={synergyVisual?.active ? 'true' : 'false'}
                           data-identity-blessing={blessingVisual?.blessingId ?? ''}
@@ -3247,9 +3264,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   ))}
                 </div>
               )}
-              {selectedPlacedDefense?.evolution && (
-                <strong>{TOWER_EVOLUTIONS.find((entry) => entry.id === selectedPlacedDefense.evolution)?.name ?? selectedPlacedDefense.evolution}</strong>
-              )}
+              {selectedPlacedDefense?.evolution && (() => {
+                const evolution = TOWER_EVOLUTIONS.find((entry) => entry.id === selectedPlacedDefense.evolution);
+                return (
+                  <div className="evolution-active-label">
+                    <strong>EVOLUTION {evolution?.branch ?? selectedPlacedDefense.evolutionChoice ?? ''} · {evolution?.name ?? selectedPlacedDefense.evolution}</strong>
+                    <small>{evolution?.description ?? 'Extreme evolution active.'}</small>
+                  </div>
+                );
+              })()}
               <small>{isShopMode(run?.mode) ? 'TFT progression: 1/7 Lv.1 · 2–3/7 Lv.2 · 4–6/7 Lv.3 · 7/7 Lv.4 + evolution' : `Max level ${UPGRADE_CURVE.maxLevel} · evolution at Lv.4`}</small>
             </div>
             <div className="defense-inspector__targeting">
