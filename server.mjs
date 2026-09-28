@@ -7,7 +7,8 @@ import { advanceLastBastionMatchmaking, eliminateLastBastionParticipant, getLast
 import { calculateRunScore } from './src/game/run/runScore.js';
 import { generateWavePlan } from './src/game/spawning/waveDirector.js';
 import { getBandWaveScaling } from './src/game/balance/difficultyBands.js';
-import { getTriGateWaveScaling } from './src/game/balance/triGatePacing.js';
+import { TRI_GATE_PACING, getTriGateWaveScaling } from './src/game/balance/triGatePacing.js';
+import { ECONOMY_BASELINE } from './src/game/economy/economyBaseline.js';
 import { getBossSummonAddsPlan } from './src/game/boss/bossSummonAdds.js';
 import { calculateAccountXpReward } from './src/game/profile/accountProgression.js';
 
@@ -205,7 +206,7 @@ app.get('/api/health', (_req, res) => res.json({
   deploymentId: process.env.RAILWAY_DEPLOYMENT_ID || null,
   matchIdentityConfigured: Boolean(matchTokenSecret)
 }));
-app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35 }));
+app.get('/api/config', (_req, res) => res.json({ startingGold: ECONOMY_BASELINE.startingGold, baseHp: 20, waveBonus: ECONOMY_BASELINE.waveClearBaseGold }));
 
 const STARTABLE_MODES = new Set(['single-gate', 'tri-gate', 'last-bastion', 'tft-shop', 'sudden-siege']);
 const LAST_BASTION_MATCHMAKING_FIXTURE = Object.freeze(getLastBastionMatchmakingFixtures());
@@ -423,7 +424,7 @@ app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowM
       p_core_hp: 20,
       p_core_max_hp: 20,
       p_kills: 0,
-      p_gold: mode === 'tri-gate' ? 320 : 240,
+      p_gold: mode === 'tri-gate' ? TRI_GATE_PACING.startingGold : ECONOMY_BASELINE.startingGold,
       p_reported_at: startedAt
     });
     if (error) {
@@ -868,11 +869,23 @@ app.get('/api/last-bastion/matchmaking/health', (_req, res) => {
 });
 
 app.get('/api/profile', requireUser, async (req, res) => {
-  const profileRead = await req.db
-    .from('profiles')
-    .select('*')
-    .eq('user_id', req.user.id)
-    .maybeSingle();
+  const [profileRead, modeRecordsResult, lastBastionResult] = await Promise.all([
+    req.db
+      .from('profiles')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .maybeSingle(),
+    req.db
+      .from('mode_records')
+      .select('mode,best_wave,best_survival_ms,best_score,best_kills,updated_at')
+      .eq('user_id', req.user.id)
+      .order('mode', { ascending: true }),
+    req.db
+      .from('last_bastion_stats')
+      .select('runs,wins,top3,best_placement,best_wave,best_survival_ms,best_score,lifetime_kills,total_survival_ms,updated_at')
+      .eq('user_id', req.user.id)
+      .maybeSingle()
+  ]);
 
   if (profileRead.error) return res.status(500).json({ error: 'profile_read_failed' });
 
@@ -886,19 +899,6 @@ app.get('/api/profile', requireUser, async (req, res) => {
     if (created.error) return res.status(500).json({ error: 'profile_create_failed' });
     profile = created.data;
   }
-
-  const [modeRecordsResult, lastBastionResult] = await Promise.all([
-    req.db
-      .from('mode_records')
-      .select('mode,best_wave,best_survival_ms,best_score,best_kills,updated_at')
-      .eq('user_id', req.user.id)
-      .order('mode', { ascending: true }),
-    req.db
-      .from('last_bastion_stats')
-      .select('runs,wins,top3,best_placement,best_wave,best_survival_ms,best_score,lifetime_kills,total_survival_ms,updated_at')
-      .eq('user_id', req.user.id)
-      .maybeSingle()
-  ]);
 
   if (modeRecordsResult.error) {
     return res.status(500).json({ error: 'mode_records_read_failed' });
