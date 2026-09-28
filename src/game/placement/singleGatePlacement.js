@@ -1,4 +1,5 @@
 import { SINGLE_GATE_MAP } from '../maps/singleGate.js';
+import { TRI_GATE_MAP } from '../maps/triGate.js';
 
 export const PLACEMENT_RULES = Object.freeze({
   footprintRadius: SINGLE_GATE_MAP.buildSlots.footprintRadius,
@@ -35,8 +36,13 @@ function distanceToPath(point, waypoints) {
   return minimum;
 }
 
-export function getSingleGateBuildSlot(slotId) {
-  return SINGLE_GATE_MAP.buildSlots.slots.find((slot) => slot.id === slotId) ?? null;
+function getBuildMap(mode) {
+  return mode === 'tri-gate' ? TRI_GATE_MAP : SINGLE_GATE_MAP;
+}
+
+export function getSingleGateBuildSlot(slotId, mode = 'single-gate') {
+  const map = getBuildMap(mode);
+  return (map.buildSlots?.slots ?? map.buildSlotPolicy.slots).find((slot) => slot.id === slotId) ?? null;
 }
 
 export function getSingleGateBuildSlotAtPoint(point) {
@@ -49,8 +55,8 @@ export function getSingleGateBuildSlotAtPoint(point) {
     .sort((a, b) => a.distance - b.distance)[0]?.slot ?? null;
 }
 
-export function validateSingleGateSlotPlacement(slotId, placedStructures = []) {
-  const slot = getSingleGateBuildSlot(slotId);
+export function validateSingleGateSlotPlacement(slotId, placedStructures = [], mode = 'single-gate') {
+  const slot = getSingleGateBuildSlot(slotId, mode);
 
   if (!slot) {
     return Object.freeze({ valid: false, reason: 'invalid-slot', slotId: null });
@@ -66,7 +72,10 @@ export function validateSingleGateSlotPlacement(slotId, placedStructures = []) {
     });
   }
 
-  const pathDistance = distanceToPath(slot, SINGLE_GATE_MAP.path.waypoints);
+  const paths = mode === 'tri-gate'
+    ? TRI_GATE_MAP.pathPlan.lanes.map((lane) => lane.waypoints)
+    : [SINGLE_GATE_MAP.path.waypoints];
+  const pathDistance = Math.min(...paths.map((path) => distanceToPath(slot, path)));
 
   return Object.freeze({
     valid: true,
@@ -90,9 +99,10 @@ export function tryPurchaseDefenseOnSlot({
   slotId,
   defense,
   gold,
-  placedStructures = []
+  placedStructures = [],
+  mode = 'single-gate'
 }) {
-  const placement = validateSingleGateSlotPlacement(slotId, placedStructures);
+  const placement = validateSingleGateSlotPlacement(slotId, placedStructures, mode);
   if (!placement.valid) {
     return Object.freeze({ ok: false, reason: placement.reason, goldAfter: gold, structure: null });
   }
@@ -102,7 +112,7 @@ export function tryPurchaseDefenseOnSlot({
     return Object.freeze({ ok: false, reason: 'insufficient-gold', goldAfter: gold, structure: null });
   }
 
-  const slot = getSingleGateBuildSlot(slotId);
+  const slot = getSingleGateBuildSlot(slotId, mode);
   const structure = Object.freeze({
     id: `${slot.id}-${defense.id}`,
     slotId: slot.id,

@@ -4933,6 +4933,19 @@ button:focus-visible,
 .battlefield-map__art { pointer-events: none; }
 .battlefield-map__road { opacity: 0; }
 .battlefield-map__road--detour { opacity: 1; }
+.battlefield-map--tri .tower-slot__shadow,
+.battlefield-map--tri .tower-slot__stone,
+.battlefield-map--tri .tower-slot__grass,
+.battlefield-map--tri .tower-slot__accent { opacity: 0; pointer-events: none; }
+.battlefield-map--tri .tower-slot__hitbox { pointer-events: all; }
+.battlefield-map--tri .battlefield-map__nexus-meter,
+.battlefield-map--tri .battlefield-map__projectiles { pointer-events: none; }
+.battlefield-map--tri .battlefield-map__tower-slot--hovered .tower-slot__hitbox,
+.battlefield-map--tri .battlefield-map__tower-slot:focus-visible .tower-slot__hitbox {
+  fill: rgba(80, 205, 255, .16);
+  stroke: #a7efff;
+  stroke-width: 3;
+}
 .battlefield-map__spawn, .battlefield-map__label { opacity: 0; }
 .battlefield-map__bastion-shadow,
 .battlefield-map__bastion-base,

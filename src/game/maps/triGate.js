@@ -1,6 +1,6 @@
 export const TRI_GATE_MAP = Object.freeze({
   id: 'tri-gate-three-fronts',
-  version: 1,
+  version: 2,
   mode: 'tri-gate',
   name: 'Three Fronts',
   size: Object.freeze({
@@ -10,27 +10,27 @@ export const TRI_GATE_MAP = Object.freeze({
   anchors: Object.freeze({
     bastion: Object.freeze({
       id: 'tri-gate-bastion-core',
-      x: 800,
-      y: 450
+      x: 918,
+      y: 430
     }),
     entrances: Object.freeze([
       Object.freeze({
         id: 'west-gate',
         side: 'west',
-        x: 80,
-        y: 450
+        x: 0,
+        y: 374
       }),
       Object.freeze({
         id: 'north-gate',
         side: 'north',
-        x: 800,
-        y: 80
+        x: 950,
+        y: 0
       }),
       Object.freeze({
         id: 'south-gate',
         side: 'south',
-        x: 800,
-        y: 820
+        x: 950,
+        y: 900
       })
     ])
   }),
@@ -45,12 +45,13 @@ export const TRI_GATE_MAP = Object.freeze({
         destinationId: 'tri-gate-bastion-core',
         width: 88,
         waypoints: Object.freeze([
-          Object.freeze({ x: 80, y: 450 }),
-          Object.freeze({ x: 260, y: 450 }),
-          Object.freeze({ x: 410, y: 340 }),
-          Object.freeze({ x: 560, y: 340 }),
-          Object.freeze({ x: 680, y: 420 }),
-          Object.freeze({ x: 800, y: 450 })
+          Object.freeze({ x: 0, y: 374 }),
+          Object.freeze({ x: 155, y: 386 }),
+          Object.freeze({ x: 315, y: 354 }),
+          Object.freeze({ x: 450, y: 397 }),
+          Object.freeze({ x: 610, y: 415 }),
+          Object.freeze({ x: 750, y: 410 }),
+          Object.freeze({ x: 918, y: 430 })
         ])
       }),
       Object.freeze({
@@ -59,12 +60,12 @@ export const TRI_GATE_MAP = Object.freeze({
         destinationId: 'tri-gate-bastion-core',
         width: 88,
         waypoints: Object.freeze([
-          Object.freeze({ x: 800, y: 80 }),
-          Object.freeze({ x: 800, y: 190 }),
-          Object.freeze({ x: 955, y: 245 }),
-          Object.freeze({ x: 970, y: 335 }),
-          Object.freeze({ x: 900, y: 405 }),
-          Object.freeze({ x: 800, y: 450 })
+          Object.freeze({ x: 950, y: 0 }),
+          Object.freeze({ x: 953, y: 61 }),
+          Object.freeze({ x: 1009, y: 146 }),
+          Object.freeze({ x: 990, y: 225 }),
+          Object.freeze({ x: 958, y: 290 }),
+          Object.freeze({ x: 918, y: 430 })
         ])
       }),
       Object.freeze({
@@ -73,12 +74,12 @@ export const TRI_GATE_MAP = Object.freeze({
         destinationId: 'tri-gate-bastion-core',
         width: 88,
         waypoints: Object.freeze([
-          Object.freeze({ x: 800, y: 820 }),
-          Object.freeze({ x: 800, y: 710 }),
-          Object.freeze({ x: 645, y: 655 }),
-          Object.freeze({ x: 630, y: 565 }),
-          Object.freeze({ x: 700, y: 495 }),
-          Object.freeze({ x: 800, y: 450 })
+          Object.freeze({ x: 950, y: 900 }),
+          Object.freeze({ x: 952, y: 783 }),
+          Object.freeze({ x: 971, y: 695 }),
+          Object.freeze({ x: 1002, y: 623 }),
+          Object.freeze({ x: 950, y: 545 }),
+          Object.freeze({ x: 918, y: 430 })
         ])
       })
     ])
@@ -89,7 +90,16 @@ export const TRI_GATE_MAP = Object.freeze({
     numericalTowerCap: null,
     footprintRadius: 34,
     minimumPathCenterDistance: 104,
-    slotsDefinedAfterPathGeometry: true
+    slotsDefinedAfterPathGeometry: true,
+    slots: Object.freeze([
+      [207,352], [308,322], [458,367], [665,396], [402,459], [565,470], [767,500],
+      [880,78], [1067,87], [963,137], [1125,170], [936,238], [1067,260],
+      [1051,563], [905,586], [992,652], [1133,674], [930,777], [1082,784]
+    ].map(([x, y], index) => Object.freeze({
+      id: `tri-slot-${String(index + 1).padStart(2, '0')}`,
+      x: Math.round(x * 1600 / 1672),
+      y: Math.round(y * 900 / 941)
+    })))
   }),
   camera: Object.freeze({
     centerX: 800,
@@ -185,8 +195,8 @@ export function getTriGateMapFixtures() {
     pathsHaveShape,
     uniqueInteriorWaypoints,
     bastionCentered:
-      bastion.x === TRI_GATE_MAP.size.width / 2 &&
-      bastion.y === TRI_GATE_MAP.size.height / 2,
+      Math.abs(bastion.x - TRI_GATE_MAP.size.width / 2) < 130 &&
+      Math.abs(bastion.y - TRI_GATE_MAP.size.height / 2) < 50,
     individualSlotPolicy:
       TRI_GATE_MAP.buildSlotPolicy.type === 'individual-pads' &&
       TRI_GATE_MAP.buildSlotPolicy.oneTowerPerSlot === true &&

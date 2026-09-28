@@ -131,7 +131,7 @@ const MODE_PRE_RUN = Object.freeze({
     fronts: '3 FRONTS',
     objective: 'SURVIVE',
     record: 'HIGHEST WAVE',
-    status: 'MODE LOGIC LATER'
+    status: 'READY TO INITIALIZE'
   }),
   [MODES.TFT_SHOP]: Object.freeze({
     kicker: 'TFT SHOP',
@@ -720,8 +720,6 @@ function ModeSelect({ onBack, onSelect }) {
 
 
 function TriGateBattlefieldPreview() {
-  const bastion = TRI_GATE_MAP.anchors.bastion;
-
   return (
     <section
       className="tri-gate-preview"
@@ -732,98 +730,15 @@ function TriGateBattlefieldPreview() {
       <div className="tri-gate-preview__header">
         <span>THREE FRONTS</span>
         <strong>{TRI_GATE_MAP.name}</strong>
-        <small>Battlefield render only — live multi-lane spawning arrives next.</small>
+        <small>Three entrances, one Nexus, 19 tower pads.</small>
       </div>
-
-      <svg
+      <img
         className="tri-gate-preview__map"
-        viewBox={`0 0 ${TRI_GATE_MAP.size.width} ${TRI_GATE_MAP.size.height}`}
-        role="img"
-        aria-label="Three entrance paths converging on the central Bastion"
-      >
-        <defs>
-          <linearGradient id="tri-terrain" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#a9d98e" />
-            <stop offset="55%" stopColor="#7fbd7c" />
-            <stop offset="100%" stopColor="#67a16e" />
-          </linearGradient>
-          <linearGradient id="tri-path" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#d2c49f" />
-            <stop offset="100%" stopColor="#b9a77b" />
-          </linearGradient>
-          <radialGradient id="tri-bastion-glow">
-            <stop offset="0%" stopColor="rgba(104,190,255,.75)" />
-            <stop offset="100%" stopColor="rgba(104,190,255,0)" />
-          </radialGradient>
-        </defs>
-
-        <rect width={TRI_GATE_MAP.size.width} height={TRI_GATE_MAP.size.height} fill="url(#tri-terrain)" />
-
-        <g className="tri-gate-preview__terrain-detail" opacity=".42">
-          <path d="M0 180Q210 100 390 190T760 160T1120 210T1600 140V0H0Z" />
-          <path d="M0 760Q220 700 420 760T820 720T1210 770T1600 710V900H0Z" />
-          <circle cx="260" cy="180" r="72" />
-          <circle cx="1310" cy="220" r="96" />
-          <circle cx="1315" cy="690" r="88" />
-          <circle cx="260" cy="700" r="82" />
-        </g>
-
-        {TRI_GATE_MAP.pathPlan.lanes.map((lane) => (
-          <polyline
-            key={lane.id}
-            className="tri-gate-preview__path-shadow"
-            points={lane.waypoints.map((point) => `${point.x},${point.y}`).join(' ')}
-            fill="none"
-            strokeWidth={lane.width + 18}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ))}
-
-        {TRI_GATE_MAP.pathPlan.lanes.map((lane) => (
-          <polyline
-            key={`${lane.id}-road`}
-            className="tri-gate-preview__path"
-            points={lane.waypoints.map((point) => `${point.x},${point.y}`).join(' ')}
-            fill="none"
-            stroke="url(#tri-path)"
-            strokeWidth={lane.width}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ))}
-
-        {TRI_GATE_MAP.anchors.entrances.map((entrance) => (
-          <g
-            key={entrance.id}
-            className="tri-gate-preview__entrance"
-            transform={`translate(${entrance.x} ${entrance.y})`}
-          >
-            <circle r="54" />
-            <path d="M-28 28V-8L0-36L28-8V28Z" />
-            <rect x="-9" y="2" width="18" height="26" rx="4" />
-            <text x="0" y="82" textAnchor="middle">{entrance.side.toUpperCase()}</text>
-          </g>
-        ))}
-
-        <circle
-          className="tri-gate-preview__bastion-glow"
-          cx={bastion.x}
-          cy={bastion.y}
-          r="120"
-          fill="url(#tri-bastion-glow)"
-        />
-
-        <g
-          className="tri-gate-preview__bastion"
-          transform={`translate(${bastion.x} ${bastion.y})`}
-        >
-          <circle r="72" />
-          <path d="M-48 42V-26L-24-48L0-26L24-48L48-26V42Z" />
-          <rect x="-18" y="2" width="36" height="40" rx="6" />
-          <text x="0" y="96" textAnchor="middle">BASTION</text>
-        </g>
-      </svg>
+        src="/assets/maps/tri-gate.webp"
+        width="1600"
+        height="900"
+        alt="Three roads converge from the west, north and south toward the central Nexus, with 19 tower pads"
+      />
     </section>
   );
 }
@@ -1283,6 +1198,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const bastionAnchor = run?.mode === MODES.TRI_GATE
     ? TRI_GATE_MAP.anchors.bastion
     : SINGLE_GATE_MAP.anchors.bastion;
+  const buildSlots = run?.mode === MODES.TRI_GATE
+    ? TRI_GATE_MAP.buildSlotPolicy.slots
+    : SINGLE_GATE_MAP.buildSlots.slots;
   const wallTravelMultiplier = 1;
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
   const towerSynergyState = getTowerSynergyState(placedDefenses, defenseDefinitions);
@@ -1690,7 +1608,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           const primaryIndex = working.findIndex((enemy) => enemy.id === primary.id);
           if (primaryIndex < 0) continue;
 
-          const slot = SINGLE_GATE_MAP.buildSlots.slots.find((entry) => entry.id === placed.slotId);
+          const slot = buildSlots.find((entry) => entry.id === placed.slotId);
           if (slot && primary.position) {
             const visual = getTowerAttackVisual(definition, placed.evolution);
             const duration = ['beam', 'chain', 'mark', 'aura'].includes(visual)
@@ -2280,7 +2198,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       slotId,
       defense: selectedDefense,
       gold: availableGoldRef.current,
-      placedStructures: placedDefenses
+      placedStructures: placedDefenses,
+      mode: run.mode
     });
 
     if (!attempt.ok) return;
@@ -2408,6 +2327,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           <svg
             className={[
               'battlefield-map',
+              run?.mode === MODES.TRI_GATE ? 'battlefield-map--tri' : '',
               riskRewardVisual.active ? 'battlefield-map--pressure' : '',
               suddenBattlefieldVisual ? 'battlefield-map--sudden' : '',
               suddenBattlefieldVisual ? `battlefield-map--sudden-${suddenBattlefieldVisual.className}` : ''
@@ -2429,7 +2349,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <radialGradient id="bf-meadow"><stop stopColor="#a9ce66"/><stop offset=".7" stopColor="#70a451"/><stop offset="1" stopColor="#416d49"/></radialGradient>
               <pattern id="bf-grass-texture" width="112" height="94" patternUnits="userSpaceOnUse"><path d="M12 25l4-5m2 5 3-6M77 67l3-5m3 5 4-7M51 12l3-4M100 36l4-6" stroke="#d9e5a1" strokeWidth="2" opacity=".43"/><circle cx="38" cy="61" r="2" fill="#f2eac8"/><circle cx="94" cy="14" r="2" fill="#e8d9a0"/></pattern>
             </defs>
-            <image className="battlefield-map__art" href="/assets/maps/bastionfall-field-v2.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
+            <image className="battlefield-map__art" href={run?.mode === MODES.TRI_GATE ? '/assets/maps/tri-gate.webp' : '/assets/maps/bastionfall-field-v2.webp'} x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
             {suddenBattlefieldVisual && (
               <g
                 className={`sudden-stage-overlay sudden-stage-overlay--${suddenBattlefieldVisual.className}`}
@@ -2488,7 +2408,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               ))}
             </g>
             <g className="battlefield-map__build-slots">
-              {SINGLE_GATE_MAP.buildSlots.slots.map((slot) => {
+              {buildSlots.map((slot) => {
                 const placed = placedDefenses.find((entry) => entry.slotId === slot.id) ?? null;
                 const benchCopy = selectedTftBenchIndex == null ? null : tftBench[selectedTftBenchIndex];
                 const movingTower = movingPlacedDefenseId
@@ -2604,6 +2524,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       }
                     }}
                   >
+                    {run?.mode === MODES.TRI_GATE && <circle className="tower-slot__hitbox" r="36" fill="transparent" />}
                     {selectedPlaced && visibleRange > 0 && (
                       <circle
                         className={`tower-range-indicator tower-range-indicator--selected tower-range-indicator--${visibleRangeKind}`}
@@ -2785,7 +2706,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 );
               })}
             </g>
-            {spawnAnchors.map((spawn) => (
+            {run?.mode !== MODES.TRI_GATE && spawnAnchors.map((spawn) => (
               <circle
                 key={spawn.id}
                 className="battlefield-map__spawn"
@@ -2865,7 +2786,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             <g className="battlefield-map__projectiles" aria-hidden="true">
               {projectiles.map((shot) => <TowerAttackEffect key={shot.id} shot={shot} speed={waveSpeed} />)}
             </g>
-            <g
+            {run?.mode !== MODES.TRI_GATE && <g
               className={`battlefield-map__bastion ${bastionStateClass}`}
               transform={`translate(${bastionAnchor.x} ${bastionAnchor.y})`}
               aria-label="Bastion structure"
@@ -2879,7 +2800,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <path className="battlefield-map__bastion-roof" d="M -48 -80 L 0 -116 L 48 -80 Z" />
               <circle className="battlefield-map__bastion-core" cx="0" cy="-20" r="18" />
               <path className="battlefield-map__bastion-gate" d="M -18 48 V 18 Q 0 2 18 18 V 48 Z" />
-            </g>
+            </g>}
             <g className={`battlefield-map__nexus-meter ${bastionStateClass}`} transform={`translate(${bastionAnchor.x} ${bastionAnchor.y})`} role="img" aria-label={`Nexus ${run?.coreHp ?? 0} of ${run?.coreMaxHp ?? 0} health`}>
                 <path className="battlefield-map__nexus-frame" d="M -106 -180 H 92 L 106 -168 V -126 H -92 L -106 -138 Z" />
                 <path className="battlefield-map__nexus-rim" d="M -103 -177 H 90 L 103 -167 M -103 -139 V -129 H 92 L 103 -139" />
@@ -2899,7 +2820,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               />
                 <path className="battlefield-map__nexus-bar-shine" d={`M -88 -146 H ${-88 + 176 * coreRatio}`} />
               </g>
-            {spawnAnchors.map((spawn) => (
+            {run?.mode !== MODES.TRI_GATE && spawnAnchors.map((spawn) => (
               <text
                 key={`${spawn.id}-label`}
                 className="battlefield-map__label"
@@ -2910,14 +2831,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 {run?.mode === MODES.TRI_GATE ? 'GATE' : 'SPAWN'}
               </text>
             ))}
-            <text
+            {run?.mode !== MODES.TRI_GATE && <text
               className="battlefield-map__label battlefield-map__label--bastion"
               x={bastionAnchor.x}
               y={bastionAnchor.y + 102}
               textAnchor="middle"
             >
               BASTION
-            </text>
+            </text>}
           </svg>
 
           <button type="button" className={`wave-speed-toggle${waveSpeed === 2 ? ' is-active' : ''}`}
@@ -3027,7 +2948,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-flying-enemy-threat={FLYING_ENEMY.threatValue}
             data-flying-enemy-speed={FLYING_ENEMY_BUDGET.speedIndex}
             data-flying-enemy-airborne={FLYING_ENEMY_BUDGET.airborne}
-            data-tower-slot-count={SINGLE_GATE_MAP.buildSlots.slots.length}
+            data-tower-slot-count={buildSlots.length}
             data-gauntlet-map-version={SINGLE_GATE_MAP.version}
             data-gauntlet-wall-count={SINGLE_GATE_MAP.wallSlots.sockets.length}
             data-late-game-soak-pass={LATE_GAME_SOAK_PASS}

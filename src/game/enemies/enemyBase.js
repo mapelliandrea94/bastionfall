@@ -25,6 +25,7 @@ export const ENEMY_BASE_MODEL = Object.freeze({
 export function createEnemyBaseState(overrides = {}) {
   const model = {
     id: String(overrides.id ?? 'enemy'),
+    laneId: overrides.laneId ?? null,
     archetype: overrides.archetype ?? ENEMY_BASE_MODEL.defaults.archetype,
     maxHp: Math.max(1, Number(overrides.maxHp ?? ENEMY_BASE_MODEL.defaults.maxHp)),
     hp: Math.max(0, Number(overrides.hp ?? overrides.maxHp ?? ENEMY_BASE_MODEL.defaults.maxHp)),
