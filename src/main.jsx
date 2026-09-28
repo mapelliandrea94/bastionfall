@@ -38,7 +38,7 @@ import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getEnemyKillReward, getWa
 import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOpportunityCost } from './game/structures/goldMine.js';
 import { WAR_FORGE, applyWarForgePreview, getWarForgeFixtures } from './game/structures/warForge.js';
 import { GUARDIAN_SHRINE, applyGuardianShrineRangePreview, applyGuardianShrineToBastionDamage, getGuardianShrineFixtures } from './game/structures/guardianShrine.js';
-import { WALL_SYSTEM, getWallSystemFixtures, purchaseWall } from './game/structures/walls.js';
+import { WALL_PROGRESS_BY_ID, WALL_SYSTEM, getWallSystemFixtures, purchaseWall } from './game/structures/walls.js';
 import { ECONOMY_SPEND_CURVE, getEconomyRiskProfile, getSpendCurveFixtures, getStrategicSpendProfile } from './game/balance/economySpendCurve.js';
 import { UPGRADE_CURVE, getNextUpgradePreview, getUpgradeCost } from './game/balance/upgradeCurves.js';
 import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/combat/targeting.js';
@@ -231,12 +231,6 @@ const TOWER_EVOLUTION_INTEGRITY_PASS = getTowerEvolutionIntegrityPass();
 const NORMAL_MODE_EVOLUTION_FLOW_QA = Object.freeze(getNormalModeEvolutionFlowQa());
 const NORMAL_MODE_EVOLUTION_FLOW_PASS = getNormalModeEvolutionFlowPass();
 const WALL_SYSTEM_FIXTURE = Object.freeze(getWallSystemFixtures());
-const WALL_PROGRESS_BY_ID = Object.freeze({
-  'wall-01': 0.115,
-  'wall-02': 0.324,
-  'wall-03': 0.543,
-  'wall-04': 0.760
-});
 const TFT_SHOP_FIXTURE = Object.freeze(getTftShopFixtures());
 const TFT_BENCH_FIXTURE = Object.freeze(getTftBenchFixtures());
 const TFT_COPY_PROGRESSION_FIXTURE = Object.freeze(getTftCopyProgressionFixtures());
