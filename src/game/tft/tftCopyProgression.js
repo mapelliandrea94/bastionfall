@@ -41,6 +41,29 @@ export function getTftProgressDenominator(copyProgress) {
     : TFT_COPY_PROGRESSION.evolutionCopies;
 }
 
+export function getTftFieldMergeOutcome(sourceProgress, targetProgress) {
+  const source = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(sourceProgress) || 1));
+  const target = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(targetProgress) || 1));
+  const total = source + target;
+
+  if (total <= TFT_COPY_PROGRESSION.maxCopies) {
+    return Object.freeze({
+      targetProgress: total,
+      sourceProgress: 0,
+      consumedCopies: 0,
+      overflow: false
+    });
+  }
+
+  const remaining = Math.max(0, total - TFT_COPY_PROGRESSION.maxCopies - 1);
+  return Object.freeze({
+    targetProgress: TFT_COPY_PROGRESSION.maxCopies,
+    sourceProgress: remaining,
+    consumedCopies: 1,
+    overflow: true
+  });
+}
+
 export function canMergeTftCopy(placedTower, benchCopy) {
   if (!placedTower || !benchCopy) return Object.freeze({ ok: false, error: 'missing_tower_or_copy' });
   if (placedTower.defenseId !== benchCopy.towerId) return Object.freeze({ ok: false, error: 'wrong_tower_type' });
@@ -97,6 +120,14 @@ export function getTftCopyProgressionFixtures() {
     sevenSwitchesToFourteenTrack: getTftProgressDenominator(6) === 7 && getTftProgressDenominator(7) === 14,
     redAscensionAtTen: p10.copyProgress === 10 && getTftAscensionTier(p10.copyProgress) === 'red' && getTftAscensionMultiplier(p10.copyProgress) === 1.15,
     goldAscensionAtFourteen: p14.copyProgress === 14 && getTftAscensionTier(p14.copyProgress) === 'gold' && getTftAscensionMultiplier(p14.copyProgress) === 1.3,
+    fieldMergeTenPlusTen: (() => {
+      const outcome = getTftFieldMergeOutcome(10, 10);
+      return outcome.targetProgress === 14 && outcome.sourceProgress === 5 && outcome.consumedCopies === 1;
+    })(),
+    fieldMergeSevenPlusSeven: (() => {
+      const outcome = getTftFieldMergeOutcome(7, 7);
+      return outcome.targetProgress === 14 && outcome.sourceProgress === 0 && outcome.consumedCopies === 0;
+    })(),
     maxBlocksExtra: canMergeTftCopy(p14, same).ok === false
   });
 }
