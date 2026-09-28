@@ -878,6 +878,40 @@ button { font: inherit; }
   backdrop-filter: blur(8px);
 }
 
+.wave-speed-toggle {
+  position: absolute;
+  z-index: 32;
+  top: 90px;
+  right: 330px;
+  width: 78px;
+  min-height: 58px;
+  display: grid;
+  place-content: center;
+  gap: 1px;
+  border: 2px solid #e6be69;
+  border-radius: 10px;
+  background: rgba(11, 25, 37, .94);
+  color: #ffdc7e;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, .4);
+  cursor: pointer;
+}
+.wave-speed-toggle strong { font-size: 22px; line-height: 1; }
+.wave-speed-toggle span { font-size: 11px; font-weight: 900; letter-spacing: .08em; }
+.wave-speed-toggle:hover, .wave-speed-toggle.is-active, .wave-speed-toggle:focus-visible {
+  background: #f2c95b;
+  color: #1a1c19;
+  outline: 2px solid #fff3ba;
+}
+@media (min-width: 901px) {
+  .run-screen:has(.run-sidebar--tft) .wave-speed-toggle { right: 455px; }
+}
+@media (min-width: 1501px) {
+  .run-screen:has(.run-sidebar--tft) .wave-speed-toggle { right: 635px; }
+}
+@media (max-width: 900px) {
+  .wave-speed-toggle { top: 82px; right: auto; left: 12px; width: 65px; min-height: 48px; }
+}
+
 .run-sidebar h3 {
   margin: 0 0 18px;
   font-family: Georgia, "Times New Roman", serif;
