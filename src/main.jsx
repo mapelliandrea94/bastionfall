@@ -45,7 +45,7 @@ import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/c
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
 import { FACTION_COUNTER_ENGINE, getFactionCounterFixtures } from './game/combat/factionCounters.js';
-import { getBaseTowerCombatFixtures, getEffectiveTowerAttackInterval, getTowerHitDamage, getTowerTargets } from './game/combat/baseTowerCombat.js';
+import { getBaseTowerCombatFixtures, getEffectiveTowerAttackInterval, getTowerHitDamage, getTowerTargets, isTowerInsideBuffAura } from './game/combat/baseTowerCombat.js';
 import { SUPPORT_STACKING, applyStrongestArmorShred, applyStrongestTimedEffect, getSupportStackingFixtures } from './game/combat/supportStacking.js';
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
@@ -1302,6 +1302,10 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     : SINGLE_GATE_MAP.buildSlots.slots;
   const wallTravelMultiplier = 1;
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
+  const positionedPlacedDefenses = placedDefenses.map((tower) => {
+    const slot = buildSlots.find((entry) => entry.id === tower.slotId);
+    return slot ? { ...tower, x: slot.x, y: slot.y } : tower;
+  });
   const towerSynergyState = getTowerSynergyState(placedDefenses, defenseDefinitions);
   const activeTowerCombos = getActiveTowerCombos(placedDefenses);
 
@@ -2601,6 +2605,13 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                 const hovered = hoveredSlotId === slot.id;
                 const selectedPlaced = placed?.id === selectedPlacedDefenseId;
                 const matchingBenchCopy = Boolean(placed && benchCopy?.towerId === placed.defenseId);
+                const positionedPlaced = placed
+                  ? positionedPlacedDefenses.find((tower) => tower.id === placed.id) ?? placed
+                  : null;
+                const buffedByNeutral = Boolean(positionedPlaced && positionedPlacedDefenses.some((buffTower) => {
+                  const buffDefinition = defenseDefinitions[buffTower.defenseId];
+                  return isTowerInsideBuffAura(positionedPlaced, buffTower, buffDefinition);
+                }));
                 const placedRuntimeDefense = placed
                   ? applyBlessingTowerIdentity(
                       applyTowerSynergy(
@@ -2734,6 +2745,12 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
                     {placed && (
                       <>
+                        {buffedByNeutral && (
+                          <g className="tower-buff-received-aura" data-buff-received="true" aria-hidden="true">
+                            <circle className="tower-buff-received-aura__outer" cx="0" cy="0" r="47" />
+                            <circle className="tower-buff-received-aura__inner" cx="0" cy="0" r="39" />
+                          </g>
+                        )}
                         {evolutionVisual?.active && (
                           <g
                             className={`tower-evolution-aura tower-evolution-aura--${evolutionVisual.branch.toLowerCase()}`}
