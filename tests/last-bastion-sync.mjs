@@ -7,6 +7,7 @@ import {
   getLastBastionQueueStatus,
   getLastBastionMatchStatus,
   hydrateLastBastionActiveMatches,
+  hydrateLastBastionMatch,
   hydrateLastBastionQueue,
   LAST_BASTION_MATCHMAKING,
   resolveLastBastionAbandons,
@@ -389,6 +390,72 @@ assert(allGoneStatus.match?.winnerSlot === null, 'All-stale match must not award
 
 clearLastBastionMatchForUser(abandonA);
 clearLastBastionMatchForUser(abandonB);
+hydrateLastBastionActiveMatches([], []);
+
+const targetedMatchA = 'targeted-match-a';
+const targetedMatchB = 'targeted-match-b';
+const targetedCreatedAt = '2026-09-27T22:00:00.000Z';
+const targetedStartedAt = '2026-09-27T22:00:05.000Z';
+
+hydrateLastBastionActiveMatches(
+  [
+    {
+      id: targetedMatchA,
+      seed: 'last-bastion:targeted-match-a',
+      status: 'active',
+      created_at: targetedCreatedAt,
+      started_at: targetedStartedAt,
+      wave_starts_at: targetedStartedAt,
+      winner_user_id: null,
+      ended_at: null
+    },
+    {
+      id: targetedMatchB,
+      seed: 'last-bastion:targeted-match-b',
+      status: 'active',
+      created_at: targetedCreatedAt,
+      started_at: targetedStartedAt,
+      wave_starts_at: targetedStartedAt,
+      winner_user_id: null,
+      ended_at: null
+    }
+  ],
+  [
+    { match_id: targetedMatchA, user_id: 'targeted-a1', slot: 1, alive: true, last_seen_at: targetedStartedAt, wave: 2, core_hp: 18 },
+    { match_id: targetedMatchA, user_id: 'targeted-a2', slot: 2, alive: true, last_seen_at: targetedStartedAt, wave: 2, core_hp: 17 },
+    { match_id: targetedMatchB, user_id: 'targeted-b1', slot: 1, alive: true, last_seen_at: targetedStartedAt, wave: 7, core_hp: 16 },
+    { match_id: targetedMatchB, user_id: 'targeted-b2', slot: 2, alive: true, last_seen_at: targetedStartedAt, wave: 7, core_hp: 15 }
+  ]
+);
+
+const targetedHydrate = hydrateLastBastionMatch(
+  {
+    id: targetedMatchA,
+    seed: 'last-bastion:targeted-match-a',
+    status: 'active',
+    created_at: targetedCreatedAt,
+    started_at: targetedStartedAt,
+    wave_starts_at: targetedStartedAt,
+    winner_user_id: null,
+    ended_at: null
+  },
+  [
+    { match_id: targetedMatchA, user_id: 'targeted-a1', slot: 1, alive: true, last_seen_at: '2026-09-27T22:00:20.000Z', wave: 5, core_hp: 14 },
+    { match_id: targetedMatchA, user_id: 'targeted-a2', slot: 2, alive: true, last_seen_at: '2026-09-27T22:00:20.000Z', wave: 5, core_hp: 13 }
+  ]
+);
+
+const targetedAStatus = getLastBastionMatchStatus('targeted-a1', targetedMatchA, Date.parse('2026-09-27T22:00:21.000Z'));
+const targetedBStatus = getLastBastionMatchStatus('targeted-b1', targetedMatchB, Date.parse('2026-09-27T22:00:21.000Z'));
+
+assert(targetedHydrate.hydrated === true, 'Targeted Last Bastion hydration must update one match');
+assert(targetedAStatus.match?.participants?.find((p) => p.self)?.wave === 5, 'Targeted hydration must refresh the requested match');
+assert(targetedBStatus.ok === true, 'Targeted hydration must preserve unrelated matches in memory');
+assert(targetedBStatus.match?.participants?.find((p) => p.self)?.wave === 7, 'Unrelated match state must remain untouched');
+
+for (const userId of ['targeted-a1','targeted-a2','targeted-b1','targeted-b2']) {
+  clearLastBastionMatchForUser(userId);
+}
 hydrateLastBastionActiveMatches([], []);
 
 const seed = 'last-bastion:sync-fixture';
