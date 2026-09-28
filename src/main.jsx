@@ -90,7 +90,7 @@ import { FLYING_ENEMY, createFlyingEnemyState, getFlyingEnemyBudget } from './ga
 import { ELITE_MODIFIER_SYSTEM, applyEliteModifiers, attachEliteModifierFoundation, getEliteModifierFoundationFixtures } from './game/elites/eliteModifiers.js';
 import { WORLD_MODIFIER_SYSTEM, getActiveWorldModifiers, getWorldModifierEffects, getWorldModifierFoundationFixtures } from './game/world/worldModifiers.js';
 import { GAME_FEEDBACK_EVENTS, emitGameFeedback, getGameFeedbackFixtures } from './game/feedback/gameFeedback.js';
-import { SUPPORTED_LANGUAGES, getLanguage, setLanguage, t } from './i18n/localization.js';
+import { SUPPORTED_LANGUAGES, gameText, getLanguage, setLanguage, t } from './i18n/localization.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -729,7 +729,7 @@ function TriGateBattlefieldPreview() {
       data-tri-gate-rendered-entrances={TRI_GATE_MAP.anchors.entrances.length}
     >
       <div className="tri-gate-preview__header">
-        <span>THREE FRONTS</span>
+        <span>{t('threeFronts')}</span>
         <strong>{TRI_GATE_MAP.name}</strong>
         <small>Three entrances, one Nexus, 19 tower pads.</small>
       </div>
@@ -888,25 +888,25 @@ function ModePreRun({ mode, onBack, onStart, session }) {
     <Shell
       onBack={onBack}
       kicker={contract.kicker}
-      title={contract.title}
-      subtitle={contract.description}
+      title={gameText(contract.title)}
+      subtitle={gameText(contract.description)}
     >
       <div className="pre-run-grid">
         <section className="pre-run-card">
           <span className="pre-run-card__eyebrow">{t('format')}</span>
-          <strong>{contract.fronts}</strong>
+          <strong>{gameText(contract.fronts)}</strong>
           <small>{mode === MODES.TRI_GATE ? 'Three rendered fronts converge on one central Bastion.' : 'Single-front battlefield.'}</small>
         </section>
 
         <section className="pre-run-card">
           <span className="pre-run-card__eyebrow">{t('objective')}</span>
-          <strong>{contract.objective}</strong>
+          <strong>{gameText(contract.objective)}</strong>
           <small>{t('equalCombatPower')}</small>
         </section>
 
         <section className="pre-run-card">
           <span className="pre-run-card__eyebrow">{t('record')}</span>
-          <strong>{contract.record}</strong>
+          <strong>{gameText(contract.record)}</strong>
           <small>{t('modePersistence')}</small>
         </section>
       </div>
@@ -2223,7 +2223,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         <div className="battlefield">
           <header className="run-hud" aria-label="Run status">
             <div>
-              <span className="run-hud__label">MODE</span>
+              <span className="run-hud__label">{t('mode')}</span>
               <strong>{
                 run?.mode === MODES.SINGLE_GATE
                   ? 'SINGLE GATE'
@@ -2239,24 +2239,24 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               }</strong>
             </div>
             <div>
-              <span className="run-hud__label">WAVE</span>
+              <span className="run-hud__label">{t('wave')}</span>
               <strong>{run?.wave ?? 0}</strong>
             </div>
             <div>
-              <span className="run-hud__label">GOLD</span>
+              <span className="run-hud__label">{t('gold')}</span>
               <strong>{run?.gold ?? RUN_DEFAULTS.startingGold}</strong>
             </div>
             <div className={`run-hud__nexus ${bastionStateClass}`} aria-label={`Nexus health ${run?.coreHp ?? RUN_DEFAULTS.coreHp} of ${run?.coreMaxHp ?? RUN_DEFAULTS.coreHp}`}>
-              <span className="run-hud__label">NEXUS</span>
+              <span className="run-hud__label">{t('nexus')}</span>
               <strong>{run?.coreHp ?? RUN_DEFAULTS.coreHp}<small> / {run?.coreMaxHp ?? RUN_DEFAULTS.coreHp}</small></strong>
               <span className="run-hud__nexus-track" aria-hidden="true"><span style={{ width: `${coreRatio * 100}%` }} /></span>
             </div>
             <div>
-              <span className="run-hud__label">SURVIVAL</span>
+              <span className="run-hud__label">{t('survival')}</span>
               <strong>{formatSurvivalTime(run?.elapsedMs ?? 0)}</strong>
             </div>
             <div>
-              <span className="run-hud__label">SCORE</span>
+              <span className="run-hud__label">{t('score')}</span>
               <strong>{runScore.totalScore.toLocaleString()}</strong>
             </div>
             <button className="run-exit" onClick={onExit} aria-label="Exit current run">{t('exitRun')}</button>
@@ -2365,7 +2365,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <g className="sudden-stage-overlay__badge" transform="translate(800 126)">
                   <rect x="-154" y="-24" width="308" height="48" rx="18" />
                   <text x="0" y="6" textAnchor="middle">
-                    {suddenBattlefieldVisual.label}
+                    {gameText(suddenBattlefieldVisual.label)}
                   </text>
                 </g>
               </g>
@@ -2382,7 +2382,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     {t('waveQuest')} · +{miniObjectiveReward}G
                   </text>
                   <text className="mini-objective-battlefield__status" x="0" y="16" textAnchor="middle">
-                    {miniObjective.name} · {miniObjectiveLive.label} · {miniObjectiveLive.progress}
+                    {gameText(miniObjective.name)} · {gameText(miniObjectiveLive.label)} · {miniObjectiveLive.progress}
                   </text>
                 </g>
               </g>
@@ -2777,9 +2777,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     <text className="enemy-status__name" x="0" y="-56" textAnchor="middle">
                       {enemy.archetype.toUpperCase()}
                     </text>
-                    {enemy.armor > 0 && <text className="enemy-status__badge enemy-status__badge--armor" x="-24" y="39">ARM</text>}
-                    {enemy.airborne && <text className="enemy-status__badge enemy-status__badge--air" x="0" y="39" textAnchor="middle">AIR</text>}
-                    {slowActive && <text className="enemy-status__badge enemy-status__badge--slow" x="24" y="39" textAnchor="end">SLOW</text>}
+                    {enemy.armor > 0 && <text className="enemy-status__badge enemy-status__badge--armor" x="-24" y="39">{t('arm')}</text>}
+                    {enemy.airborne && <text className="enemy-status__badge enemy-status__badge--air" x="0" y="39" textAnchor="middle">{t('air')}</text>}
+                    {slowActive && <text className="enemy-status__badge enemy-status__badge--slow" x="24" y="39" textAnchor="end">{t('slow')}</text>}
                   </g>
                 </g>
               );
@@ -2806,7 +2806,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <path className="battlefield-map__nexus-frame" d="M -106 -180 H 92 L 106 -168 V -126 H -92 L -106 -138 Z" />
                 <path className="battlefield-map__nexus-rim" d="M -103 -177 H 90 L 103 -167 M -103 -139 V -129 H 92 L 103 -139" />
                 <path className="battlefield-map__nexus-gem" d="M -92 -169 L -86 -163 L -92 -157 L -98 -163 Z" />
-                <text className="battlefield-map__nexus-label" x="-78" y="-158">NEXUS</text>
+                <text className="battlefield-map__nexus-label" x="-78" y="-158">{t('nexus')}</text>
                 <text className="battlefield-map__bastion-hp-text" x="90" y="-158" textAnchor="end">
                   {run?.coreHp ?? 0} <tspan className="battlefield-map__nexus-max">/ {run?.coreMaxHp ?? 0}</tspan>
                 </text>
@@ -3046,7 +3046,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               </section>
             )}
             <div className="tft-shop-layout">
-            <p className="main-menu__kicker">SHOP</p>
+            <p className="main-menu__kicker">{t('shop')}</p>
             <h3>TFT SHOP</h3>
             <div className="tft-shop-grid" data-shop-slots={tftShopOffers.length}>
               {tftShopOffers.map((offer) => (
@@ -3257,8 +3257,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </>
         ) : (
           <>
-            <p className="main-menu__kicker">DEFENSES</p>
-          <h3>BUILD</h3>
+            <p className="main-menu__kicker">{t('defenses')}</p>
+          <h3>{t('build')}</h3>
           <div className="normal-build-roster" data-normal-build-count={NORMAL_MODE_TOWERS.length}>
             {['human', 'insect', 'alien', 'neutral'].map((faction) => (
               <section className={`normal-build-group normal-build-group--${faction}`} key={faction}>
@@ -3307,7 +3307,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               {'attackIntervalMs' in inspectedDefense && <div><span>{t('rate')}</span><strong>{(1000 / inspectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
               {'damageType' in inspectedDefense && <div><span>{t('type')}</span><strong>{inspectedDefense.damageType}</strong></div>}
               {'splashRadius' in inspectedDefense && <div><span>{t('splash')}</span><strong>{inspectedDefense.splashRadius}</strong></div>}
-              {'slowPercent' in inspectedDefense && <div><span>SLOW</span><strong>{inspectedDefense.slowPercent}%</strong></div>}
+              {'slowPercent' in inspectedDefense && <div><span>{t('slow')}</span><strong>{inspectedDefense.slowPercent}%</strong></div>}
               {'squadSize' in inspectedDefense && <div><span>{t('squad')}</span><strong>{inspectedDefense.squadSize}</strong></div>}
               {'unitHp' in inspectedDefense && <div><span>{t('unitHp')}</span><strong>{inspectedDefense.unitHp}</strong></div>}
             </div>
@@ -3434,9 +3434,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   key={entry.faction}
                   className={entry.active ? 'tower-synergy tower-synergy--active' : 'tower-synergy'}
                 >
-                  <span>{entry.name}</span>
+                  <span>{gameText(entry.name)}</span>
                   <strong>{entry.count}/{entry.threshold}</strong>
-                  <small>{entry.description}</small>
+                  <small>{gameText(entry.description)}</small>
                 </div>
               ))}
             </div>
@@ -3459,16 +3459,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           {rareWaveEvent && (
             <div className="rare-wave-event-panel" aria-label="Rare wave event">
               <span>{t('rareEvent')}</span>
-              <strong>{rareWaveEvent.name}</strong>
-              <small>{rareWaveEvent.description}</small>
+              <strong>{gameText(rareWaveEvent.name)}</strong>
+              <small>{gameText(rareWaveEvent.description)}</small>
             </div>
           )}
 
           {waveAffix && (
             <div className="wave-affix-panel" aria-label="Wave affix">
               <span>{t('waveAffix')}</span>
-              <strong>{waveAffix.name}</strong>
-              <small>{waveAffix.description}</small>
+              <strong>{gameText(waveAffix.name)}</strong>
+              <small>{gameText(waveAffix.description)}</small>
             </div>
           )}
 
@@ -3523,10 +3523,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           >
             <div>
               <span>{t('waveQuest')}</span>
-              <strong>{miniObjective.name}</strong>
+              <strong>{gameText(miniObjective.name)}</strong>
             </div>
             <b>+{miniObjectiveReward}G</b>
-            <small>{miniObjective.description}</small>
+            <small>{gameText(miniObjective.description)}</small>
             {miniObjectiveFeedback && <em>{miniObjectiveFeedback}</em>}
           </div>
 
@@ -3564,7 +3564,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               )}
               {waveAffix && (
                 <div className="run-wave-preview__special">
-                  <span>{t('affix')}</span><strong>{waveAffix.name}</strong>
+                  <span>{t('affix')}</span><strong>{gameText(waveAffix.name)}</strong>
                 </div>
               )}
               {rareWaveEvent && (
