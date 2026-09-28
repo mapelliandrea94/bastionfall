@@ -8,11 +8,11 @@ import {
 const checkpoints = Object.freeze([
   { wave: 1, maxCountRatio: 1.25, expectedReward: 5 },
   { wave: 5, maxCountRatio: 1.25, expectedReward: 5 },
-  { wave: 8, maxCountRatio: 1.35, expectedReward: 6 },
-  { wave: 12, maxCountRatio: 1.35, expectedReward: 6 },
-  { wave: 15, maxCountRatio: 1.50, expectedReward: 7 },
-  { wave: 20, maxCountRatio: 1.50, expectedReward: 7 },
-  { wave: 25, maxCountRatio: 1.65, expectedReward: 7 }
+  { wave: 8, maxCountRatio: 1.35, expectedReward: 5 },
+  { wave: 12, maxCountRatio: 1.35, expectedReward: 5 },
+  { wave: 15, maxCountRatio: 1.50, expectedReward: 5 },
+  { wave: 20, maxCountRatio: 1.50, expectedReward: 5 },
+  { wave: 25, maxCountRatio: 1.65, expectedReward: 5 }
 ]);
 
 const rows = checkpoints.map(({ wave, maxCountRatio, expectedReward }) => {

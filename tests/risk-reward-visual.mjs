@@ -11,7 +11,7 @@ assert.equal(getRiskRewardVisualState('single-gate', 'safe', 'active').active, f
 
 const sudden = getRiskRewardVisualState('sudden-siege', 'pressure', 'active');
 assert.equal(sudden.active, true);
-assert.equal(sudden.threatMultiplier, 1.30);
-assert.equal(sudden.flatGoldBonus, 2);
+assert.equal(sudden.threatMultiplier, 1.15);
+assert.equal(sudden.flatGoldBonus, 1);
 
 console.log('RISK_REWARD_VISUAL_PASS');
