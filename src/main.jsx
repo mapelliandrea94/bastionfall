@@ -67,6 +67,7 @@ import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
 import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
 import { ENEMY_ROSTER, createRosterEnemyState, getEnemyRosterFixtures } from './game/enemies/enemyRoster.js';
+import { getCleanEnemyArt } from './game/enemies/cleanEnemyArt.js';
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
@@ -996,6 +997,16 @@ function ModePreRun({ mode, onBack, onStart, session }) {
 
 
 function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled }) {
+  const [cleanEnemyArt, setCleanEnemyArt] = useState({});
+  useEffect(() => {
+    let active = true;
+    ENEMY_ROSTER.enemies.forEach(({ id }) => {
+      getCleanEnemyArt(id).then((url) => {
+        if (active) setCleanEnemyArt((current) => ({ ...current, [id]: url }));
+      });
+    });
+    return () => { active = false; };
+  }, []);
   const restoredTftSnapshot = useRef(isShopMode(run?.mode) ? loadTftRunSnapshot() : null);
   const matchingTftSnapshot = restoredTftSnapshot.current?.run?.seed === run?.seed ? restoredTftSnapshot.current : null;
   const [spawnQueue, setSpawnQueue] = useState([]);
@@ -2199,7 +2210,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               const shieldRatio = enemy.maxShield > 0 ? Math.max(0, Math.min(1, enemy.shield / enemy.maxShield)) : 0;
               const slowActive = (enemy.statusEffects?.slowUntilMs ?? 0) > performance.now();
               const enemyArtHref = ENEMY_ROSTER.byId[enemy.archetype]
-                ? `/assets/enemies/${enemy.archetype}.png`
+                ? (cleanEnemyArt[enemy.archetype] ?? `/assets/enemies/${enemy.archetype}.png`)
                 : null;
 
               return (
@@ -2227,6 +2238,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                         width="72"
                         height="72"
                         preserveAspectRatio="xMidYMid meet"
+                        style={{ animationDelay: `${-(Number(enemy.id?.length ?? 0) % 7) * 0.17}s` }}
                         onError={(event) => {
                           event.currentTarget.setAttribute('visibility', 'hidden');
                           event.currentTarget.previousElementSibling?.setAttribute('opacity', '1');
