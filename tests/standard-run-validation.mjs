@@ -20,6 +20,11 @@ const waveAuthorityMigration = fs.readFileSync(
   'utf8'
 );
 
+const killLedgerMigration = fs.readFileSync(
+  new URL('../supabase/migrations/20260928000830_standard_kill_ledger_foundation.sql', import.meta.url),
+  'utf8'
+);
+
 assert(migration.includes('create table if not exists public.standard_run_sessions'), 'Standard run session table must exist');
 assert(migration.includes('persist_standard_run_checkpoint'), 'Checkpoint RPC must exist');
 assert(migration.includes('wave_regression'), 'Checkpoint RPC must reject wave regression');
@@ -58,6 +63,18 @@ assert(server.includes("wave > Number(currentRun.last_wave) + 1"), 'Progress end
 assert(waveAuthorityMigration.includes("p_wave > v_current.last_wave + 1"), 'Database checkpoint RPC must enforce sequential wave increments');
 assert(waveAuthorityMigration.includes("initial_wave_must_be_zero"), 'Database checkpoint RPC must require wave zero at run creation');
 assert(waveAuthorityMigration.includes("wave_jump_too_large"), 'Database checkpoint RPC must reject skipped waves');
+
+
+assert(server.includes("persist_standard_run_progress_v2"), 'Standard progress must use per-wave kill ledger RPC');
+assert(server.includes("getStandardWaveKillCapacity"), 'Server must derive kill capacity from deterministic wave generation');
+assert(server.includes("getBossSummonAddsPlan"), 'Kill capacity must include deterministic boss summons');
+assert(server.includes("const killDelta = kills - previousKills"), 'Server must validate kill deltas instead of trusting cumulative totals');
+assert(main.includes("defeatedEnemyIdsRef"), 'Client must deduplicate defeated enemy ids');
+assert(main.includes("onEnemyKilled?.(enemyId)"), 'Client must emit a kill only when an enemy actually reaches zero HP');
+assert(killLedgerMigration.includes("create table if not exists public.standard_run_wave_kills"), 'Per-wave kill ledger table must exist');
+assert(killLedgerMigration.includes("wave_kill_budget_exceeded"), 'Ledger must reject kill claims beyond the wave capacity');
+assert(killLedgerMigration.includes("wave_kill_ledger_finalized"), 'Finalized wave kill ledgers must reject additional kills');
+assert(killLedgerMigration.includes("kill_delta_mismatch"), 'Database must verify cumulative kills against the claimed delta');
 
 console.log('Standard run validation foundation QA PASS', {
   persistedSessions: true,
