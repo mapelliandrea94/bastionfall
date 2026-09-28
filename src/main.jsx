@@ -1101,7 +1101,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
   const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(false);
   const [waveSpeed, setWaveSpeed] = useState(() => matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1);
-  const waveClockRef = useRef({ real: performance.now(), virtual: performance.now(), speed: 1 });
+  const waveClockRef = useRef({ real: performance.now(), virtual: performance.now(), speed: matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1 });
+  const onlineClockRebasedRef = useRef(false);
   const getWaveNow = () => {
     const clock = waveClockRef.current;
     const real = performance.now();
@@ -1115,11 +1116,42 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     waveClockRef.current.speed = next;
     setWaveSpeed(next);
   };
+
+  useEffect(() => {
+    if (!matchingOnlineSnapshot || onlineClockRebasedRef.current) return;
+    const savedClock = Number(matchingOnlineSnapshot.waveClockNow);
+    if (!Number.isFinite(savedClock)) {
+      onlineClockRebasedRef.current = true;
+      return;
+    }
+
+    const resumedClock = getWaveNow();
+    const delta = resumedClock - savedClock;
+    if (!Number.isFinite(delta)) {
+      onlineClockRebasedRef.current = true;
+      return;
+    }
+
+    setActiveEnemies((current) => current.map((enemy) => {
+      const status = { ...(enemy.statusEffects ?? {}) };
+      for (const key of ['slowUntilMs', 'vulnerabilityUntilMs', 'armorShredUntilMs', 'poisonUntilMs']) {
+        if (Number.isFinite(Number(status[key])) && Number(status[key]) > 0) status[key] = Number(status[key]) + delta;
+      }
+      return {
+        ...enemy,
+        spawnedAt: Number.isFinite(Number(enemy.spawnedAt)) ? Number(enemy.spawnedAt) + delta : resumedClock,
+        statusEffects: status
+      };
+    }));
+
+    onlineClockRebasedRef.current = true;
+  }, []);
+
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
-  const queuedWaveRef = useRef(null);
-  const spawnedWaveRef = useRef(null);
+  const queuedWaveRef = useRef(matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE ? waveScaling.waveNumber : null);
+  const spawnedWaveRef = useRef(matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE && (matchingOnlineSnapshot?.activeEnemies?.length ?? 0) > 0 ? waveScaling.waveNumber : null);
   const towerAttackTimesRef = useRef({});
   const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
   const previousSuddenStageRef = useRef(null);
@@ -1410,7 +1442,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       spawnQueue,
       activeEnemies,
       preparationRemaining,
-      waveSpeed
+      waveSpeed,
+      waveClockNow: getWaveNow()
     });
   }, [
     run,
