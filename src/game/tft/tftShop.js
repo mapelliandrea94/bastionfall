@@ -1,12 +1,12 @@
 import { TOWER_ROSTER, TOWER_FACTIONS } from '../towers/towerRoster.js';
 
 export const TFT_SHOP = Object.freeze({
-  version: 1,
+  version: 2,
   slotCount: 7,
   copyCost: 2,
   rerollCost: 3,
   startingGold: 10,
-  waveClearGold: 5,
+  waveClearGold: 7,
   perfectWaveBonus: 1,
   bossWaveBonus: 3,
   milestoneWaveBonus: 2,
@@ -76,7 +76,7 @@ export function getTftShopFixtures() {
     rerollCostActual: TFT_SHOP.rerollCost,
     startingGoldExpected: 10,
     startingGoldActual: TFT_SHOP.startingGold,
-    waveClearGoldExpected: 5,
+    waveClearGoldExpected: 7,
     waveClearGoldActual: TFT_SHOP.waveClearGold,
     perfectWaveBonusExpected: 1,
     perfectWaveBonusActual: TFT_SHOP.perfectWaveBonus,
