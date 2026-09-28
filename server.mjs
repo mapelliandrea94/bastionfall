@@ -221,7 +221,8 @@ async function hydratePersistentLastBastionState(req) {
     'x-bastionfall-server-secret': matchTokenSecret
   });
 
-  const abandonSweep = await serverDb.rpc('resolve_stale_last_bastion_participants', {
+  const abandonSweep = await serverDb.rpc('resolve_stale_last_bastion_participants_for_match', {
+    p_match_id: requestedMatchId,
     p_now: new Date().toISOString(),
     p_timeout_seconds: LAST_BASTION_ABANDON_TIMEOUT_SECONDS
   });
