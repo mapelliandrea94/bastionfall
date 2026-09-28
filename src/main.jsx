@@ -2106,9 +2106,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <span className="run-hud__label">GOLD</span>
               <strong>{run?.gold ?? RUN_DEFAULTS.startingGold}</strong>
             </div>
-            <div>
-              <span className="run-hud__label">CORE</span>
-              <strong>{run?.coreHp ?? RUN_DEFAULTS.coreHp} / {run?.coreMaxHp ?? RUN_DEFAULTS.coreHp}</strong>
+            <div className={`run-hud__nexus ${bastionStateClass}`} aria-label={`Nexus health ${run?.coreHp ?? RUN_DEFAULTS.coreHp} of ${run?.coreMaxHp ?? RUN_DEFAULTS.coreHp}`}>
+              <span className="run-hud__label">NEXUS</span>
+              <strong>{run?.coreHp ?? RUN_DEFAULTS.coreHp}<small> / {run?.coreMaxHp ?? RUN_DEFAULTS.coreHp}</small></strong>
+              <span className="run-hud__nexus-track" aria-hidden="true"><span style={{ width: `${coreRatio * 100}%` }} /></span>
             </div>
             <div>
               <span className="run-hud__label">SURVIVAL</span>
@@ -2529,18 +2530,25 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <rect className="battlefield-map__bastion-tower" x="44" y="-70" width="34" height="70" rx="7" />
               <path className="battlefield-map__bastion-roof" d="M -48 -80 L 0 -116 L 48 -80 Z" />
               <circle className="battlefield-map__bastion-core" cx="0" cy="-20" r="18" />
-              <rect className="battlefield-map__bastion-hp-bg" x="-84" y="-142" width="168" height="14" rx="7" />
+              <g className="battlefield-map__nexus-meter" role="img" aria-label={`Nexus ${run?.coreHp ?? 0} of ${run?.coreMaxHp ?? 0} health`}>
+                <path className="battlefield-map__nexus-frame" d="M -106 -180 H 92 L 106 -168 V -126 H -92 L -106 -138 Z" />
+                <path className="battlefield-map__nexus-rim" d="M -103 -177 H 90 L 103 -167 M -103 -139 V -129 H 92 L 103 -139" />
+                <path className="battlefield-map__nexus-gem" d="M -92 -169 L -86 -163 L -92 -157 L -98 -163 Z" />
+                <text className="battlefield-map__nexus-label" x="-78" y="-158">NEXUS</text>
+                <text className="battlefield-map__bastion-hp-text" x="90" y="-158" textAnchor="end">
+                  {run?.coreHp ?? 0} <tspan className="battlefield-map__nexus-max">/ {run?.coreMaxHp ?? 0}</tspan>
+                </text>
+                <rect className="battlefield-map__bastion-hp-bg" x="-92" y="-148" width="184" height="13" rx="6.5" />
               <rect
                 className="battlefield-map__bastion-hp-fill"
-                x="-84"
-                y="-142"
-                width={168 * coreRatio}
-                height="14"
-                rx="7"
+                  x="-92"
+                  y="-148"
+                  width={184 * coreRatio}
+                  height="13"
+                  rx="6.5"
               />
-              <text className="battlefield-map__bastion-hp-text" x="0" y="-152" textAnchor="middle">
-                {run?.coreHp ?? 0} / {run?.coreMaxHp ?? 0}
-              </text>
+                <path className="battlefield-map__nexus-bar-shine" d={`M -88 -146 H ${-88 + 176 * coreRatio}`} />
+              </g>
               <path className="battlefield-map__bastion-gate" d="M -18 48 V 18 Q 0 2 18 18 V 48 Z" />
             </g>
             {spawnAnchors.map((spawn) => (
