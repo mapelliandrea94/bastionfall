@@ -2210,9 +2210,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       }
                     }}
                   >
-                    {visibleRange > 0 && (placed || affordable) && (
+                    {selectedPlaced && visibleRange > 0 && (
                       <circle
-                        className={`tower-range-indicator ${placed ? 'tower-range-indicator--placed' : 'tower-range-indicator--preview'}`}
+                        className="tower-range-indicator tower-range-indicator--selected"
                         cx="0"
                         cy="0"
                         r={visibleRange}

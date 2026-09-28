@@ -2545,33 +2545,13 @@ body { background:#1c3f61; }
 
 .tower-range-indicator {
   pointer-events: none;
-  fill: rgba(84, 196, 255, .07);
-  stroke: rgba(126, 220, 255, .34);
-  stroke-width: 3;
-  stroke-dasharray: 11 8;
+  fill: rgba(84, 196, 255, .13);
+  stroke: rgba(163, 235, 255, .98);
+  stroke-width: 4;
+  stroke-dasharray: 12 8;
   vector-effect: non-scaling-stroke;
-  opacity: .48;
-  transition: opacity .12s ease, fill .12s ease, stroke .12s ease;
-}
-
-.tower-range-indicator--preview {
-  opacity: 0;
-  fill: rgba(255, 221, 126, .08);
-  stroke: rgba(255, 229, 145, .7);
-}
-
-.battlefield-map__tower-slot--occupied:hover .tower-range-indicator,
-.battlefield-map__tower-slot--hovered .tower-range-indicator,
-.battlefield-map__tower-slot--selected .tower-range-indicator {
-  opacity: .92;
-  fill: rgba(84, 196, 255, .12);
-  stroke: rgba(163, 235, 255, .95);
-}
-
-.battlefield-map__tower-slot:hover .tower-range-indicator--preview,
-.battlefield-map__tower-slot--hovered .tower-range-indicator--preview,
-.battlefield-map__tower-slot:focus-visible .tower-range-indicator--preview {
-  opacity: .88;
+  opacity: .96;
+  filter: drop-shadow(0 0 5px rgba(84, 196, 255, .55));
 }
 
 .tower-progress-badge {
