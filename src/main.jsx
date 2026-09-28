@@ -1161,6 +1161,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const towerAttackTimesRef = useRef({});
   const towerAttackChargeRef = useRef({});
   const combatClockRef = useRef(null);
+  const wallDamageClockRef = useRef(null);
+  const statusClockRef = useRef(null);
   const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
   const previousSuddenStageRef = useRef(null);
   const bossSummonFiredRef = useRef(new Set(matchingOnlineSnapshot?.bossSummonFiredKeys ?? []));
@@ -1392,14 +1394,25 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   }, [activeEnemies]);
 
   useEffect(() => {
-    if (run?.phase !== RUN_PHASES.ACTIVE || activeWallIds.length === 0) return undefined;
+    if (run?.phase !== RUN_PHASES.ACTIVE || activeWallIds.length === 0) {
+      wallDamageClockRef.current = null;
+      return undefined;
+    }
 
     const wallProgress = WALL_PROGRESS_BY_ID;
+    wallDamageClockRef.current = getWaveNow();
 
     const intervalId = window.setInterval(() => {
+      const now = getWaveNow();
+      const previousAt = Number(wallDamageClockRef.current);
+      const simulatedDeltaMs = Number.isFinite(previousAt) ? Math.max(0, now - previousAt) : 0;
+      wallDamageClockRef.current = now;
+      if (simulatedDeltaMs <= 0) return;
+
       const enemies = activeEnemiesRef.current ?? [];
       if (enemies.length === 0) return;
 
+      const tickScale = simulatedDeltaMs / Math.max(1, WALL_SYSTEM.damageTickMs);
       const damageByWall = {};
       for (const wallId of activeWallIds) {
         const targetProgress = wallProgress[wallId];
@@ -1409,9 +1422,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
         for (const enemy of enemies) {
           if (enemy.airborne) continue;
           if (Math.abs(Number(enemy.progress ?? 0) - targetProgress) > 0.045) continue;
-          damage += enemy.unitType === 'armored'
+          damage += (enemy.unitType === 'armored'
             ? WALL_SYSTEM.armoredDamagePerTick
-            : WALL_SYSTEM.infantryDamagePerTick;
+            : WALL_SYSTEM.infantryDamagePerTick) * tickScale;
         }
         if (damage > 0) damageByWall[wallId] = damage;
       }
@@ -1437,10 +1450,13 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
         return next;
       });
-    }, WALL_SYSTEM.damageTickMs / waveSpeed);
+    }, 100);
 
-    return () => window.clearInterval(intervalId);
-  }, [run?.phase, run?.mode, activeWallIds.join('|'), waveSpeed]);
+    return () => {
+      window.clearInterval(intervalId);
+      wallDamageClockRef.current = null;
+    };
+  }, [run?.phase, run?.mode, activeWallIds.join('|')]);
 
   useEffect(() => {
     if (!run?.matchId || !run?.matchToken || run?.phase === RUN_PHASES.ENDED || typeof onPersistOnlineSnapshot !== 'function') return;
@@ -1982,17 +1998,31 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   }, [run?.phase]);
 
   useEffect(() => {
-    if (run?.phase !== RUN_PHASES.ACTIVE || activeEnemies.length === 0) return undefined;
+    if (run?.phase !== RUN_PHASES.ACTIVE || activeEnemies.length === 0) {
+      statusClockRef.current = null;
+      return undefined;
+    }
+
+    statusClockRef.current = getWaveNow();
 
     const intervalId = window.setInterval(() => {
       const now = getWaveNow();
+      const previousAt = Number(statusClockRef.current);
+      const simulatedDeltaMs = Number.isFinite(previousAt) ? Math.max(0, now - previousAt) : 0;
+      statusClockRef.current = now;
+      if (simulatedDeltaMs <= 0) return;
+
       setActiveEnemies((current) => removeAndCountDefeatedEnemies(current
         .map((enemy) => {
           const status = { ...(enemy.statusEffects ?? {}) };
           let next = enemy;
 
           if (Number(status.poisonUntilMs ?? 0) > now && Number(status.poisonDamagePerSecond ?? 0) > 0) {
-            next = applyEnemyDamage(next, Number(status.poisonDamagePerSecond) * 0.25, 'physical');
+            next = applyEnemyDamage(
+              next,
+              Number(status.poisonDamagePerSecond) * (simulatedDeltaMs / 1000),
+              'physical'
+            );
           }
 
           if (Number(status.vulnerabilityUntilMs ?? 0) <= now) {
@@ -2011,10 +2041,13 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
           return { ...next, statusEffects: status };
         })));
-    }, 250 / waveSpeed);
+    }, 100);
 
-    return () => window.clearInterval(intervalId);
-  }, [run?.phase, activeEnemies.length, waveSpeed]);
+    return () => {
+      window.clearInterval(intervalId);
+      statusClockRef.current = null;
+    };
+  }, [run?.phase, activeEnemies.length]);
 
   useEffect(() => {
     const queueInitialized = queuedWaveRef.current === waveScaling.waveNumber;
