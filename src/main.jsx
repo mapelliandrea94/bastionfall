@@ -59,8 +59,8 @@ import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveLiveSta
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
-import { BLESSING_SYSTEM, addBlessingToLoadout, getBlessingOffer, getBlessingSystemFixtures } from './game/blessings/blessings.js';
-import { BLESSING_ENGINE, applyBlessingBastionDamage, applyBlessingTowerIdentity, applyBlessingWaveGold, getBlessingAdjustedMaxHp, getBlessingEngineFixtures, getBlessingModifiers } from './game/blessings/blessingEngine.js';
+import { BLESSINGS, BLESSING_SYSTEM, addBlessingToLoadout, getBlessingOffer, getBlessingSystemFixtures } from './game/blessings/blessings.js';
+import { BLESSING_ENGINE, applyBlessingBastionDamage, applyBlessingTowerIdentity, applyBlessingWaveGold, getBlessingAdjustedMaxHp, getBlessingEngineFixtures, getBlessingIdentityVisualCue, getBlessingModifiers } from './game/blessings/blessingEngine.js';
 import { BLESSING_REROLL, canRerollBlessings, getBlessingRerollCost, getBlessingRerollFixtures, getRerolledBlessingOffer } from './game/blessings/blessingReroll.js';
 import { BLESSING_POWER_BUDGET, getBlessingExploitChecks } from './game/blessings/blessingPowerBudget.js';
 import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } from './game/boss/bossSummonAdds.js';
@@ -2368,6 +2368,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 const synergyVisual = placedRuntimeDefense
                   ? getTowerSynergyVisualCue(placedRuntimeDefense, towerSynergyState)
                   : null;
+                const blessingVisual = placedRuntimeDefense
+                  ? getBlessingIdentityVisualCue(placedRuntimeDefense, run?.blessings ?? [])
+                  : null;
                 const towerLevel = Math.max(1, Math.min(4, Number(placed?.level ?? 1)));
                 const copyProgress = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(placed?.copyProgress ?? 1)));
                 const towerActionOffsetX = slot.x > SINGLE_GATE_MAP.size.width - 220 ? -170 : 54;
@@ -2476,6 +2479,17 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
                     {placed && (
                       <>
+                        {blessingVisual?.active && (
+                          <g
+                            className={`tower-blessing-aura tower-blessing-aura--${blessingVisual.faction}`}
+                            data-identity-blessing={blessingVisual.blessingId ?? ''}
+                            data-identity-faction={blessingVisual.faction ?? ''}
+                            aria-hidden="true"
+                          >
+                            <circle className="tower-blessing-aura__ring" cx="0" cy="0" r="43" />
+                            <path className="tower-blessing-aura__sigil" d="M0-48l5 9 10 2-7 7 2 10-10-5-10 5 2-10-7-7 10-2Z" />
+                          </g>
+                        )}
                         {synergyVisual?.active && (
                           <g
                             className={`tower-synergy-aura tower-synergy-aura--${synergyVisual.faction}`}
@@ -2489,9 +2503,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                           </g>
                         )}
                         <g
-                          className={`tower-visual tower-visual--${placed.defenseId}${synergyVisual?.active ? ` tower-visual--synergy-active tower-visual--synergy-${synergyVisual.faction}` : ''}`}
+                          className={`tower-visual tower-visual--${placed.defenseId}${synergyVisual?.active ? ` tower-visual--synergy-active tower-visual--synergy-${synergyVisual.faction}` : ''}${blessingVisual?.active ? ` tower-visual--identity-blessing tower-visual--identity-${blessingVisual.faction}` : ''}`}
                           data-evolution={placed.evolution ?? ''}
                           data-synergy-active={synergyVisual?.active ? 'true' : 'false'}
+                          data-identity-blessing={blessingVisual?.blessingId ?? ''}
                         >
                           <ellipse className="tower-visual__shadow" cx="0" cy="20" rx="30" ry="10" />
                           <foreignObject x="-42" y="-54" width="84" height="84" pointerEvents="none">
@@ -3288,6 +3303,25 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               </small>
             </div>
           </section>
+
+          {(run?.blessings ?? []).some((blessingId) => ['human-doctrine', 'brood-frenzy', 'alien-overmind', 'neutral-covenant'].includes(blessingId)) && (
+            <div className="identity-blessing-panel" aria-label="Identity blessings">
+              <div className="identity-blessing-panel__title">IDENTITY BLESSINGS</div>
+              <div className="identity-blessing-panel__list">
+                {['human-doctrine', 'brood-frenzy', 'alien-overmind', 'neutral-covenant']
+                  .filter((blessingId) => (run?.blessings ?? []).includes(blessingId))
+                  .map((blessingId) => {
+                    const blessing = BLESSINGS.find((entry) => entry.id === blessingId);
+                    return blessing ? (
+                      <div key={blessing.id} className="identity-blessing-panel__entry">
+                        <strong>{blessing.name}</strong>
+                        <small>{blessing.description}</small>
+                      </div>
+                    ) : null;
+                  })}
+              </div>
+            </div>
+          )}
 
           <div
             className={synergyFeedback ? 'tower-synergy-panel tower-synergy-panel--flash' : 'tower-synergy-panel'}
