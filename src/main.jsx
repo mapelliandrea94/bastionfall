@@ -828,27 +828,27 @@ function LastBastionLobby({ session, onBack, onStart }) {
       }}
       kicker="LAST BASTION"
       title="LAST SURVIVOR WINS."
-      subtitle="Join the shared queue, ready up, and wait for a synchronized match."
+      subtitle={t('lastBastionSubtitle')}
     >
       <div className="pre-run-grid">
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">QUEUE</span>
+          <span className="pre-run-card__eyebrow">{t('queue')}</span>
           <strong>{state.queued ? `#${state.ticket?.position ?? '-'}` : 'NOT QUEUED'}</strong>
           <small>{state.queuedPlayers} defender{state.queuedPlayers === 1 ? '' : 's'} queued</small>
         </section>
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">STATUS</span>
-          <strong>{state.ticket?.ready ? 'READY' : state.queued ? 'WAITING' : 'IDLE'}</strong>
+          <span className="pre-run-card__eyebrow">{t('status').toUpperCase()}</span>
+          <strong>{state.ticket?.ready ? t('ready') : state.queued ? t('waiting') : t('idle')}</strong>
           <small>{state.ticket?.ready ? 'Ready for matchmaking.' : 'Ready status can be changed any time before match start.'}</small>
         </section>
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">MATCH</span>
+          <span className="pre-run-card__eyebrow">{t('match')}</span>
           <strong>
             {state.matched
-              ? 'MATCH FOUND'
+              ? t('matchFound')
               : state.readyPlayers >= 2 && Number.isFinite(Number(state.fillWindowRemainingMs))
                 ? `FILLING ${Math.max(0, Math.ceil(Number(state.fillWindowRemainingMs) / 1000))}s`
-                : 'SHARED SIEGE'}
+                : t('sharedSiege')}
           </strong>
           <small>
             {state.matched
@@ -863,14 +863,14 @@ function LastBastionLobby({ session, onBack, onStart }) {
       <div className="pre-run-footer">
         <p>Status: <strong>{state.error || (state.loading ? 'SYNCING...' : state.ticket?.status?.toUpperCase() || 'READY TO QUEUE')}</strong></p>
         {!state.queued ? (
-          <button className="pre-run-start" onClick={join} disabled={state.loading}>JOIN QUEUE<small>Enter Last Bastion matchmaking</small></button>
+          <button className="pre-run-start" onClick={join} disabled={state.loading}>{t('joinQueue')}<small>{t('enterMatchmaking')}</small></button>
         ) : (
           <div className="last-bastion-lobby-actions">
             <button className="pre-run-start" onClick={() => setReady(!state.ticket?.ready)}>
-              {state.ticket?.ready ? 'NOT READY' : 'READY'}
-              <small>{state.ticket?.ready ? 'Return to waiting' : 'Lock in for the match'}</small>
+              {state.ticket?.ready ? t('notReady') : t('ready')}
+              <small>{state.ticket?.ready ? t('returnWaiting') : t('lockMatch')}</small>
             </button>
-            <button className="mode-screen__back" onClick={leave}>LEAVE QUEUE</button>
+            <button className="mode-screen__back" onClick={leave}>{t('leaveQueue')}</button>
           </div>
         )}
       </div>
@@ -893,35 +893,35 @@ function ModePreRun({ mode, onBack, onStart, session }) {
     >
       <div className="pre-run-grid">
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">FORMAT</span>
+          <span className="pre-run-card__eyebrow">{t('format')}</span>
           <strong>{contract.fronts}</strong>
           <small>{mode === MODES.TRI_GATE ? 'Three rendered fronts converge on one central Bastion.' : 'Single-front battlefield.'}</small>
         </section>
 
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">OBJECTIVE</span>
+          <span className="pre-run-card__eyebrow">{t('objective')}</span>
           <strong>{contract.objective}</strong>
-          <small>Every defender begins from equal combat power.</small>
+          <small>{t('equalCombatPower')}</small>
         </section>
 
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">RECORD</span>
+          <span className="pre-run-card__eyebrow">{t('record')}</span>
           <strong>{contract.record}</strong>
-          <small>Mode-specific persistence and validation arrive in later roadmap batches.</small>
+          <small>{t('modePersistence')}</small>
         </section>
       </div>
 
       {mode === MODES.TRI_GATE && <TriGateBattlefieldPreview />}
 
       <div className="pre-run-footer">
-        <p>Status: <strong>{contract.status}</strong></p>
+        <p>{t('status')}: <strong>{getLanguage() === SUPPORTED_LANGUAGES.IT_IT ? t('readyToInitialize') : contract.status}</strong></p>
         <button
           className="pre-run-start"
           disabled={mode === MODES.LAST_BASTION}
           onClick={() => mode !== MODES.LAST_BASTION && onStart(mode)}
         >
-          START RUN
-          <small>{mode !== MODES.LAST_BASTION ? 'Initialize run' : contract.status}</small>
+          {t('startRun')}
+          <small>{mode !== MODES.LAST_BASTION ? t('initializeRun') : contract.status}</small>
         </button>
       </div>
     </Shell>
@@ -3663,8 +3663,8 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
   return (
     <Shell
       onBack={onBack}
-      kicker={isLastBastion ? 'LAST BASTION RESULT' : 'RUN COMPLETE'}
-      title={lastBastionWon ? 'LAST BASTION STANDING' : isLastBastion ? 'ELIMINATED' : 'BASTION FALLEN'}
+      kicker={isLastBastion ? 'LAST BASTION' : t('runComplete')}
+      title={lastBastionWon ? t('lastBastionStanding') : isLastBastion ? t('eliminated') : t('bastionFallen')}
       subtitle={isLastBastion
         ? lastBastionWon
           ? 'You outlasted every other defender.'
@@ -3672,7 +3672,7 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
         : 'Your run has ended. Review the final snapshot before trying again.'}
     >
       <div className="results-hero">
-        <span>{personalBestResult?.isPersonalBest ? 'NEW PERSONAL BEST' : 'FINAL SCORE'}</span>
+        <span>{personalBestResult?.isPersonalBest ? t('newPersonalBest') : t('finalScore')}</span>
         <strong>{snapshot.score.toLocaleString()}</strong>
         <small>
           {personalBestResult?.isPersonalBest
@@ -3688,7 +3688,7 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
       <div className="results-grid">
         {isLastBastion && (
           <div className="stat-card">
-            <span>PLACEMENT</span>
+            <span>{t('placement')}</span>
             <strong>#{snapshot.placement}</strong>
             <small>{snapshot.won ? 'Winner' : `of ${snapshot.participantCount || '?'} defenders`}</small>
           </div>
@@ -3702,8 +3702,8 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
       </div>
 
       <div className="results-actions">
-        <button className="pre-run-start" onClick={onRetry}>RETRY RUN</button>
-        <button className="run-exit" onClick={onBack}>BACK TO MODE</button>
+        <button className="pre-run-start" onClick={onRetry}>{t('retryRun')}</button>
+        <button className="run-exit" onClick={onBack}>{t('backToMode')}</button>
       </div>
     </Shell>
   );
@@ -3743,9 +3743,9 @@ function Leaderboard({ session, onBack }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="GLOBAL RECORDS"
-      title="TOP 10"
-      subtitle="Verified mode records only. Ranked by wave, survival, score, kills, then oldest verified record."
+      kicker={t('globalRecords')}
+      title={t('top10')}
+      subtitle={t('leaderboardSubtitle')}
     >
       <div className="leaderboard-tabs">
         <button
@@ -3771,7 +3771,7 @@ function Leaderboard({ session, onBack }) {
             >
               <span className="leaderboard-podium__rank">#{entry.rank}</span>
               <strong>{entry.displayName}</strong>
-              {entry.isSelf && <em>YOU</em>}
+              {entry.isSelf && <em>{t('you')}</em>}
               <small>WAVE {entry.bestWave} · {formatSurvivalTime(entry.bestSurvivalMs)}</small>
               <b>{Number(entry.bestScore || 0).toLocaleString()} SCORE</b>
             </div>
@@ -3782,11 +3782,11 @@ function Leaderboard({ session, onBack }) {
       {leaderboardStatus === 'ready' && leaderboardView.personal && (
         <div className="leaderboard-personal-record" aria-label="Your verified record">
           <div>
-            <span>YOUR VERIFIED RECORD</span>
+            <span>{t('yourVerifiedRecord')}</span>
             <strong>
               {leaderboardView.personal.isTopTen
                 ? `GLOBAL #${leaderboardView.personal.rank}`
-                : 'OUTSIDE TOP 10'}
+                : t('outsideTop10')}
             </strong>
           </div>
           <div>
@@ -3807,7 +3807,7 @@ function Leaderboard({ session, onBack }) {
         </div>
 
         {leaderboardStatus === 'loading' && (
-          <div className="empty-state">Loading verified records…</div>
+          <div className="empty-state">{t('loadingRecords')}</div>
         )}
 
         {leaderboardStatus !== 'loading' && leaderboardStatus !== 'ready' && (
@@ -3815,7 +3815,7 @@ function Leaderboard({ session, onBack }) {
         )}
 
         {leaderboardStatus === 'ready' && entries.length === 0 && (
-          <div className="empty-state">No verified runs recorded for this mode yet.</div>
+          <div className="empty-state">{t('noVerifiedRuns')}</div>
         )}
 
         {leaderboardStatus === 'ready' && leaderboardView.rows.map((entry) => {
@@ -3827,7 +3827,7 @@ function Leaderboard({ session, onBack }) {
               <span className="leaderboard-rank">{entry.podium ? `#${entry.rank} ★` : `#${entry.rank}`}</span>
               <span className="leaderboard-defender">
                 {entry.displayName}
-                {entry.isSelf && <em>YOU</em>}
+                {entry.isSelf && <em>{t('you')}</em>}
               </span>
               <span>{entry.bestWave}</span>
               <span>{formatSurvivalTime(entry.bestSurvivalMs)}</span>
@@ -4099,14 +4099,14 @@ function AuthModal({ mode, onClose, onSuccess }) {
 
         {authMode !== 'reset-password' && (
           <label>
-            <span>Email</span>
+            <span>{t('email')}</span>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
           </label>
         )}
 
         {authMode !== 'forgot' && (
           <label>
-            <span>{authMode === 'reset-password' ? 'New password' : 'Password'}</span>
+            <span>{authMode === 'reset-password' ? t('newPassword') : t('password')}</span>
             <input
               type="password"
               value={password}
@@ -4144,7 +4144,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
               setNotice('');
             }}
           >
-            Forgot password?
+            {t('forgotPassword')}
           </button>
         )}
 
@@ -4158,7 +4158,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
               setNotice('');
             }}
           >
-            {authMode === 'register' ? 'Already registered? Sign in' : authMode === 'login' ? 'New here? Create account' : 'Back to sign in'}
+            {authMode === 'register' ? t('alreadyRegistered') : authMode === 'login' ? t('newHere') : t('backToSignIn')}
           </button>
         )}
       </form>
