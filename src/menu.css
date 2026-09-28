@@ -4395,7 +4395,7 @@ button:focus-visible,
 
 /* The actual battlefield is the menu backdrop; keep the bastion visible on desktop. */
 .main-menu {
-  place-items: center start;
+  place-items: center;
   padding: clamp(18px, 5vw, 72px);
   background:
     linear-gradient(90deg, rgba(3, 12, 23, .87) 0%, rgba(4, 14, 26, .62) 31%, rgba(4, 14, 26, .13) 67%, rgba(4, 14, 26, .12) 100%),
@@ -4411,9 +4411,9 @@ button:focus-visible,
   box-shadow: 0 28px 75px rgba(0, 0, 0, .7), inset 0 1px rgba(255, 227, 161, .2);
   backdrop-filter: blur(12px);
 }
-.main-menu__content { width: min(100%, 530px); padding: 40px 42px 30px; }
+.main-menu__content { width: min(100%, 680px); padding: 40px 42px 30px; }
 .main-menu__kicker { font-size: 12px; letter-spacing: .2em; }
-.main-menu h1 { font-size: clamp(42px, 5.3vw, 72px); letter-spacing: .025em; }
+.main-menu h1 { font-size: clamp(34px, 5.3vw, 72px); letter-spacing: .025em; overflow-wrap: anywhere; }
 .main-menu__button { min-height: 55px; border-color: rgba(162, 203, 224, .24); background: linear-gradient(110deg, rgba(40, 87, 115, .3), rgba(11, 27, 43, .6)); }
 .main-menu__button--primary { min-height: 65px; font-size: 19px; letter-spacing: .2em; border-color: #e9c57b; background: linear-gradient(120deg, #9b6626, #d5a953 50%, #82561f); color: #111b23; box-shadow: inset 0 2px #ffe6a9a8, 0 8px 26px #a46d3155; }
 .main-menu__button--primary:hover { background: linear-gradient(120deg, #b98232, #f3ce77 50%, #9c6929); }
@@ -4438,6 +4438,7 @@ button:focus-visible,
       url('/assets/maps/bastionfall-field-v2.webp') 75% center / auto 100% no-repeat;
   }
   .main-menu__content { padding: 32px 20px 24px; }
+  .main-menu h1 { font-size: clamp(30px, 9vw, 56px); }
   .mode-screen { padding: 27px 18px; max-height: calc(100dvh - 36px); }
   .profile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat-card { min-height: 125px; padding: 12px; }
