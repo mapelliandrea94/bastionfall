@@ -54,7 +54,7 @@ import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/b
 import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balance/endToEndRegressionQa.js';
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
-import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeBattlefieldVisual, getSuddenSiegeTelemetry, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
+import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeBattlefieldVisual, getSuddenSiegeStageTransition, getSuddenSiegeTelemetry, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
 import { applyRiskRewardGold, getRiskRewardConfig, getRiskRewardVisualState } from './game/balance/riskReward.js';
 import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveLiveState, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
@@ -1097,6 +1097,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [riskRewardTier, setRiskRewardTier] = useState('safe');
   const [miniObjectiveFeedback, setMiniObjectiveFeedback] = useState('');
   const [synergyFeedback, setSynergyFeedback] = useState(null);
+  const [suddenStageTransition, setSuddenStageTransition] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
   const [tftRollIndex, setTftRollIndex] = useState(() => matchingTftSnapshot?.tftRollIndex ?? 0);
@@ -1132,6 +1133,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const spawnedWaveRef = useRef(null);
   const towerAttackTimesRef = useRef({});
   const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
+  const previousSuddenStageRef = useRef(null);
   const projectileQueueRef = useRef([]);
   const projectileIdRef = useRef(0);
   const defeatedEnemyIdsRef = useRef(new Set());
@@ -1160,6 +1162,27 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const suddenBattlefieldVisual = run?.mode === MODES.SUDDEN_SIEGE
     ? getSuddenSiegeBattlefieldVisual(waveScaling.waveNumber)
     : null;
+
+  useEffect(() => {
+    if (run?.mode !== MODES.SUDDEN_SIEGE || !suddenTelemetry?.stage) {
+      previousSuddenStageRef.current = null;
+      setSuddenStageTransition(null);
+      return undefined;
+    }
+
+    const previousStage = previousSuddenStageRef.current;
+    const nextStage = suddenTelemetry.stage;
+    previousSuddenStageRef.current = nextStage;
+    if (!previousStage || previousStage === nextStage) return undefined;
+
+    const transition = getSuddenSiegeStageTransition(previousStage, nextStage);
+    if (!transition) return undefined;
+
+    setSuddenStageTransition(transition);
+    const timeoutId = window.setTimeout(() => setSuddenStageTransition(null), 2800);
+    return () => window.clearTimeout(timeoutId);
+  }, [run?.mode, suddenTelemetry?.stage]);
+
   const nextWaveNumber = Math.max(1, (run?.wave ?? 0) + 1);
   const upcomingBossWave = getUpcomingBossWave(nextWaveNumber);
   const bossWaveIncoming = isBossWave(nextWaveNumber);
@@ -2266,6 +2289,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 ))}
               </div>
             </section>
+          )}
+
+          {suddenStageTransition && (
+            <div
+              className={`sudden-stage-transition sudden-stage-transition--${suddenStageTransition.to.toLowerCase()}`}
+              role="status"
+              aria-live="assertive"
+            >
+              <span>{suddenStageTransition.from} → {suddenStageTransition.to}</span>
+              <strong>{suddenStageTransition.title}</strong>
+              <small>{suddenStageTransition.subtitle}</small>
+            </div>
           )}
 
           {(isLastBastionSpectating || isLastBastionFinished) && (
