@@ -63,6 +63,12 @@ jobs:
         run: node tests/stacked-tower-power-audit.mjs
       - name: Final Release Audit QA
         run: node tests/final-release-audit.mjs
+      - name: Wave Affixes QA
+        run: node tests/wave-affixes.mjs
+      - name: Rich Wave Quests QA
+        run: node tests/rich-wave-quests.mjs
+      - name: Rare Wave Events QA
+        run: node tests/rare-wave-events.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA
