@@ -1339,8 +1339,6 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     const durationMs = waveScaling.travelDurationMs * wallTravelMultiplier;
 
     const tick = (now) => {
-      let reachedBastion = 0;
-
       setActiveEnemies((current) => current
         .map((enemy) => {
           const effectiveSpeed =
@@ -1376,18 +1374,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             spawnedAt: rebasedSpawnedAt,
             blockedByWallId: wallId
           };
-        })
-        .filter((enemy) => {
-          if (enemy.progress >= 1) {
-            reachedBastion += 1;
-            return false;
-          }
-          return true;
         }));
-
-      if (reachedBastion > 0) {
-        onDamageBastion(reachedBastion * waveScaling.bastionDamage);
-      }
 
       animationFrameRef.current = requestAnimationFrame(tick);
     };
@@ -1398,6 +1385,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
   }, [activeEnemies.length, run?.phase, activeWallIds.join('|')]);
+
+  useEffect(() => {
+    if (run?.phase === RUN_PHASES.ENDED || activeEnemies.length === 0) return;
+    const escapedEnemies = activeEnemies.filter((enemy) => Number(enemy?.progress ?? 0) >= 1);
+    if (escapedEnemies.length === 0) return;
+
+    setActiveEnemies((current) => current.filter((enemy) => Number(enemy?.progress ?? 0) < 1));
+    onDamageBastion(escapedEnemies.length * waveScaling.bastionDamage);
+  }, [activeEnemies, run?.phase, waveScaling.bastionDamage, onDamageBastion]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || placedDefenses.length === 0 || activeEnemies.length === 0) return undefined;
@@ -1679,30 +1675,35 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     });
   };
 
-  const handleMergeTftCopy = (benchIndex) => {
-    if (run?.mode !== MODES.TFT_SHOP || !selectedPlacedDefense) return;
+  const handleMergeTftCopy = (benchIndex, targetTowerId = selectedPlacedDefense?.id, skipConfirm = false) => {
+    if (run?.mode !== MODES.TFT_SHOP || !targetTowerId) return;
+    const targetTower = placedDefenses.find((tower) => tower.id === targetTowerId);
     const copy = tftBench[benchIndex];
-    const validation = canMergeTftCopy(selectedPlacedDefense, copy);
+    if (!targetTower || !copy) return;
 
+    const validation = canMergeTftCopy(targetTower, copy);
     if (!validation.ok) {
       setTftFeedback(validation.error === 'wrong_tower_type' ? 'WRONG TOWER TYPE' : 'COPY PROGRESS MAXED');
       return;
     }
 
-    const nextProgress = Number(selectedPlacedDefense.copyProgress ?? 1) + 1;
-    const confirmed = window.confirm(
-      `Merge this ${copy.name ?? copy.towerId} copy into the selected tower? Progress ${selectedPlacedDefense.copyProgress ?? 1}/${TFT_COPY_PROGRESSION.maxCopies} → ${nextProgress}/${TFT_COPY_PROGRESSION.maxCopies}. Cost: 0 Gold.`
-    );
-    if (!confirmed) return;
+    const nextProgress = Number(targetTower.copyProgress ?? 1) + 1;
+    if (!skipConfirm) {
+      const confirmed = window.confirm(
+        `Merge this ${copy.name ?? copy.towerId} copy into the selected tower? Progress ${targetTower.copyProgress ?? 1}/${TFT_COPY_PROGRESSION.maxCopies} → ${nextProgress}/${TFT_COPY_PROGRESSION.maxCopies}. Cost: 0 Gold.`
+      );
+      if (!confirmed) return;
+    }
 
     setPlacedDefenses((current) => current.map((tower) => {
-      if (tower.id !== selectedPlacedDefense.id) return tower;
+      if (tower.id !== targetTower.id) return tower;
       const merged = mergeTftCopyProgress(tower, copy).tower;
       return {
         ...merged,
         investedGold: Number(tower.investedGold ?? 0) + Number(copy.cost ?? TFT_SHOP.copyCost)
       };
     }));
+    setSelectedPlacedDefenseId(targetTower.id);
     setTftBench((current) => removeCopyFromBench(current, benchIndex).bench);
     setSelectedTftBenchIndex(null);
     setTftFeedback(nextProgress === TFT_COPY_PROGRESSION.maxCopies ? '7/7 — CHOOSE EVOLUTION A OR B' : `MERGED — ${nextProgress}/7`);
@@ -1747,6 +1748,17 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     }
 
     if (occupied) {
+      if (run?.mode === MODES.TFT_SHOP && selectedTftBenchIndex != null) {
+        const copy = tftBench[selectedTftBenchIndex];
+        const validation = canMergeTftCopy(occupied, copy);
+        if (validation.ok) {
+          handleMergeTftCopy(selectedTftBenchIndex, occupied.id, true);
+          return;
+        }
+        if (copy) {
+          setTftFeedback(validation.error === 'wrong_tower_type' ? 'WRONG TOWER TYPE' : 'COPY PROGRESS MAXED');
+        }
+      }
       setSelectedPlacedDefenseId(occupied.id);
       setMovingPlacedDefenseId(occupied.id);
       return;
