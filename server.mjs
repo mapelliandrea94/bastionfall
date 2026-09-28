@@ -31,6 +31,7 @@ const consumedMatchCompletions = new Map();
 const ABUSE_BUCKET_TTL_MS = 10 * 60 * 1000;
 const COMPLETION_REPLAY_TTL_MS = 25 * 60 * 60 * 1000;
 const LAST_BASTION_ABANDON_TIMEOUT_SECONDS = 60;
+const STANDARD_RUN_STALE_TIMEOUT_SECONDS = 6 * 60 * 60;
 
 function getStandardRunValidationBounds(mode, matchId, completedWave) {
   const seed = `${mode}:${matchId}`;
@@ -171,6 +172,16 @@ function clientForToken(token, extraHeaders = {}) {
     }
   });
 }
+
+async function abandonStaleStandardRuns(serverDb) {
+  const { data, error } = await serverDb.rpc('abandon_stale_standard_runs_for_user', {
+    p_now: new Date().toISOString(),
+    p_timeout_seconds: STANDARD_RUN_STALE_TIMEOUT_SECONDS
+  });
+  if (error) return { ok: false, error };
+  return { ok: true, abandoned: Number(data ?? 0) || 0 };
+}
+
 
 async function requireUser(req, res, next) {
   if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'server_not_configured' });
@@ -398,6 +409,11 @@ app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowM
     const serverDb = clientForToken(req.accessToken, {
       'x-bastionfall-server-secret': matchTokenSecret
     });
+    const staleCleanup = await abandonStaleStandardRuns(serverDb);
+    if (!staleCleanup.ok) {
+      console.error('Standard stale-run cleanup failed:', staleCleanup.error.message);
+      return res.status(500).json({ error: 'run_cleanup_failed' });
+    }
     const { error } = await serverDb.rpc('persist_standard_run_checkpoint', {
       p_match_id: matchId,
       p_mode: mode,
@@ -463,6 +479,12 @@ app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windo
   const serverDb = clientForToken(req.accessToken, {
     'x-bastionfall-server-secret': matchTokenSecret
   });
+
+  const staleCleanup = await abandonStaleStandardRuns(serverDb);
+  if (!staleCleanup.ok) {
+    console.error('Standard stale-run cleanup failed:', staleCleanup.error.message);
+    return res.status(500).json({ error: 'run_cleanup_failed' });
+  }
 
   const { data: currentRun, error: currentRunError } = await serverDb
     .from('standard_run_sessions')
@@ -948,6 +970,12 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     const serverDb = clientForToken(req.accessToken, {
       'x-bastionfall-server-secret': matchTokenSecret
     });
+
+    const staleCleanup = await abandonStaleStandardRuns(serverDb);
+    if (!staleCleanup.ok) {
+      console.error('Standard stale-run cleanup failed:', staleCleanup.error.message);
+      return res.status(500).json({ error: 'run_cleanup_failed' });
+    }
 
     const { data: checkpoint, error: checkpointError } = await serverDb
       .from('standard_run_sessions')
