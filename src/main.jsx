@@ -1654,29 +1654,23 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             0.48 *
             blessingModifiers.enemyMoveSpeedMultiplier *
             worldModifierEffects.enemyMoveSpeedMultiplier;
-          const previousEffectiveSpeed = Number(enemy.movementSpeedApplied);
-          let movementSpawnedAt = Number(enemy.spawnedAt);
 
-          if (
-            Number.isFinite(previousEffectiveSpeed) &&
-            Math.abs(previousEffectiveSpeed - effectiveSpeed) > 0.0001 &&
-            effectiveSpeed > 0
-          ) {
-            movementSpawnedAt =
-              now - ((Math.max(0, Math.min(1, Number(enemy.progress ?? 0))) * durationMs) / effectiveSpeed);
-          }
-
-          const naturalProgress = Math.min(
-            1,
-            ((now - movementSpawnedAt) / durationMs) * effectiveSpeed
-          );
+          const previousProgress = Math.max(0, Math.min(1, Number(enemy.progress ?? 0)));
+          const previousMovementAt = Number(enemy.lastMovementAt);
+          const rawDeltaMs = Number.isFinite(previousMovementAt) ? Math.max(0, now - previousMovementAt) : 0;
+          const deltaMs = Math.min(rawDeltaMs, 80);
+          const progressDelta = durationMs > 0
+            ? (deltaMs / durationMs) * effectiveSpeed
+            : 0;
+          const naturalProgress = Math.min(1, previousProgress + progressDelta);
 
           if (enemy.airborne || activeWallIds.length === 0) {
             return {
               ...enemy,
               progress: naturalProgress,
-              spawnedAt: movementSpawnedAt,
-              movementSpeedApplied: effectiveSpeed
+              lastMovementAt: now,
+              movementSpeedApplied: effectiveSpeed,
+              blockedByWallId: null
             };
           }
 
@@ -1685,18 +1679,21 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             .sort((a, b) => a[1] - b[1])[0];
 
           if (!blockingWall) {
-            return { ...enemy, progress: naturalProgress };
+            return {
+              ...enemy,
+              progress: naturalProgress,
+              lastMovementAt: now,
+              movementSpeedApplied: effectiveSpeed,
+              blockedByWallId: null
+            };
           }
 
           const [wallId, wallProgress] = blockingWall;
-          const rebasedSpawnedAt = effectiveSpeed > 0
-            ? now - ((wallProgress * durationMs) / effectiveSpeed)
-            : enemy.spawnedAt;
 
           return {
             ...enemy,
-            progress: wallProgress,
-            spawnedAt: rebasedSpawnedAt,
+            progress: Math.min(previousProgress, wallProgress),
+            lastMovementAt: now,
             movementSpeedApplied: effectiveSpeed,
             blockedByWallId: wallId
           };
