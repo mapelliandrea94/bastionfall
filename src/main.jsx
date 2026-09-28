@@ -1139,9 +1139,16 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       return {
         ...enemy,
         spawnedAt: Number.isFinite(Number(enemy.spawnedAt)) ? Number(enemy.spawnedAt) + delta : resumedClock,
+        lastMovementAt: Number.isFinite(Number(enemy.lastMovementAt)) ? Number(enemy.lastMovementAt) + delta : resumedClock,
         statusEffects: status
       };
     }));
+    setSpawnQueue((current) => current.map((enemy) => ({
+      ...enemy,
+      scheduledSpawnAt: Number.isFinite(Number(enemy.scheduledSpawnAt))
+        ? Number(enemy.scheduledSpawnAt) + delta
+        : enemy.scheduledSpawnAt
+    })));
 
     onlineClockRebasedRef.current = true;
   }, []);
