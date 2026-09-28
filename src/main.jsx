@@ -54,7 +54,7 @@ import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/b
 import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balance/endToEndRegressionQa.js';
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
-import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeTelemetry, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
+import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeBattlefieldVisual, getSuddenSiegeTelemetry, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
 import { applyRiskRewardGold, getRiskRewardConfig, getRiskRewardVisualState } from './game/balance/riskReward.js';
 import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveLiveState, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
@@ -1157,6 +1157,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const suddenTelemetry = run?.mode === MODES.SUDDEN_SIEGE
     ? getSuddenSiegeTelemetry(waveScaling.waveNumber)
     : null;
+  const suddenBattlefieldVisual = run?.mode === MODES.SUDDEN_SIEGE
+    ? getSuddenSiegeBattlefieldVisual(waveScaling.waveNumber)
+    : null;
   const nextWaveNumber = Math.max(1, (run?.wave ?? 0) + 1);
   const upcomingBossWave = getUpcomingBossWave(nextWaveNumber);
   const bossWaveIncoming = isBossWave(nextWaveNumber);
@@ -2197,8 +2200,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <strong>{
                 run?.mode === MODES.SINGLE_GATE
                   ? 'SINGLE GATE'
-                  : isShopMode(run?.mode)
-                    ? 'TFT SHOP'
+                  : run?.mode === MODES.SUDDEN_SIEGE
+                    ? 'SUDDEN SIEGE'
+                    : isShopMode(run?.mode)
+                      ? 'TFT SHOP'
                     : run?.mode === MODES.LAST_BASTION
                       ? 'LAST BASTION'
                       : run?.mode === MODES.TRI_GATE
@@ -2282,9 +2287,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           )}
 
           <svg
-            className={riskRewardVisual.active ? 'battlefield-map battlefield-map--pressure' : 'battlefield-map'}
+            className={[
+              'battlefield-map',
+              riskRewardVisual.active ? 'battlefield-map--pressure' : '',
+              suddenBattlefieldVisual ? 'battlefield-map--sudden' : '',
+              suddenBattlefieldVisual ? `battlefield-map--sudden-${suddenBattlefieldVisual.className}` : ''
+            ].filter(Boolean).join(' ')}
             data-risk-reward-tier={riskRewardTier}
             data-pressure-active={riskRewardVisual.active ? 'true' : 'false'}
+            data-sudden-stage={suddenBattlefieldVisual?.stage ?? ''}
             viewBox={`0 0 ${SINGLE_GATE_MAP.size.width} ${SINGLE_GATE_MAP.size.height}`}
             preserveAspectRatio="none"
             role="img"
@@ -2300,6 +2311,25 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <pattern id="bf-grass-texture" width="112" height="94" patternUnits="userSpaceOnUse"><path d="M12 25l4-5m2 5 3-6M77 67l3-5m3 5 4-7M51 12l3-4M100 36l4-6" stroke="#d9e5a1" strokeWidth="2" opacity=".43"/><circle cx="38" cy="61" r="2" fill="#f2eac8"/><circle cx="94" cy="14" r="2" fill="#e8d9a0"/></pattern>
             </defs>
             <image className="battlefield-map__art" href="/assets/maps/bastionfall-field-v2.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
+            {suddenBattlefieldVisual && (
+              <g
+                className={`sudden-stage-overlay sudden-stage-overlay--${suddenBattlefieldVisual.className}`}
+                style={{
+                  '--sudden-intensity': suddenBattlefieldVisual.intensity,
+                  '--sudden-pulse-ms': `${suddenBattlefieldVisual.pulseMs}ms`
+                }}
+                aria-hidden="true"
+              >
+                <rect className="sudden-stage-overlay__vignette" x="0" y="0" width="1600" height="900" />
+                <rect className="sudden-stage-overlay__frame" x="16" y="16" width="1568" height="868" rx="32" />
+                <g className="sudden-stage-overlay__badge" transform="translate(800 126)">
+                  <rect x="-154" y="-24" width="308" height="48" rx="18" />
+                  <text x="0" y="6" textAnchor="middle">
+                    {suddenBattlefieldVisual.label}
+                  </text>
+                </g>
+              </g>
+            )}
             {run?.phase === RUN_PHASES.ACTIVE && (
               <g
                 className={`mini-objective-battlefield mini-objective-battlefield--${miniObjectiveLive.status}`}
