@@ -1,7 +1,6 @@
 export const TFT_PERSISTENCE = Object.freeze({
-  version: 1,
-  storageKey: 'bastionfall:tft-run:v1',
-  maxResumeAgeMs: 10 * 60 * 1000
+  version: 2,
+  storageKey: 'bastionfall:tft-run:v2'
 });
 
 function clampInt(value, min, max, fallback = min) {
@@ -109,11 +108,6 @@ export function loadTftRunSnapshot(storage = globalThis?.localStorage) {
     if (!raw) return null;
     const snapshot = normalizeTftRunSnapshot(JSON.parse(raw));
     if (!snapshot) return null;
-    const ageMs = Date.now() - Number(snapshot.savedAt || 0);
-    if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > TFT_PERSISTENCE.maxResumeAgeMs) {
-      storage.removeItem(TFT_PERSISTENCE.storageKey);
-      return null;
-    }
     return snapshot;
   } catch {
     return null;
