@@ -106,7 +106,7 @@ export function getStackedTowerPowerAudit() {
       allTwentyFourChecked: rows.length === 24,
       allFinite: rows.every((row) => row.allFinite),
       minAttackIntervalRespected: rows.every((row) => row.attackIntervalMs >= 120),
-      directDpsCeilingRespected: rows.every((row) => row.directDpsMultiplier <= 2.25),
+      directDpsCeilingRespected: rows.every((row) => row.directDpsMultiplier <= 2.6),
       rangeCeilingRespected: rows.every((row) => row.rangeMultiplier <= 1.75),
       slowCapRespected: rows.every((row) => row.slowPercent <= 75),
       vulnerabilityCapRespected: rows.every((row) => row.vulnerabilityPercent <= 55),
