@@ -1,5 +1,12 @@
 import { SINGLE_GATE_MAP, getSingleGatePathForWalls } from '../maps/singleGate.js';
 
+export const WALL_PROGRESS_BY_ID = Object.freeze({
+  'wall-01': 0.115,
+  'wall-02': 0.324,
+  'wall-03': 0.543,
+  'wall-04': 0.760
+});
+
 export const WALL_SYSTEM = Object.freeze({
   maxActive: SINGLE_GATE_MAP.wallSlots.maximumActive,
   cost: SINGLE_GATE_MAP.wallSlots.defaultCost,
