@@ -734,8 +734,8 @@ app.post('/api/last-bastion/match/eliminate', requireUser, rateLimitUser('lb-eli
     return res.status(500).json({ error: 'elimination_persistence_failed' });
   }
 
-  const refreshed = await hydratePersistentLastBastionState(req);
-  if (!refreshed.ok) return res.status(503).json({ error: refreshed.error });
+  const refreshed = await hydratePersistentLastBastionMatch(req, identity.matchId);
+  if (!refreshed.ok) return res.status(refreshed.error === 'last_bastion_match_not_found' ? 404 : 503).json({ error: refreshed.error });
 
   const result = getLastBastionMatchStatus(req.user.id, identity.matchId);
   if (!result.ok) return res.status(404).json({ error: result.error || 'elimination_failed' });
