@@ -26,6 +26,7 @@ import { applyWaveAffix, getWaveAffix } from '../waves/waveAffixes.js';
 import { applyRareWaveEvent, getRareWaveEvent } from '../waves/rareWaveEvents.js';
 import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveReward } from '../objectives/miniObjectives.js';
 import { getEndlessMilestone } from './endlessMilestones.js';
+import { createRunEndSnapshot } from './runEndSnapshot.js';
 import { isBossWave } from '../boss/bossSchedule.js';
 import { getBossSummonAddsPlan } from '../boss/bossSummonAdds.js';
 import { WALL_SYSTEM } from '../structures/walls.js';
@@ -482,6 +483,7 @@ function activeStep(snapshot, dtMs, engine) {
     run.result = 'bastion-destroyed';
     run.endedAtMs = Date.now();
     run.elapsedMs = Math.max(Number(run.elapsedMs ?? 0), Number(run.endedAtMs) - Number(run.startedAtMs ?? run.endedAtMs));
+    run.endSnapshot = createRunEndSnapshot(run, 'bastion-destroyed');
     snapshot.offlineBlockedReason = 'run-ended';
   } else if (snapshot.spawnQueue.length === 0 && snapshot.activeEnemies.length === 0) {
     run.phase = 'resolving';
