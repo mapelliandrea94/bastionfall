@@ -1496,7 +1496,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         setActiveEnemies((active) => [...active, applyEliteModifiers(modeScaledEnemy)]);
         return remaining;
       });
-    }, activeEnemies.length === 0 ? 150 : waveScaling.spawnIntervalMs * worldModifierEffects.spawnIntervalMultiplier);
+    }, activeEnemies.length === 0
+      ? 150
+      : waveScaling.spawnIntervalMs * worldModifierEffects.spawnIntervalMultiplier * 0.5);
 
     return () => window.clearTimeout(timeoutId);
   }, [run?.phase, spawnQueue.length, activeEnemies.length]);
