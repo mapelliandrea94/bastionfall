@@ -68,6 +68,7 @@ import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } fr
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
+import { ACCOUNT_PROGRESSION, getAccountProgress } from './game/profile/accountProgression.js';
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
 import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
 import { ENEMY_ROSTER, createRosterEnemyState, getEnemyRosterFixtures } from './game/enemies/enemyRoster.js';
@@ -382,6 +383,7 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
     result: null,
     endSnapshot: null,
     personalBestResult: null,
+    towerMilestones: Object.freeze({ seven: 0, fourteen: 0 }),
     blessings: []
   };
 }
@@ -477,6 +479,7 @@ async function completeServerRun(session, run) {
       coreHp: snapshot.coreHp,
       coreMaxHp: snapshot.coreMaxHp,
       kills: snapshot.kills,
+      towerMilestones: snapshot.towerMilestones ?? { seven: 0, fourteen: 0 },
       resultReason: snapshot.reason
     })
   });
@@ -1060,7 +1063,7 @@ function TowerAttackEffect({ shot, speed = 1 }) {
   );
 }
 
-function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled }) {
+function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled, onTowerMilestone }) {
   const [cleanEnemyArt, setCleanEnemyArt] = useState({});
   useEffect(() => {
     let active = true;
@@ -1073,6 +1076,17 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }, []);
   const restoredTftSnapshot = useRef(isShopMode(run?.mode) ? loadTftRunSnapshot() : null);
   const matchingTftSnapshot = restoredTftSnapshot.current?.run?.seed === run?.seed ? restoredTftSnapshot.current : null;
+  const towerMilestoneAwardsRef = useRef(new Set());
+  const reportTowerMilestones = (towerId, previousProgress, nextProgress) => {
+    if (!towerId || typeof onTowerMilestone !== 'function') return;
+    [TFT_COPY_PROGRESSION.evolutionCopies, TFT_COPY_PROGRESSION.goldAscensionCopies].forEach((threshold) => {
+      if (previousProgress >= threshold || nextProgress < threshold) return;
+      const key = `${towerId}:${threshold}`;
+      if (towerMilestoneAwardsRef.current.has(key)) return;
+      towerMilestoneAwardsRef.current.add(key);
+      onTowerMilestone(threshold);
+    });
+  };
   const [spawnQueue, setSpawnQueue] = useState([]);
   const [activeEnemies, setActiveEnemies] = useState([]);
   const [preparationRemaining, setPreparationRemaining] = useState(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
@@ -1945,7 +1959,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       return;
     }
 
-    const nextProgress = Number(targetTower.copyProgress ?? 1) + 1;
+    const previousProgress = Number(targetTower.copyProgress ?? 1);
+    const nextProgress = previousProgress + 1;
     if (!skipConfirm) {
       const confirmed = window.confirm(
         `Merge this ${copy.name ?? copy.towerId} copy into the selected tower? Progress ${targetTower.copyProgress ?? 1}/${getTftProgressDenominator(targetTower.copyProgress)} → ${nextProgress}/${getTftProgressDenominator(nextProgress)}. Cost: 0 Gold.`
@@ -1953,6 +1968,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       if (!confirmed) return;
     }
 
+    reportTowerMilestones(targetTower.id, previousProgress, nextProgress);
     setPlacedDefenses((current) => current.map((tower) => {
       if (tower.id !== targetTower.id) return tower;
       const merged = mergeTftCopyProgress(tower, copy).tower;
@@ -2012,6 +2028,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     );
     if (!confirmed) return false;
 
+    reportTowerMilestones(targetTower.id, targetProgress, mergedProgress);
     const combinedInvestedGold = Number(targetTower.investedGold ?? 0) + Number(sourceTower.investedGold ?? 0);
     const survivingCopies = mergedProgress + residualProgress;
     const targetGoldShare = survivingCopies > 0
@@ -3878,6 +3895,7 @@ function Profile({ session, onBack }) {
   const last = profileData?.lastBastion ?? null;
   const totalRuns = Number(profileData?.profile?.runs || 0);
   const totalSurvivalMs = Number(last?.total_survival_ms || 0);
+  const accountProgress = getAccountProgress(profileData?.profile?.account_xp ?? 0);
 
   return (
     <Shell
@@ -3893,8 +3911,22 @@ function Profile({ session, onBack }) {
         </div>
       ) : (
         <>
+          <section className="profile-level-card" aria-label="Account level progression">
+            <div className="profile-level-card__header">
+              <div>
+                <span>ACCOUNT LEVEL</span>
+                <strong>LV. {accountProgress.level}</strong>
+              </div>
+              <small>{accountProgress.currentXp.toLocaleString()} / {accountProgress.requiredXp.toLocaleString()} XP</small>
+            </div>
+            <div className="profile-xp-track" role="progressbar" aria-valuemin="0" aria-valuemax={accountProgress.requiredXp} aria-valuenow={accountProgress.currentXp}>
+              <div className="profile-xp-fill" style={{ width: `${Math.round(accountProgress.progress * 100)}%` }} />
+            </div>
+            <p>Run XP: +{ACCOUNT_PROGRESSION.runBaseXp} base · +{ACCOUNT_PROGRESSION.xpPerWave}/wave · +{ACCOUNT_PROGRESSION.towerSevenBonusXp} at 7/7 · +{ACCOUNT_PROGRESSION.towerFourteenBonusXp} at 14/14.</p>
+          </section>
+
           <div className="profile-grid">
-            <div className="stat-card"><span>FORTRESS LEVEL</span><strong>{profileData.profile.fortress_level}</strong><small>Account prestige progression</small></div>
+            <div className="stat-card"><span>ACCOUNT XP</span><strong>{Number(profileData.profile.account_xp || 0).toLocaleString()}</strong><small>Permanent profile progression</small></div>
             <div className="stat-card"><span>TOTAL RUNS</span><strong>{totalRuns}</strong><small>Verified completed runs</small></div>
             <div className="stat-card"><span>LIFETIME KILLS</span><strong>{Number(profileData.profile.lifetime_kills || 0).toLocaleString()}</strong><small>Across verified runs</small></div>
             <div className="stat-card"><span>SHARDS</span><strong>{profileData.profile.shards}</strong><small>Account progression currency</small></div>
@@ -4540,6 +4572,19 @@ function App() {
           setRunState((current) => {
             if (!current || current.phase === RUN_PHASES.ENDED) return current;
             return { ...current, kills: Math.max(0, Number(current.kills) || 0) + 1 };
+          });
+        }}
+        onTowerMilestone={(threshold) => {
+          setRunState((current) => {
+            if (!current || current.phase === RUN_PHASES.ENDED) return current;
+            const key = Number(threshold) >= TFT_COPY_PROGRESSION.goldAscensionCopies ? 'fourteen' : 'seven';
+            return {
+              ...current,
+              towerMilestones: Object.freeze({
+                seven: Number(current.towerMilestones?.seven ?? 0) + (key === 'seven' ? 1 : 0),
+                fourteen: Number(current.towerMilestones?.fourteen ?? 0) + (key === 'fourteen' ? 1 : 0)
+              })
+            };
           });
         }}
         onDamageBastion={(damage) => {
