@@ -4463,6 +4463,8 @@ function App() {
   const [language, setLanguageState] = useState(() => getLanguage());
   const lastStandardProgressRef = useRef(null);
   const lastOnlineSnapshotAtRef = useRef(0);
+  const onlineSnapshotInFlightRef = useRef(false);
+  const pendingOnlineSnapshotRef = useRef(null);
   const hiddenAtRef = useRef(null);
 
   useEffect(() => {
@@ -4511,13 +4513,35 @@ function App() {
     return () => { cancelled = true; };
   }, [session?.access_token]);
 
+  const sendOnlineSnapshot = (snapshot) => {
+    if (!snapshot || onlineSnapshotInFlightRef.current) return;
+
+    onlineSnapshotInFlightRef.current = true;
+    lastOnlineSnapshotAtRef.current = Date.now();
+
+    saveOnlineRunSnapshot(session, snapshot)
+      .then((result) => {
+        if (!result.ok) console.warn('Online run snapshot failed:', result.error);
+      })
+      .finally(() => {
+        onlineSnapshotInFlightRef.current = false;
+        const pending = pendingOnlineSnapshotRef.current;
+        pendingOnlineSnapshotRef.current = null;
+        if (pending) sendOnlineSnapshot(pending);
+      });
+  };
+
   const persistOnlineSnapshot = (snapshot) => {
+    if (!snapshot) return;
+
+    if (onlineSnapshotInFlightRef.current) {
+      pendingOnlineSnapshotRef.current = snapshot;
+      return;
+    }
+
     const now = Date.now();
-    if (now - lastOnlineSnapshotAtRef.current < 2500) return;
-    lastOnlineSnapshotAtRef.current = now;
-    saveOnlineRunSnapshot(session, snapshot).then((result) => {
-      if (!result.ok) console.warn('Online run snapshot failed:', result.error);
-    });
+    if (now - lastOnlineSnapshotAtRef.current < 3000) return;
+    sendOnlineSnapshot(snapshot);
   };
 
   useEffect(() => {
