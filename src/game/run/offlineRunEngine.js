@@ -28,6 +28,7 @@ import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveReward 
 import { getEndlessMilestone } from './endlessMilestones.js';
 import { createRunEndSnapshot } from './runEndSnapshot.js';
 import { isBossWave } from '../boss/bossSchedule.js';
+import { applyBossEnrageStats } from '../boss/bossArmorEnrage.js';
 import { getBossSummonAddsPlan } from '../boss/bossSummonAdds.js';
 import { WALL_PROGRESS_BY_ID, WALL_SYSTEM } from '../structures/walls.js';
 
@@ -521,7 +522,11 @@ function activeStep(snapshot, dtMs, engine) {
 
   const escaped = snapshot.activeEnemies.filter((enemy) => Number(enemy.progress ?? 0) >= 1);
   if (escaped.length > 0) {
-    const rawDamage = escaped.length * Number(ctx.scaling.bastionDamage ?? 1);
+    const rawDamage = escaped.reduce((sum, enemy) => {
+      const baseDamage = Number(enemy?.bastionDamage ?? ctx.scaling.bastionDamage ?? 1);
+      const enrage = applyBossEnrageStats(enemy);
+      return sum + baseDamage * Number(enrage.bastionDamageMultiplier ?? 1);
+    }, 0);
     const damage = applyBlessingBastionDamage(rawDamage, run.coreHp, run.coreMaxHp, run.blessings ?? []);
     run.coreHp = Math.max(0, Number(run.coreHp ?? 0) - damage);
     run.bastionHitId = Number(run.bastionHitId ?? 0) + 1;
