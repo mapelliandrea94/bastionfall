@@ -3243,8 +3243,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   disabled={!run || run.phase !== RUN_PHASES.PREPARATION}
                   onClick={() => setConfirmedTftSetupKey(tftSetupKey)}
                 >
-                  <span>{gameText(tftSetupConfirmed ? 'CONFIGURATION CONFIRMED' : 'CONFIRM SETUP')}</span>
-                  <small>{gameText(tftSetupConfirmed ? 'Current setup locked in' : 'Confirm towers and bench')}</small>
+                  <span className="tft-wave-control__title">{gameText(tftSetupConfirmed ? 'CONFIRMED' : 'CONFIRM')}</span>
+                  <small className="tft-wave-control__subtitle">{gameText(tftSetupConfirmed ? 'Setup locked' : 'Lock current setup')}</small>
                 </button>
                 <button
                   type="button"
@@ -3252,8 +3252,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   disabled={!run || run.phase !== RUN_PHASES.PREPARATION || !tftSetupConfirmed}
                   onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
                 >
-                  <span>{t('startWave')}</span>
-                  <small>{gameText(tftSetupConfirmed ? 'Launch immediately' : 'Confirm setup first')}</small>
+                  <span className="tft-wave-control__title">{gameText('START WAVE')}</span>
+                  <small className="tft-wave-control__subtitle">{gameText(tftSetupConfirmed ? 'Launch now' : 'Confirm first')}</small>
                 </button>
                 <button
                   type="button"
