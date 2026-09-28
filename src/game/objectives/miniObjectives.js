@@ -4,6 +4,7 @@ export const MINI_OBJECTIVES = Object.freeze({
     'single-gate': 8,
     'tri-gate': 10,
     'tft-shop': 1,
+    'sudden-siege': 1,
     'last-bastion': 6
   }),
   definitions: Object.freeze([

@@ -50,6 +50,7 @@ import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/b
 import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balance/endToEndRegressionQa.js';
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
+import { SUDDEN_SIEGE, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
 import { applyRiskRewardGold, getRiskRewardConfig } from './game/balance/riskReward.js';
 import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
@@ -93,8 +94,11 @@ const MODES = Object.freeze({
   SINGLE_GATE: 'single-gate',
   TRI_GATE: 'tri-gate',
   LAST_BASTION: 'last-bastion',
-  TFT_SHOP: 'tft-shop'
+  TFT_SHOP: 'tft-shop',
+  SUDDEN_SIEGE: 'sudden-siege'
 });
+
+const isShopMode = (mode) => mode === MODES.TFT_SHOP || mode === MODES.SUDDEN_SIEGE;
 
 const MODE_PRE_RUN = Object.freeze({
   [MODES.SINGLE_GATE]: Object.freeze({
@@ -119,6 +123,15 @@ const MODE_PRE_RUN = Object.freeze({
     kicker: 'TFT SHOP',
     title: 'ROLL. BENCH. BUILD.',
     description: 'Shop-driven survival using random tower copies.',
+    fronts: '1 FRONT',
+    objective: 'SURVIVE',
+    record: 'HIGHEST WAVE',
+    status: 'READY TO INITIALIZE'
+  }),
+  [MODES.SUDDEN_SIEGE]: Object.freeze({
+    kicker: 'SUDDEN SIEGE',
+    title: 'ROLL FAST. DIE LATE.',
+    description: 'TFT Shop rules with harder scaling, faster pressure and shorter preparation.',
     fronts: '1 FRONT',
     objective: 'SURVIVE',
     record: 'HIGHEST WAVE',
@@ -308,9 +321,9 @@ function canTransitionWavePhase(from, to) {
 
 function getWaveScaling(completedWaves, mode = MODES.SINGLE_GATE) {
   const waveNumber = Math.max(1, completedWaves + 1);
-  return mode === MODES.TRI_GATE
-    ? getTriGateWaveScaling(waveNumber)
-    : getBandWaveScaling(waveNumber);
+  if (mode === MODES.TRI_GATE) return getTriGateWaveScaling(waveNumber);
+  if (mode === MODES.SUDDEN_SIEGE) return getSuddenSiegeWaveScaling(waveNumber);
+  return getBandWaveScaling(waveNumber);
 }
 
 const RUN_DEFAULTS = Object.freeze({
@@ -329,12 +342,17 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
     serverStartedAt: serverMatch?.startedAt ?? null,
     seed: normalizeRunSeed(seedInput),
     phase: RUN_PHASES.PREPARATION,
-    preparationSeconds: mode === MODES.TRI_GATE ? TRI_GATE_PACING.preparationSeconds : RUN_DEFAULTS.preparationSeconds,
+    preparationSeconds:
+      mode === MODES.TRI_GATE
+        ? TRI_GATE_PACING.preparationSeconds
+        : mode === MODES.SUDDEN_SIEGE
+          ? SUDDEN_SIEGE.preparationSeconds
+          : RUN_DEFAULTS.preparationSeconds,
     wave: 0,
     gold:
       mode === MODES.TRI_GATE
         ? TRI_GATE_PACING.startingGold
-        : mode === MODES.TFT_SHOP
+        : isShopMode(mode)
           ? TFT_SHOP.startingGold
           : RUN_DEFAULTS.startingGold,
     coreHp: RUN_DEFAULTS.coreHp,
@@ -664,6 +682,13 @@ function ModeSelect({ onBack, onSelect }) {
           <em>SELECT MODE</em>
         </button>
 
+        <button className="mode-card mode-card--ready mode-card--sudden" onClick={() => onSelect(MODES.SUDDEN_SIEGE)}>
+          <span className="mode-card__players">FAST SHOP SURVIVAL</span>
+          <strong>SUDDEN SIEGE</strong>
+          <small>TFT rules. Faster waves. Harder scaling. Less time to breathe.</small>
+          <em>SELECT MODE</em>
+        </button>
+
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.LAST_BASTION)}>
           <span className="mode-card__players">COMPETITIVE SURVIVAL</span>
           <strong>LAST BASTION</strong>
@@ -971,7 +996,7 @@ function ModePreRun({ mode, onBack, onStart, session }) {
 
 
 function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled }) {
-  const restoredTftSnapshot = useRef(run?.mode === MODES.TFT_SHOP ? loadTftRunSnapshot() : null);
+  const restoredTftSnapshot = useRef(isShopMode(run?.mode) ? loadTftRunSnapshot() : null);
   const matchingTftSnapshot = restoredTftSnapshot.current?.run?.seed === run?.seed ? restoredTftSnapshot.current : null;
   const [spawnQueue, setSpawnQueue] = useState([]);
   const [activeEnemies, setActiveEnemies] = useState([]);
@@ -1056,7 +1081,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     waveNumber: waveScaling.waveNumber,
     mode: run?.mode ?? MODES.SINGLE_GATE,
     budgetMultiplier:
-      (run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1) *
+      (run?.mode === MODES.TRI_GATE
+        ? TRI_GATE_PACING.threatMultiplier
+        : run?.mode === MODES.SUDDEN_SIEGE
+          ? SUDDEN_SIEGE.threatMultiplier
+          : 1) *
       worldModifierEffects.threatMultiplier *
       riskRewardConfig.threatMultiplier
   });
@@ -1118,7 +1147,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const isLastBastionFinished =
     run?.mode === MODES.LAST_BASTION &&
     run?.lastBastionMatchStatus === 'finished';
-  const tftSetupKey = run?.mode === MODES.TFT_SHOP
+  const tftSetupKey = isShopMode(run?.mode)
     ? JSON.stringify({
         wave: run?.wave ?? 0,
         bench: tftBench.map((copy) => copy?.copyId ?? null),
@@ -1127,7 +1156,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           .sort((a, b) => String(a[0]).localeCompare(String(b[0])))
       })
     : '';
-  const tftSetupConfirmed = run?.mode === MODES.TFT_SHOP && confirmedTftSetupKey === tftSetupKey;
+  const tftSetupConfirmed = isShopMode(run?.mode) && confirmedTftSetupKey === tftSetupKey;
 
   const coreRatio = Math.max(0, Math.min(1, (run?.coreHp ?? 0) / (run?.coreMaxHp || 1)));
   const bastionStateClass = coreRatio <= 0.25
@@ -1184,7 +1213,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
         if (destroyed.length > 0) {
           setActiveWallIds((ids) => ids.filter((id) => !destroyed.includes(id)));
-          if (run?.mode === MODES.TFT_SHOP) {
+          if (isShopMode(run?.mode)) {
             setTftFeedback(`WALL DESTROYED · ${destroyed.join(', ').toUpperCase()}`);
           }
         }
@@ -1197,7 +1226,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }, [run?.phase, run?.mode, activeWallIds.join('|')]);
 
   useEffect(() => {
-    if (run?.mode !== MODES.TFT_SHOP || run?.phase === RUN_PHASES.ENDED) return;
+    if (!isShopMode(run?.mode) || run?.phase === RUN_PHASES.ENDED) return;
     const snapshot = createTftRunSnapshot({
       run,
       placedDefenses,
@@ -1227,7 +1256,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
 
-    if (run?.mode === MODES.TFT_SHOP && !tftSetupConfirmed) {
+    if (isShopMode(run?.mode) && !tftSetupConfirmed) {
       setPreparationRemaining(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
       return undefined;
     }
@@ -1646,7 +1675,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const handleWallPurchase = (wallId) => {
     if (!run || run.phase !== RUN_PHASES.PREPARATION) {
-      if (run?.mode === MODES.TFT_SHOP) setTftFeedback('WALLS CAN ONLY BE BOUGHT DURING PREPARATION');
+      if (isShopMode(run?.mode)) setTftFeedback('WALLS CAN ONLY BE BOUGHT DURING PREPARATION');
       return;
     }
     if (!SINGLE_GATE_MAP.compatibleModes.includes(run.mode)) return;
@@ -1659,7 +1688,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     });
 
     if (!attempt.ok) {
-      if (run?.mode === MODES.TFT_SHOP) {
+      if (isShopMode(run?.mode)) {
         setTftFeedback(
           attempt.reason === 'insufficient-gold'
             ? `NEED ${WALL_SYSTEM.cost}G FOR WALL`
@@ -1675,7 +1704,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setActiveWallIds([...attempt.activeWallIds]);
     setWallHpById((current) => ({ ...current, [wallId]: WALL_SYSTEM.maxHp }));
     onSpendGold(WALL_SYSTEM.cost);
-    if (run?.mode === MODES.TFT_SHOP) setTftFeedback(`WALL BUILT · -${WALL_SYSTEM.cost}G`);
+    if (isShopMode(run?.mode)) setTftFeedback(`WALL BUILT · -${WALL_SYSTEM.cost}G`);
   };
 
   const handleDefenseSelection = (defenseId) => {
@@ -1703,7 +1732,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const handleEvolutionChoice = (evolutionId) => {
     if (!selectedPlacedDefense || !canChooseEvolution(selectedPlacedDefense)) return;
-    if (run?.mode === MODES.TFT_SHOP && Number(selectedPlacedDefense.copyProgress ?? 1) < TFT_COPY_PROGRESSION.maxCopies) return;
+    if (isShopMode(run?.mode) && Number(selectedPlacedDefense.copyProgress ?? 1) < TFT_COPY_PROGRESSION.maxCopies) return;
     setPlacedDefenses((current) => current.map((tower) =>
       tower.id === selectedPlacedDefense.id ? chooseTowerEvolution(tower, evolutionId) : tower
     ));
@@ -1714,7 +1743,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   };
 
   const handleMergeTftCopy = (benchIndex, targetTowerId = selectedPlacedDefense?.id, skipConfirm = false) => {
-    if (run?.mode !== MODES.TFT_SHOP || !targetTowerId) return;
+    if (!isShopMode(run?.mode) || !targetTowerId) return;
     const targetTower = placedDefenses.find((tower) => tower.id === targetTowerId);
     const copy = tftBench[benchIndex];
     if (!targetTower || !copy) return;
@@ -1755,7 +1784,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setMovingPlacedDefenseId(null);
     towerAttackTimesRef.current[selectedPlacedDefense.id] = 0;
     if (refund > 0) onGainGold(refund);
-    if (run.mode === MODES.TFT_SHOP) setTftFeedback(`TOWER SOLD · +${refund}G`);
+    if (isShopMode(run.mode)) setTftFeedback(`TOWER SOLD · +${refund}G`);
   };
 
   const handleToggleMoveSelectedTower = () => {
@@ -1781,12 +1810,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       ));
       setSelectedPlacedDefenseId(movingPlacedDefenseId);
       setMovingPlacedDefenseId(null);
-      if (run.mode === MODES.TFT_SHOP) setTftFeedback('TOWER MOVED · 0G');
+      if (isShopMode(run.mode)) setTftFeedback('TOWER MOVED · 0G');
       return;
     }
 
     if (occupied) {
-      if (run?.mode === MODES.TFT_SHOP && selectedTftBenchIndex != null) {
+      if (isShopMode(run?.mode) && selectedTftBenchIndex != null) {
         const copy = tftBench[selectedTftBenchIndex];
         const validation = canMergeTftCopy(occupied, copy);
         if (validation.ok) {
@@ -1804,7 +1833,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     if (!run || run.phase === RUN_PHASES.ENDED) return;
 
-    if (run.mode === MODES.TFT_SHOP) {
+    if (isShopMode(run.mode)) {
       if (selectedTftBenchIndex == null) return;
       const copy = tftBench[selectedTftBenchIndex];
       if (!copy) return;
@@ -1871,7 +1900,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <strong>{
                 run?.mode === MODES.SINGLE_GATE
                   ? 'SINGLE GATE'
-                  : run?.mode === MODES.TFT_SHOP
+                  : isShopMode(run?.mode)
                     ? 'TFT SHOP'
                     : run?.mode === MODES.LAST_BASTION
                       ? 'LAST BASTION'
@@ -2006,12 +2035,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   : null;
                 const previewDefense = movingTower
                   ? defenseDefinitions[movingTower.defenseId] ?? selectedDefense
-                  : run?.mode === MODES.TFT_SHOP && benchCopy
+                  : isShopMode(run?.mode) && benchCopy
                     ? defenseDefinitions[benchCopy.towerId] ?? selectedDefense
                     : selectedDefense;
                 const affordable = movingTower
                   ? true
-                  : run?.mode === MODES.TFT_SHOP
+                  : isShopMode(run?.mode)
                     ? Boolean(benchCopy)
                     : (run?.gold ?? 0) >= selectedDefense.cost;
                 const hovered = hoveredSlotId === slot.id;
@@ -2023,7 +2052,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   hovered ? 'battlefield-map__tower-slot--hovered' : '',
                   selectedPlaced ? 'battlefield-map__tower-slot--selected' : '',
                   movingTower && !placed ? 'battlefield-map__tower-slot--move-target' : '',
-                  run?.mode === MODES.TFT_SHOP && placed && benchCopy && canMergeTftCopy(placed, benchCopy).ok
+                  isShopMode(run?.mode) && placed && benchCopy && canMergeTftCopy(placed, benchCopy).ok
                     ? 'battlefield-map__tower-slot--merge-target'
                     : ''
                 ].filter(Boolean).join(' ');
@@ -2045,13 +2074,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     onMouseEnter={() => setHoveredSlotId(slot.id)}
                     onMouseLeave={() => setHoveredSlotId((current) => current === slot.id ? null : current)}
                     onDragOver={(event) => {
-                      if (run?.mode === MODES.TFT_SHOP && placed) {
+                      if (isShopMode(run?.mode) && placed) {
                         event.preventDefault();
                         event.dataTransfer.dropEffect = 'move';
                       }
                     }}
                     onDrop={(event) => {
-                      if (run?.mode !== MODES.TFT_SHOP || !placed) return;
+                      if (!isShopMode(run?.mode) || !placed) return;
                       event.preventDefault();
                       const benchIndex = Number(event.dataTransfer.getData('text/plain'));
                       if (!Number.isInteger(benchIndex)) return;
@@ -2288,7 +2317,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </svg>
 
           <aside
-            className={`run-sidebar ${run?.mode === MODES.TFT_SHOP ? 'run-sidebar--tft' : ''}`}
+            className={`run-sidebar ${isShopMode(run?.mode) ? 'run-sidebar--tft' : ''}`}
             aria-label="Tower management"
             data-balance-version={COMBAT_BALANCE_MODEL.version}
             data-performance-telemetry-pass={PERFORMANCE_TELEMETRY_PASS}
@@ -2418,7 +2447,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-tft-bench-selected={selectedTftBenchIndex ?? ''}
             data-tft-bench-pass={TFT_BENCH_FIXTURE.slotCountExpected === TFT_BENCH_FIXTURE.slotCountActual && TFT_BENCH_FIXTURE.buyToBenchWorks === true && TFT_BENCH_FIXTURE.fullBlocksPurchase === true && TFT_BENCH_FIXTURE.sellRemovesCopy === true && TFT_BENCH_FIXTURE.noAutoMerge === true}
             data-tft-shop-version={TFT_SHOP.version}
-            data-tft-shop-mode={run?.mode === MODES.TFT_SHOP}
+            data-tft-shop-mode={isShopMode(run?.mode)}
             data-tft-shop-pass={TFT_SHOP_FIXTURE.slotCountExpected === TFT_SHOP_FIXTURE.slotCountActual && TFT_SHOP_FIXTURE.humanExpected === TFT_SHOP_FIXTURE.humanActual && TFT_SHOP_FIXTURE.insectExpected === TFT_SHOP_FIXTURE.insectActual && TFT_SHOP_FIXTURE.alienExpected === TFT_SHOP_FIXTURE.alienActual && TFT_SHOP_FIXTURE.neutralExpected === TFT_SHOP_FIXTURE.neutralActual && TFT_SHOP_FIXTURE.everyCopyCostsTwo === true && TFT_SHOP_FIXTURE.rerollCostExpected === TFT_SHOP_FIXTURE.rerollCostActual && TFT_SHOP_FIXTURE.deterministic === true && TFT_SHOP_FIXTURE.rerollChangesSeededOffer === true}
             data-tower-art-version={TOWER_ART_SYSTEM.version}
             data-tower-art-pass={TOWER_ART_FIXTURE.expectedEvolutionCount === TOWER_ART_FIXTURE.actualEvolutionCount && TOWER_ART_FIXTURE.everyEvolutionMapped === true && TOWER_ART_FIXTURE.uniqueFrames === true && TOWER_ART_FIXTURE.humanPaletteDistinct === true && TOWER_ART_FIXTURE.alienNeutralDistinct === true && TOWER_ART_FIXTURE.everyBaseTowerHasRepresentativeArt === true}
@@ -2466,7 +2495,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-placed-defense-count={placedDefenses.length}
             data-run-gold={run?.gold ?? 0}
           >
-          {run?.mode === MODES.TFT_SHOP ? (
+          {isShopMode(run?.mode) ? (
           <>
             <div className="tft-shop-layout">
             <p className="main-menu__kicker">SHOP</p>
@@ -2739,15 +2768,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               {!selectedPlacedDefense && !selectedUpgradePreview.maxed && (
                 <strong>LV.{selectedUpgradePreview.nextLevel} · {selectedUpgradePreview.upgradeCost}g</strong>
               )}
-              {selectedPlacedDefense && run?.mode === MODES.TFT_SHOP && (
+              {selectedPlacedDefense && isShopMode(run?.mode) && (
                 <strong>COPIES {selectedPlacedDefense.copyProgress ?? 1}/{TFT_COPY_PROGRESSION.maxCopies}</strong>
               )}
-              {selectedPlacedDefense && run?.mode !== MODES.TFT_SHOP && selectedPlacedDefense.level < UPGRADE_CURVE.maxLevel && (
+              {selectedPlacedDefense && !isShopMode(run?.mode) && selectedPlacedDefense.level < UPGRADE_CURVE.maxLevel && (
                 <button type="button" onClick={handleUpgradeSelectedTower}>
                   UPGRADE TO LV.{selectedPlacedDefense.level + 1} · {getUpgradeCost(inspectedDefenseBase, selectedPlacedDefense.level + 1)}g
                 </button>
               )}
-              {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && (!run || run.mode !== MODES.TFT_SHOP || Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) && !selectedPlacedDefense.evolution && (
+              {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && (!run || !isShopMode(run.mode) || Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) && !selectedPlacedDefense.evolution && (
                 <div className="tower-evolution-choice">
                   <div className="tower-evolution-choice__title">CHOOSE EVOLUTION</div>
                   {selectedEvolutionChoices.map((choice) => (
@@ -2773,7 +2802,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               {selectedPlacedDefense?.evolution && (
                 <strong>{TOWER_EVOLUTIONS.find((entry) => entry.id === selectedPlacedDefense.evolution)?.name ?? selectedPlacedDefense.evolution}</strong>
               )}
-              <small>{run?.mode === MODES.TFT_SHOP ? 'TFT progression: 1/7 Lv.1 · 2–3/7 Lv.2 · 4–6/7 Lv.3 · 7/7 Lv.4 + evolution' : `Max level ${UPGRADE_CURVE.maxLevel} · evolution at Lv.4`}</small>
+              <small>{isShopMode(run?.mode) ? 'TFT progression: 1/7 Lv.1 · 2–3/7 Lv.2 · 4–6/7 Lv.3 · 7/7 Lv.4 + evolution' : `Max level ${UPGRADE_CURVE.maxLevel} · evolution at Lv.4`}</small>
             </div>
             <div className="defense-inspector__targeting">
               <span>TARGETING</span>
@@ -2892,11 +2921,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <div><span>CLEAR GOLD</span><strong>+{
                 run?.mode === MODES.TRI_GATE
                   ? getTriGateWaveClearReward(waveScaling.waveNumber)
-                  : run?.mode === MODES.TFT_SHOP
+                  : isShopMode(run?.mode)
                     ? TFT_SHOP.waveClearGold
                     : getWaveClearReward(waveScaling.waveNumber)
               }</strong></div>
-              {run?.mode === MODES.TFT_SHOP && (
+              {isShopMode(run?.mode) && (
                 <div><span>BONUSES</span><strong>+1 PERFECT · +3 BOSS · +2 / 5 WAVES</strong></div>
               )}
             </div>
@@ -2955,7 +2984,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </section>
           )}
 
-          {run?.mode !== MODES.TFT_SHOP && (
+          {!isShopMode(run?.mode) && (
             <button
               className="run-prep-start"
               onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
@@ -3437,7 +3466,7 @@ function App() {
     new URLSearchParams(window.location.search).get('qa') === 'tower-placement'
   );
   const [screen, setScreen] = useState(towerPlacementQa ? SCREENS.SINGLE_GATE_RUN : restoredTftRun ? SCREENS.SINGLE_GATE_RUN : SCREENS.MENU);
-  const [selectedMode, setSelectedMode] = useState(towerPlacementQa ? MODES.SINGLE_GATE : restoredTftRun ? MODES.TFT_SHOP : null);
+  const [selectedMode, setSelectedMode] = useState(towerPlacementQa ? MODES.SINGLE_GATE : restoredTftRun ? restoredTftRun.run?.mode ?? MODES.TFT_SHOP : null);
   const [runState, setRunState] = useState(
     towerPlacementQa ? createInitialRunState(MODES.SINGLE_GATE, 'tower-placement-qa') : restoredTftRun?.run ?? null
   );
@@ -3737,16 +3766,16 @@ function App() {
         session={session}
         onBack={() => setScreen(SCREENS.PLAY)}
         onStart={async (mode, preparedMatch = null) => {
-          if (mode !== MODES.SINGLE_GATE && mode !== MODES.TFT_SHOP && mode !== MODES.LAST_BASTION) return;
+          if (mode !== MODES.SINGLE_GATE && !isShopMode(mode) && mode !== MODES.LAST_BASTION) return;
           const started = preparedMatch
             ? { ok: true, match: preparedMatch }
-            : mode === MODES.TFT_SHOP
-              ? { ok: true, match: { id: null, token: null, startedAt: null, seed: `${MODES.TFT_SHOP}:${Date.now()}` } }
+            : isShopMode(mode)
+              ? { ok: true, match: { id: null, token: null, startedAt: null, seed: `${mode}:${Date.now()}` } }
               : await startServerMatch(session, mode);
           if (!started.ok) return;
           const nextRun = createInitialRunState(mode, started.match.seed, started.match);
           if (!nextRun) return;
-          if (mode === MODES.TFT_SHOP) clearTftRunSnapshot();
+          if (isShopMode(mode)) clearTftRunSnapshot();
           setRunState(nextRun);
           setScreen(SCREENS.SINGLE_GATE_RUN);
         }}
@@ -3849,24 +3878,24 @@ function App() {
             const baseWaveClearGold = advancingWave
               ? current.mode === MODES.TRI_GATE
                 ? getTriGateWaveClearReward(completedWaveNumber)
-                : current.mode === MODES.TFT_SHOP
+                : isShopMode(current.mode)
                   ? TFT_SHOP.waveClearGold
                   : getWaveClearReward(completedWaveNumber)
               : 0;
             const tftPerfectWave =
-              current.mode === MODES.TFT_SHOP &&
+              isShopMode(current.mode) &&
               advancingWave &&
               Number(current.coreHp ?? 0) >= Number(current.waveStartCoreHp ?? current.coreHp ?? 0);
             const tftBossWave =
-              current.mode === MODES.TFT_SHOP &&
+              isShopMode(current.mode) &&
               advancingWave &&
               isBossWave(completedWaveNumber);
             const tftMilestoneWave =
-              current.mode === MODES.TFT_SHOP &&
+              isShopMode(current.mode) &&
               advancingWave &&
               completedWaveNumber % TFT_SHOP.milestoneInterval === 0;
             const tftWaveBonus =
-              current.mode === MODES.TFT_SHOP && advancingWave
+              isShopMode(current.mode) && advancingWave
                 ? (tftPerfectWave ? TFT_SHOP.perfectWaveBonus : 0) +
                   (tftBossWave ? TFT_SHOP.bossWaveBonus : 0) +
                   (tftMilestoneWave ? TFT_SHOP.milestoneWaveBonus : 0)
@@ -3877,7 +3906,7 @@ function App() {
             const activeModifiersForClear = getActiveWorldModifiers(current.seed ?? 'run', completedWaveNumber);
             const worldEffectsForClear = getWorldModifierEffects(activeModifiersForClear);
             const modeAdjustedWaveClearGold = advancingWave
-              ? current.mode === MODES.TFT_SHOP
+              ? isShopMode(current.mode)
                 ? baseWaveClearGold + tftWaveBonus
                 : Math.max(0, Math.round(applyBlessingWaveGold(baseWaveClearGold, nextBlessings) * worldEffectsForClear.waveGoldMultiplier))
               : 0;
@@ -3900,7 +3929,7 @@ function App() {
           });
         }}
         onExit={() => {
-          if (runState?.mode === MODES.TFT_SHOP) clearTftRunSnapshot();
+          if (isShopMode(runState?.mode)) clearTftRunSnapshot();
           setRunState(null);
           setScreen(SCREENS.MODE_PREP);
         }}

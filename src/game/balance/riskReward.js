@@ -6,6 +6,7 @@ export const RISK_REWARD = Object.freeze({
     'single-gate': Object.freeze({ threatMultiplier: 1.25, rewardMultiplier: 1.35, flatGoldBonus: 0 }),
     'tri-gate': Object.freeze({ threatMultiplier: 1.20, rewardMultiplier: 1.25, flatGoldBonus: 0 }),
     'tft-shop': Object.freeze({ threatMultiplier: 1.25, rewardMultiplier: 1, flatGoldBonus: 2 }),
+    'sudden-siege': Object.freeze({ threatMultiplier: 1.30, rewardMultiplier: 1, flatGoldBonus: 2 }),
     'last-bastion': Object.freeze({ threatMultiplier: 1.15, rewardMultiplier: 1.20, flatGoldBonus: 0 })
   })
 });
