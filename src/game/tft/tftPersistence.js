@@ -33,7 +33,8 @@ export function createTftRunSnapshot({
   waveTimelineStartedAt = null,
   queuedWaveNumber = null,
   spawnedWaveNumber = null,
-  bossSummonFiredKeys = []
+  bossSummonFiredKeys = [],
+  towerAttackChargeById = {}
 } = {}) {
   if (!run || !TFT_PERSISTENCE.supportedModes.includes(run.mode)) return null;
 
@@ -73,7 +74,14 @@ export function createTftRunSnapshot({
     waveTimelineStartedAt: Number.isFinite(Number(waveTimelineStartedAt)) ? Number(waveTimelineStartedAt) : null,
     queuedWaveNumber: queuedWaveNumber == null ? null : clampInt(queuedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
     spawnedWaveNumber: spawnedWaveNumber == null ? null : clampInt(spawnedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
-    bossSummonFiredKeys: Object.freeze(Array.isArray(bossSummonFiredKeys) ? [...new Set(bossSummonFiredKeys.map(String))] : [])
+    bossSummonFiredKeys: Object.freeze(Array.isArray(bossSummonFiredKeys) ? [...new Set(bossSummonFiredKeys.map(String))] : []),
+    towerAttackChargeById: Object.freeze(
+      Object.fromEntries(
+        Object.entries(towerAttackChargeById ?? {})
+          .filter(([id, value]) => id && Number.isFinite(Number(value)))
+          .map(([id, value]) => [String(id), Math.max(0, Number(value))])
+      )
+    )
   });
 }
 
@@ -130,7 +138,12 @@ export function normalizeTftRunSnapshot(snapshot) {
     waveTimelineStartedAt: Number.isFinite(Number(snapshot.waveTimelineStartedAt)) ? Number(snapshot.waveTimelineStartedAt) : null,
     queuedWaveNumber: snapshot.queuedWaveNumber == null ? null : clampInt(snapshot.queuedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
     spawnedWaveNumber: snapshot.spawnedWaveNumber == null ? null : clampInt(snapshot.spawnedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
-    bossSummonFiredKeys: Array.isArray(snapshot.bossSummonFiredKeys) ? [...new Set(snapshot.bossSummonFiredKeys.map(String))] : []
+    bossSummonFiredKeys: Array.isArray(snapshot.bossSummonFiredKeys) ? [...new Set(snapshot.bossSummonFiredKeys.map(String))] : [],
+    towerAttackChargeById: Object.fromEntries(
+      Object.entries(snapshot.towerAttackChargeById ?? {})
+        .filter(([id, value]) => id && Number.isFinite(Number(value)))
+        .map(([id, value]) => [String(id), Math.max(0, Number(value))])
+    )
   };
 }
 
@@ -191,7 +204,8 @@ export function getTftPersistenceFixtures() {
     waveTimelineStartedAt: 900,
     queuedWaveNumber: 9,
     spawnedWaveNumber: 9,
-    bossSummonFiredKeys: ['10:0']
+    bossSummonFiredKeys: ['10:0'],
+    towerAttackChargeById: { 'field:copy-a': 375 }
   });
   const restored = normalizeTftRunSnapshot(JSON.parse(JSON.stringify(source)));
   const corrupt = normalizeTftRunSnapshot({ version: 999, run: { mode: 'tft-shop' } });
@@ -222,7 +236,8 @@ export function getTftPersistenceFixtures() {
       restored?.riskRewardTier === 'pressure' &&
       restored?.waveTimelineStartedAt === 900 &&
       restored?.queuedWaveNumber === 9 &&
-      restored?.spawnedWaveNumber === 9,
+      restored?.spawnedWaveNumber === 9 &&
+      restored?.towerAttackChargeById?.['field:copy-a'] === 375,
     suddenSiegeSupported: sudden?.run?.mode === 'sudden-siege',
     invalidVersionRejected: corrupt === null
   });
