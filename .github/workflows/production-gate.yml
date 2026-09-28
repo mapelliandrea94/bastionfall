@@ -31,6 +31,8 @@ jobs:
         run: node tests/end-to-end-regression.mjs
       - name: Wave Director QA
         run: node tests/wave-director.mjs
+      - name: Sudden Siege Calibration QA
+        run: node tests/sudden-siege-calibration.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA
