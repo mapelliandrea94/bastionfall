@@ -25,6 +25,11 @@ const killLedgerMigration = fs.readFileSync(
   'utf8'
 );
 
+const canonicalFinalMigration = fs.readFileSync(
+  new URL('../supabase/migrations/20260928001318_canonical_standard_final_result.sql', import.meta.url),
+  'utf8'
+);
+
 assert(migration.includes('create table if not exists public.standard_run_sessions'), 'Standard run session table must exist');
 assert(migration.includes('persist_standard_run_checkpoint'), 'Checkpoint RPC must exist');
 assert(migration.includes('wave_regression'), 'Checkpoint RPC must reject wave regression');
@@ -75,6 +80,18 @@ assert(killLedgerMigration.includes("create table if not exists public.standard_
 assert(killLedgerMigration.includes("wave_kill_budget_exceeded"), 'Ledger must reject kill claims beyond the wave capacity');
 assert(killLedgerMigration.includes("wave_kill_ledger_finalized"), 'Finalized wave kill ledgers must reject additional kills');
 assert(killLedgerMigration.includes("kill_delta_mismatch"), 'Database must verify cumulative kills against the claimed delta');
+
+
+assert(server.includes("const canonicalWave = Number(checkpoint.last_wave)"), 'Final wave must come from the persisted server checkpoint');
+assert(server.includes("const canonicalKills = (killRows || []).reduce"), 'Final kills must be reconstructed from the kill ledger');
+assert(server.includes("persist_verified_standard_result_v3"), 'Final persistence must use the canonical v3 RPC');
+assert(!server.includes("persist_verified_standard_result_v2"), 'Legacy standard final-result RPC must not be used by the server');
+assert(server.includes("canonicalCoreMaxHp > 28"), 'Canonical standard core HP must respect the real blessing cap');
+assert(canonicalFinalMigration.includes("drop function if exists public.persist_verified_standard_result_v2"), 'Legacy v2 result RPC must be retired');
+assert(canonicalFinalMigration.includes("v_ledger_kills <> v_session.last_kills"), 'Database must bind final kills to the ledger');
+assert(canonicalFinalMigration.includes("v_elapsed_ms := floor(extract(epoch from (p_ended_at - v_session.started_at)) * 1000)"), 'Database must derive canonical elapsed time');
+assert(canonicalFinalMigration.includes("(v_session.last_wave::bigint * 1000)"), 'Database must calculate the canonical score formula');
+assert(canonicalFinalMigration.includes("canonical_score bigint"), 'Canonical score must be returned by the result RPC');
 
 console.log('Standard run validation foundation QA PASS', {
   persistedSessions: true,
