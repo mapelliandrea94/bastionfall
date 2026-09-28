@@ -1543,21 +1543,21 @@ button { font: inherit; }
   filter: drop-shadow(0 5px 4px rgba(18, 25, 38, .34));
   transform-box: fill-box;
   transform-origin: 50% 75%;
-  animation: enemy-march 0.66s ease-in-out infinite alternate;
+  animation: enemy-march 0.54s ease-in-out infinite alternate;
 }
 
 .battlefield-map__enemy[data-airborne="true"] .battlefield-map__enemy-art {
-  animation: enemy-flight 1.35s ease-in-out infinite alternate;
+  animation: enemy-flight 1.05s ease-in-out infinite alternate;
 }
 
 @keyframes enemy-march {
-  from { transform: translateY(1px) rotate(-2deg) scaleY(0.98); }
-  to { transform: translateY(-1.5px) rotate(2deg) scaleY(1.02); }
+  from { transform: translateY(3px) rotate(-4deg) scale(0.96, 0.93); }
+  to { transform: translateY(-3px) rotate(4deg) scale(1.04, 1.06); }
 }
 
 @keyframes enemy-flight {
-  from { transform: translateY(2px) rotate(-2deg); }
-  to { transform: translateY(-3px) rotate(2deg); }
+  from { transform: translateY(5px) rotate(-4deg) scale(0.97); }
+  to { transform: translateY(-6px) rotate(4deg) scale(1.03); }
 }
 
 @media (prefers-reduced-motion: reduce) {
