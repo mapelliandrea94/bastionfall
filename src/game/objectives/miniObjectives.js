@@ -39,15 +39,53 @@ export function evaluateMiniObjective(objective, context = {}) {
   return false;
 }
 
+export function getMiniObjectiveLiveState(objective, context = {}) {
+  if (!objective) {
+    return Object.freeze({ status: 'inactive', label: 'NO OBJECTIVE', progress: '' });
+  }
+
+  if (objective.id === 'flawless') {
+    const coreHp = Number(context.coreHp ?? 0);
+    const waveStartCoreHp = Number(context.waveStartCoreHp ?? coreHp);
+    const intact = coreHp >= waveStartCoreHp;
+    return Object.freeze({
+      status: intact ? 'on-track' : 'failed',
+      label: intact ? 'ON TRACK' : 'FAILED',
+      progress: intact ? `${coreHp}/${waveStartCoreHp} HP` : `LOST ${Math.max(0, waveStartCoreHp - coreHp)} HP`
+    });
+  }
+
+  if (objective.id === 'lean-defense') {
+    const count = Math.max(0, Number(context.placedTowerCount ?? 0));
+    const onTrack = count <= 8;
+    return Object.freeze({
+      status: onTrack ? 'on-track' : 'over-limit',
+      label: onTrack ? 'ON TRACK' : 'OVER LIMIT',
+      progress: `${count}/8 TOWERS`
+    });
+  }
+
+  return Object.freeze({ status: 'inactive', label: 'NO OBJECTIVE', progress: '' });
+}
+
 export function getMiniObjectiveReward(mode) {
   return MINI_OBJECTIVES.rewardsByMode[mode] ?? MINI_OBJECTIVES.rewardsByMode['single-gate'];
 }
 
 export function getMiniObjectiveFixtures() {
+  const flawlessOk = getMiniObjectiveLiveState(MINI_OBJECTIVES.definitions[0], { coreHp: 20, waveStartCoreHp: 20 });
+  const flawlessFailed = getMiniObjectiveLiveState(MINI_OBJECTIVES.definitions[0], { coreHp: 18, waveStartCoreHp: 20 });
+  const leanOk = getMiniObjectiveLiveState(MINI_OBJECTIVES.definitions[1], { placedTowerCount: 8 });
+  const leanOver = getMiniObjectiveLiveState(MINI_OBJECTIVES.definitions[1], { placedTowerCount: 9 });
+
   return Object.freeze({
     wave1Flawless: getMiniObjectiveForWave(1).id === 'flawless',
     wave2Lean: getMiniObjectiveForWave(2).id === 'lean-defense',
     tftReward: getMiniObjectiveReward('tft-shop') === 1,
-    triReward: getMiniObjectiveReward('tri-gate') === 10
+    triReward: getMiniObjectiveReward('tri-gate') === 10,
+    flawlessLiveOnTrack: flawlessOk.status === 'on-track',
+    flawlessLiveFailsAfterDamage: flawlessFailed.status === 'failed',
+    leanLiveOnTrackAtEight: leanOk.status === 'on-track',
+    leanLiveOverLimitAtNine: leanOver.status === 'over-limit'
   });
 }
