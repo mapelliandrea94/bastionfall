@@ -15,6 +15,11 @@ const antiCheatMigration = fs.readFileSync(
   'utf8'
 );
 
+const waveAuthorityMigration = fs.readFileSync(
+  new URL('../supabase/migrations/20260928000215_standard_wave_progression_authority.sql', import.meta.url),
+  'utf8'
+);
+
 assert(migration.includes('create table if not exists public.standard_run_sessions'), 'Standard run session table must exist');
 assert(migration.includes('persist_standard_run_checkpoint'), 'Checkpoint RPC must exist');
 assert(migration.includes('wave_regression'), 'Checkpoint RPC must reject wave regression');
@@ -45,6 +50,14 @@ assert(server.includes("const officialElapsedMs = Math.max(0, checkpointReported
 assert(server.includes("elapsedMs: officialElapsedMs"), 'Standard score must use server-authoritative elapsed time');
 assert(server.includes("p_elapsed_ms: Math.floor(officialElapsedMs)"), 'Persisted standard elapsed time must be server-authoritative');
 assert(server.includes("canonicalRun = Object.freeze"), 'Completion response must expose canonical server timing');
+
+
+assert(server.includes("const waveBounds = getStandardRunValidationBounds(mode, identity.matchId, wave)"), 'Progress checkpoints must use deterministic server wave timing');
+assert(server.includes("'wave_progression_too_fast'"), 'Progress endpoint must reject temporally impossible waves');
+assert(server.includes("wave > Number(currentRun.last_wave) + 1"), 'Progress endpoint must reject multi-wave jumps');
+assert(waveAuthorityMigration.includes("p_wave > v_current.last_wave + 1"), 'Database checkpoint RPC must enforce sequential wave increments');
+assert(waveAuthorityMigration.includes("initial_wave_must_be_zero"), 'Database checkpoint RPC must require wave zero at run creation');
+assert(waveAuthorityMigration.includes("wave_jump_too_large"), 'Database checkpoint RPC must reject skipped waves');
 
 console.log('Standard run validation foundation QA PASS', {
   persistedSessions: true,
