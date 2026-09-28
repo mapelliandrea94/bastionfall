@@ -1087,7 +1087,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
-  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(true);
+  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(false);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
