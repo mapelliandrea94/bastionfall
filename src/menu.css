@@ -4547,15 +4547,15 @@ button:focus-visible,
 @media (max-width: 380px) { .profile-grid { grid-template-columns: 1fr; } }
 
 /* Nexus integrity: a readable jeweled meter on the battlefield and in the HUD. */
-.battlefield-map__bastion, .run-hud__nexus {
+.battlefield-map__bastion, .battlefield-map__nexus-meter, .run-hud__nexus {
   --nexus-color: #39d9c3;
   --nexus-glow: rgba(57, 217, 195, .45);
 }
-.battlefield-map__bastion--damaged, .run-hud__nexus.battlefield-map__bastion--damaged {
+.battlefield-map__bastion--damaged, .battlefield-map__nexus-meter.battlefield-map__bastion--damaged, .run-hud__nexus.battlefield-map__bastion--damaged {
   --nexus-color: #ffc65b;
   --nexus-glow: rgba(255, 198, 91, .45);
 }
-.battlefield-map__bastion--critical, .run-hud__nexus.battlefield-map__bastion--critical {
+.battlefield-map__bastion--critical, .battlefield-map__nexus-meter.battlefield-map__bastion--critical, .run-hud__nexus.battlefield-map__bastion--critical {
   --nexus-color: #ff5e72;
   --nexus-glow: rgba(255, 94, 114, .5);
 }
@@ -4577,16 +4577,22 @@ button:focus-visible,
   filter: drop-shadow(0 0 5px var(--nexus-glow));
 }
 .battlefield-map__nexus-label {
-  fill: #f7e6ba;
-  font: 800 12px Inter, sans-serif;
-  letter-spacing: 1.8px;
+  fill: #fff;
+  font: 900 17px Arial, sans-serif;
+  letter-spacing: .5px;
+  stroke: #071421;
+  stroke-width: 2px;
+  paint-order: stroke fill;
 }
 .battlefield-map__bastion-hp-text {
-  fill: #fff5da;
-  font: 900 17px Inter, sans-serif;
-  letter-spacing: .2px;
+  fill: #fff;
+  font: 900 23px Arial, sans-serif;
+  letter-spacing: 0;
+  stroke: #071421;
+  stroke-width: 2px;
+  paint-order: stroke fill;
 }
-.battlefield-map__nexus-max { fill: #b4c6ca; font-size: 12px; }
+.battlefield-map__nexus-max { fill: #e2edf2; font-size: 17px; }
 .battlefield-map__bastion-hp-bg {
   fill: rgba(2, 10, 18, .96);
   stroke: rgba(234, 218, 170, .4);
