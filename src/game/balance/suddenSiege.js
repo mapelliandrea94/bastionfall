@@ -82,6 +82,36 @@ export function getSuddenSiegeBattlefieldVisual(waveNumber) {
   });
 }
 
+export function getSuddenSiegeStageTransition(previousStage, nextStage) {
+  const stages = Object.freeze(['OPENING', 'ESCALATION', 'ONSLAUGHT', 'ENDLESS']);
+  const previousIndex = stages.indexOf(previousStage);
+  const nextIndex = stages.indexOf(nextStage);
+  if (previousIndex < 0 || nextIndex < 0 || nextIndex <= previousIndex) return null;
+
+  const copy = Object.freeze({
+    ESCALATION: Object.freeze({
+      title: 'SIEGE ESCALATES',
+      subtitle: 'Enemy pressure and health have increased.'
+    }),
+    ONSLAUGHT: Object.freeze({
+      title: 'ONSLAUGHT',
+      subtitle: 'The siege has entered its lethal phase.'
+    }),
+    ENDLESS: Object.freeze({
+      title: 'ENDLESS PRESSURE',
+      subtitle: 'No ceiling remains. Survive as long as you can.'
+    })
+  });
+
+  const message = copy[nextStage];
+  if (!message) return null;
+  return Object.freeze({
+    from: previousStage,
+    to: nextStage,
+    ...message
+  });
+}
+
 export function getSuddenSiegeFixtures() {
   const early = getSuddenSiegeWaveScaling(3);
   const mid = getSuddenSiegeWaveScaling(10);
@@ -92,6 +122,8 @@ export function getSuddenSiegeFixtures() {
   const visual3 = getSuddenSiegeBattlefieldVisual(3);
   const visual18 = getSuddenSiegeBattlefieldVisual(18);
   const visual25 = getSuddenSiegeBattlefieldVisual(25);
+  const escalationTransition = getSuddenSiegeStageTransition('OPENING', 'ESCALATION');
+  const invalidTransition = getSuddenSiegeStageTransition('ONSLAUGHT', 'ESCALATION');
   return Object.freeze({
     gradualThreat: early.suddenThreatMultiplier < mid.suddenThreatMultiplier && mid.suddenThreatMultiplier < late.suddenThreatMultiplier && late.suddenThreatMultiplier < endless.suddenThreatMultiplier,
     gradualHp: early.enemyHpMultiplier < mid.enemyHpMultiplier && mid.enemyHpMultiplier < late.enemyHpMultiplier && late.enemyHpMultiplier < endless.enemyHpMultiplier,
@@ -103,6 +135,8 @@ export function getSuddenSiegeFixtures() {
     telemetryStage25: telemetry25.stage === 'ENDLESS',
     telemetryUsesWaveReward: telemetry10.waveReward === getSuddenSiegeWaveReward(10),
     battlefieldVisualEscalates: visual3.intensity < visual18.intensity && visual18.intensity < visual25.intensity,
-    battlefieldPulseAccelerates: visual3.pulseMs > visual18.pulseMs && visual18.pulseMs > visual25.pulseMs
+    battlefieldPulseAccelerates: visual3.pulseMs > visual18.pulseMs && visual18.pulseMs > visual25.pulseMs,
+    escalationTransitionAnnounces: escalationTransition?.to === 'ESCALATION',
+    reverseTransitionIgnored: invalidTransition === null
   });
 }
