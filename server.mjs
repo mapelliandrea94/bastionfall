@@ -11,6 +11,7 @@ import { TRI_GATE_PACING, getTriGateWaveScaling } from './src/game/balance/triGa
 import { ECONOMY_BASELINE } from './src/game/economy/economyBaseline.js';
 import { getBossSummonAddsPlan } from './src/game/boss/bossSummonAdds.js';
 import { calculateAccountXpReward } from './src/game/profile/accountProgression.js';
+import { advanceOfflineRunSnapshot } from './src/game/run/offlineRunEngine.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -509,13 +510,48 @@ app.get('/api/run/active', requireUser, rateLimitUser('run-active', { windowMs: 
   if (!data) return res.json({ activeRun: null });
 
   const savedAtMs = Date.parse(data.saved_at);
+  const offlineElapsedMs = Number.isFinite(savedAtMs) ? Math.max(0, Date.now() - savedAtMs) : 0;
+  let snapshot = data.snapshot;
+  let catchup = { advancedMs: 0, remainingMs: offlineElapsedMs, blockedReason: null };
+
+  if (offlineElapsedMs >= 1500 && snapshot?.run?.phase !== 'ended') {
+    try {
+      catchup = advanceOfflineRunSnapshot(snapshot, offlineElapsedMs);
+      snapshot = catchup.snapshot;
+      const nowIso = new Date().toISOString();
+      const { error: catchupPersistError } = await serverDb
+        .from('online_run_snapshots')
+        .update({
+          snapshot,
+          saved_at: nowIso,
+          updated_at: nowIso
+        })
+        .eq('match_id', data.match_id)
+        .eq('user_id', req.user.id)
+        .eq('status', 'active');
+
+      if (catchupPersistError) {
+        console.error('Offline catch-up persistence failed:', catchupPersistError.message);
+        return res.status(500).json({ error: 'offline_catchup_persist_failed' });
+      }
+
+      data.saved_at = nowIso;
+    } catch (catchupError) {
+      console.error('Offline run catch-up failed:', catchupError?.stack || catchupError);
+      return res.status(500).json({ error: 'offline_catchup_failed' });
+    }
+  }
+
   return res.json({
     activeRun: {
       matchId: data.match_id,
       mode: data.mode,
-      snapshot: data.snapshot,
+      snapshot,
       savedAt: data.saved_at,
-      offlineElapsedMs: Number.isFinite(savedAtMs) ? Math.max(0, Date.now() - savedAtMs) : 0
+      offlineElapsedMs,
+      catchupAdvancedMs: catchup.advancedMs,
+      catchupRemainingMs: catchup.remainingMs,
+      offlineBlockedReason: catchup.blockedReason
     }
   });
 });
