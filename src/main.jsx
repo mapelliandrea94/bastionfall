@@ -1060,8 +1060,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       onTowerMilestone(threshold);
     });
   };
-  const [spawnQueue, setSpawnQueue] = useState(() => matchingOnlineSnapshot?.spawnQueue ?? []);
-  const [activeEnemies, setActiveEnemies] = useState(() => matchingOnlineSnapshot?.activeEnemies ?? []);
+  const [spawnQueue, setSpawnQueue] = useState(() => matchingOnlineSnapshot?.spawnQueue ?? matchingTftSnapshot?.spawnQueue ?? []);
+  const [activeEnemies, setActiveEnemies] = useState(() => matchingOnlineSnapshot?.activeEnemies ?? matchingTftSnapshot?.activeEnemies ?? []);
   const [preparationRemaining, setPreparationRemaining] = useState(() => matchingOnlineSnapshot?.preparationRemaining ?? run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
   const [selectedDefenseId, setSelectedDefenseId] = useState('human-aa');
   const [placedDefenses, setPlacedDefenses] = useState(() => {
@@ -1081,7 +1081,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const [movingPlacedDefenseId, setMovingPlacedDefenseId] = useState(null);
   const [swappingPlacedDefenseId, setSwappingPlacedDefenseId] = useState(null);
   const [mergingPlacedDefenseId, setMergingPlacedDefenseId] = useState(null);
-  const [riskRewardTier, setRiskRewardTier] = useState(() => matchingOnlineSnapshot?.riskRewardTier ?? 'safe');
+  const [riskRewardTier, setRiskRewardTier] = useState(() => matchingOnlineSnapshot?.riskRewardTier ?? matchingTftSnapshot?.riskRewardTier ?? 'safe');
   const [miniObjectiveFeedback, setMiniObjectiveFeedback] = useState('');
   const [synergyFeedback, setSynergyFeedback] = useState(null);
   const [suddenStageTransition, setSuddenStageTransition] = useState(null);
@@ -1097,9 +1097,15 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingOnlineSnapshot?.selectedTftBenchIndex ?? matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
-  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(() => Boolean(matchingOnlineSnapshot?.tftAutoStartEnabled));
-  const [waveSpeed, setWaveSpeed] = useState(() => matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1);
-  const waveClockRef = useRef({ real: performance.now(), virtual: performance.now(), speed: matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1 });
+  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(() => Boolean(matchingOnlineSnapshot?.tftAutoStartEnabled ?? matchingTftSnapshot?.tftAutoStartEnabled));
+  const [waveSpeed, setWaveSpeed] = useState(() =>
+    (matchingOnlineSnapshot?.waveSpeed ?? matchingTftSnapshot?.waveSpeed) === 2 ? 2 : 1
+  );
+  const waveClockRef = useRef({
+    real: performance.now(),
+    virtual: performance.now(),
+    speed: (matchingOnlineSnapshot?.waveSpeed ?? matchingTftSnapshot?.waveSpeed) === 2 ? 2 : 1
+  });
   const waveTimelineStartedAtRef = useRef(null);
   const onlineClockRebasedRef = useRef(false);
   const getWaveNow = () => {
@@ -1117,8 +1123,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   };
 
   useEffect(() => {
-    if (!matchingOnlineSnapshot || onlineClockRebasedRef.current) return;
-    const savedClock = Number(matchingOnlineSnapshot.waveClockNow);
+    const restoredSnapshot = matchingOnlineSnapshot ?? matchingTftSnapshot;
+    if (!restoredSnapshot || onlineClockRebasedRef.current) return;
+    const savedClock = Number(restoredSnapshot.waveClockNow);
     if (!Number.isFinite(savedClock)) {
       onlineClockRebasedRef.current = true;
       return;
@@ -1159,11 +1166,14 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const restoredWaveNumber = Math.max(1, Number(run?.wave ?? 0) + 1);
   const queuedWaveRef = useRef(
     matchingOnlineSnapshot?.queuedWaveNumber ??
-    (matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE ? restoredWaveNumber : null)
+    matchingTftSnapshot?.queuedWaveNumber ??
+    ((matchingOnlineSnapshot ?? matchingTftSnapshot)?.run?.phase === RUN_PHASES.ACTIVE ? restoredWaveNumber : null)
   );
   const spawnedWaveRef = useRef(
     matchingOnlineSnapshot?.spawnedWaveNumber ??
-    (matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE && (matchingOnlineSnapshot?.activeEnemies?.length ?? 0) > 0 ? restoredWaveNumber : null)
+    matchingTftSnapshot?.spawnedWaveNumber ??
+    ((matchingOnlineSnapshot ?? matchingTftSnapshot)?.run?.phase === RUN_PHASES.ACTIVE &&
+      ((matchingOnlineSnapshot ?? matchingTftSnapshot)?.activeEnemies?.length ?? 0) > 0 ? restoredWaveNumber : null)
   );
   const towerAttackTimesRef = useRef({});
   const towerAttackChargeRef = useRef({});
@@ -1172,7 +1182,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const statusClockRef = useRef(null);
   const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
   const previousSuddenStageRef = useRef(null);
-  const bossSummonFiredRef = useRef(new Set(matchingOnlineSnapshot?.bossSummonFiredKeys ?? []));
+  const bossSummonFiredRef = useRef(new Set(
+    matchingOnlineSnapshot?.bossSummonFiredKeys ?? matchingTftSnapshot?.bossSummonFiredKeys ?? []
+  ));
   const projectileQueueRef = useRef([]);
   const projectileIdRef = useRef(0);
   const defeatedEnemyIdsRef = useRef(new Set());
@@ -1519,10 +1531,36 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       selectedTftBenchIndex,
       tftRollIndex,
       tftShopLocked,
-      tftPurchasedSlotIds
+      tftPurchasedSlotIds,
+      spawnQueue,
+      activeEnemies,
+      preparationRemaining,
+      waveSpeed,
+      riskRewardTier,
+      tftAutoStartEnabled,
+      waveClockNow: getWaveNow(),
+      queuedWaveNumber: queuedWaveRef.current,
+      spawnedWaveNumber: spawnedWaveRef.current,
+      bossSummonFiredKeys: Array.from(bossSummonFiredRef.current)
     });
     saveTftRunSnapshot(snapshot);
-  }, [run, placedDefenses, activeWallIds, wallHpById, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked, tftPurchasedSlotIds]);
+  }, [
+    run,
+    placedDefenses,
+    activeWallIds,
+    wallHpById,
+    tftBench,
+    selectedTftBenchIndex,
+    tftRollIndex,
+    tftShopLocked,
+    tftPurchasedSlotIds,
+    spawnQueue,
+    activeEnemies,
+    preparationRemaining,
+    waveSpeed,
+    riskRewardTier,
+    tftAutoStartEnabled
+  ]);
 
   useEffect(() => {
     if (!run || run.phase !== RUN_PHASES.ACTIVE) return undefined;
@@ -3357,7 +3395,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             data-tft-copy-progression-version={TFT_COPY_PROGRESSION.version}
             data-tft-copy-progression-pass={TFT_COPY_PROGRESSION_FIXTURE.oneCopyLevelOne === true && TFT_COPY_PROGRESSION_FIXTURE.twoAndThreeLevelTwo === true && TFT_COPY_PROGRESSION_FIXTURE.fourToSixLevelThree === true && TFT_COPY_PROGRESSION_FIXTURE.sevenLevelFour === true && TFT_COPY_PROGRESSION_FIXTURE.wrongTypeBlocked === true && TFT_COPY_PROGRESSION_FIXTURE.independentProgress === true && TFT_COPY_PROGRESSION_FIXTURE.reachesSevenExactly === true && TFT_COPY_PROGRESSION_FIXTURE.maxBlocksExtra === true}
             data-tft-persistence-version={TFT_PERSISTENCE.version}
-            data-tft-persistence-pass={TFT_PERSISTENCE_FIXTURE.validSnapshotCreated === true && TFT_PERSISTENCE_FIXTURE.runFieldsPersist === true && TFT_PERSISTENCE_FIXTURE.towerProgressPersists === true && TFT_PERSISTENCE_FIXTURE.maxProgressPersists === true && TFT_PERSISTENCE_FIXTURE.evolutionPersists === true && TFT_PERSISTENCE_FIXTURE.benchPersists === true && TFT_PERSISTENCE_FIXTURE.wallsPersist === true && TFT_PERSISTENCE_FIXTURE.rollLockPersist === true && TFT_PERSISTENCE_FIXTURE.purchasedSlotsPersist === true && TFT_PERSISTENCE_FIXTURE.invalidVersionRejected === true}
+            data-tft-persistence-pass={TFT_PERSISTENCE_FIXTURE.validSnapshotCreated === true && TFT_PERSISTENCE_FIXTURE.runFieldsPersist === true && TFT_PERSISTENCE_FIXTURE.towerProgressPersists === true && TFT_PERSISTENCE_FIXTURE.maxProgressPersists === true && TFT_PERSISTENCE_FIXTURE.evolutionPersists === true && TFT_PERSISTENCE_FIXTURE.benchPersists === true && TFT_PERSISTENCE_FIXTURE.wallsPersist === true && TFT_PERSISTENCE_FIXTURE.rollLockPersist === true && TFT_PERSISTENCE_FIXTURE.purchasedSlotsPersist === true && TFT_PERSISTENCE_FIXTURE.activeWavePersists === true && TFT_PERSISTENCE_FIXTURE.suddenSiegeSupported === true && TFT_PERSISTENCE_FIXTURE.invalidVersionRejected === true}
             data-tft-bench-selected={selectedTftBenchIndex ?? ''}
             data-tft-bench-pass={TFT_BENCH_FIXTURE.slotCountExpected === TFT_BENCH_FIXTURE.slotCountActual && TFT_BENCH_FIXTURE.buyToBenchWorks === true && TFT_BENCH_FIXTURE.fullBlocksPurchase === true && TFT_BENCH_FIXTURE.sellRemovesCopy === true && TFT_BENCH_FIXTURE.noAutoMerge === true}
             data-tft-shop-version={TFT_SHOP.version}
