@@ -71,6 +71,12 @@ import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './g
 import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
 import { ENEMY_ROSTER, createRosterEnemyState, getEnemyRosterFixtures } from './game/enemies/enemyRoster.js';
 import { getCleanEnemyArt } from './game/enemies/cleanEnemyArt.js';
+
+// Older waves and boss summons still use these archetypes instead of roster IDs.
+const LEGACY_ENEMY_ART = Object.freeze({
+  normal: 'footman', runner: 'skitterling', tank: 'carapace-beast',
+  armored: 'ironclad', shielded: 'null-guardian', flying: 'stinger'
+});
 import { NORMAL_ENEMY, createNormalEnemyState, getNormalEnemyBudget } from './game/enemies/normal.js';
 import { RUNNER_ENEMY, createRunnerEnemyState, getRunnerEnemyBudget } from './game/enemies/runner.js';
 import { TANK_ENEMY, createTankEnemyState, getTankEnemyBudget } from './game/enemies/tank.js';
@@ -2655,8 +2661,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               const hpRatio = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0;
               const shieldRatio = enemy.maxShield > 0 ? Math.max(0, Math.min(1, enemy.shield / enemy.maxShield)) : 0;
               const slowActive = (enemy.statusEffects?.slowUntilMs ?? 0) > performance.now();
-              const enemyArtHref = ENEMY_ROSTER.byId[enemy.archetype]
-                ? (cleanEnemyArt[enemy.archetype] ?? `/assets/enemies/${enemy.archetype}.png`)
+              const artId = ENEMY_ROSTER.byId[enemy.archetype]
+                ? enemy.archetype : LEGACY_ENEMY_ART[enemy.archetype];
+              const enemyArtHref = artId
+                ? (cleanEnemyArt[artId] ?? `/assets/enemies/${artId}.png`)
                 : null;
 
               return (
