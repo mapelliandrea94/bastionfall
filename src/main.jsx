@@ -1955,7 +1955,6 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
           towerAttackChargeRef.current[placed.id] = Math.max(0, attackCharge - attacksExecuted * attackInterval);
           towerAttackTimesRef.current[placed.id] = now;
           playTowerAttackSound(definition);
-          }
         }
 
         return removeAndCountDefeatedEnemies(working).map(({ position, ...enemy }) => enemy);
