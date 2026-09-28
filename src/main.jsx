@@ -2259,7 +2259,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <span className="run-hud__label">SCORE</span>
               <strong>{runScore.totalScore.toLocaleString()}</strong>
             </div>
-            <button className="run-exit" onClick={onExit} aria-label="Exit current run">EXIT RUN</button>
+            <button className="run-exit" onClick={onExit} aria-label="Exit current run">{t('exitRun')}</button>
           </header>
 
           {run?.mode === MODES.LAST_BASTION && (
@@ -2379,7 +2379,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <g className="mini-objective-battlefield__card" transform="translate(250 824)">
                   <rect x="-205" y="-34" width="410" height="68" rx="18" />
                   <text className="mini-objective-battlefield__title" x="0" y="-7" textAnchor="middle">
-                    WAVE QUEST · +{miniObjectiveReward}G
+                    {t('waveQuest')} · +{miniObjectiveReward}G
                   </text>
                   <text className="mini-objective-battlefield__status" x="0" y="16" textAnchor="middle">
                     {miniObjective.name} · {miniObjectiveLive.label} · {miniObjectiveLive.progress}
@@ -2845,7 +2845,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           <button type="button" className={`wave-speed-toggle${waveSpeed === 2 ? ' is-active' : ''}`}
             aria-label={`Wave speed: ${waveSpeed}x. Switch to ${waveSpeed === 2 ? 'normal' : 'double'} speed`}
             aria-pressed={waveSpeed === 2} onClick={toggleWaveSpeed}>
-            <strong>{waveSpeed}×</strong><span>WAVE</span>
+            <strong>{waveSpeed}×</strong><span>{t('wave')}</span>
           </button>
           <aside
             className={`run-sidebar ${isShopMode(run?.mode) ? 'run-sidebar--tft' : ''}${run?.mode === MODES.SUDDEN_SIEGE ? ' run-sidebar--sudden' : ''}`}
@@ -3035,12 +3035,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   <strong>{suddenTelemetry.stage}</strong>
                 </div>
                 <div className="sudden-siege-hud__grid">
-                  <div><span>THREAT</span><strong>×{suddenTelemetry.threatMultiplier.toFixed(2)}</strong></div>
-                  <div><span>ENEMY HP</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
-                  <div><span>SPAWN</span><strong>{(suddenTelemetry.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
-                  <div><span>PREP</span><strong>{suddenTelemetry.preparationSeconds}s</strong></div>
-                  <div><span>CLEAR GOLD</span><strong>{suddenTelemetry.waveReward}G</strong></div>
-                  <div><span>ECONOMY</span><strong>TFT PARITY</strong></div>
+                  <div><span>{t('threat')}</span><strong>×{suddenTelemetry.threatMultiplier.toFixed(2)}</strong></div>
+                  <div><span>{t('enemyHp')}</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
+                  <div><span>{t('spawn')}</span><strong>{(suddenTelemetry.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
+                  <div><span>{t('prep')}</span><strong>{suddenTelemetry.preparationSeconds}s</strong></div>
+                  <div><span>{t('clearGold')}</span><strong>{suddenTelemetry.waveReward}G</strong></div>
+                  <div><span>{t('economy')}</span><strong>{t('tftParity')}</strong></div>
                 </div>
                 <small>Difficulty escalates by wave bracket. Base clear economy stays aligned with TFT Shop; PRESSURE adds a smaller Sudden-specific risk premium.</small>
               </section>
@@ -3079,7 +3079,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
             <div className="tft-shop-economy">
               <div className="tft-shop-gold" aria-label={`${run?.gold ?? 0} gold available`}>
-                <span>GOLD</span>
+                <span>{t('gold')}</span>
                 <strong>{run?.gold ?? 0}</strong>
               </div>
               <div className="tft-shop-actions">
@@ -3115,7 +3115,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     setTftFeedback('');
                   }}
                 >
-                  <span>BUY</span>
+                  <span>{t('buy')}</span>
                   <small>{selectedTftShopOffer ? `${selectedTftShopOffer.cost}G` : 'SELECT'}</small>
                 </button>
               <button
@@ -3130,7 +3130,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   setTftRollIndex((value) => value + 1);
                 }}
               >
-                <span>ROLL</span>
+                <span>{t('roll')}</span>
                 <small>{TFT_SHOP.rerollCost}G</small>
               </button>
               </div>
@@ -3145,7 +3145,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </button>
             <div className="tft-bench">
               <div className="tft-bench__header">
-                <span>BENCH</span>
+                <span>{t('bench')}</span>
                 <strong>{tftBench.filter(Boolean).length}/{TFT_BENCH.slotCount}</strong>
               </div>
               <div className="tft-bench__grid" data-bench-slots={TFT_BENCH.slotCount}>
@@ -3205,7 +3205,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                         </button>
                       </>
                     ) : (
-                      <span>EMPTY</span>
+                      <span>{t('empty')}</span>
                     )}
                   </div>
                 ))}
@@ -3227,7 +3227,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   disabled={!run || run.phase !== RUN_PHASES.PREPARATION || !tftSetupConfirmed}
                   onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
                 >
-                  <span>START WAVE</span>
+                  <span>{t('startWave')}</span>
                   <small>{tftSetupConfirmed ? 'Launch immediately' : 'Confirm setup first'}</small>
                 </button>
                 <button
@@ -3300,20 +3300,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <strong>{inspectedDefense.name}</strong>
             </div>
             <div className="defense-inspector__grid">
-              <div><span>ROLE</span><strong>{inspectedDefense.role}</strong></div>
-              <div><span>COST</span><strong>{inspectedDefense.cost}g</strong></div>
-              {'damage' in inspectedDefense && <div><span>DAMAGE</span><strong>{inspectedDefense.damage}</strong></div>}
-              {'range' in inspectedDefense && <div><span>RANGE</span><strong>{inspectedDefense.range}</strong></div>}
-              {'attackIntervalMs' in inspectedDefense && <div><span>RATE</span><strong>{(1000 / inspectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
-              {'damageType' in inspectedDefense && <div><span>TYPE</span><strong>{inspectedDefense.damageType}</strong></div>}
-              {'splashRadius' in inspectedDefense && <div><span>SPLASH</span><strong>{inspectedDefense.splashRadius}</strong></div>}
+              <div><span>{t('role')}</span><strong>{inspectedDefense.role}</strong></div>
+              <div><span>{t('cost')}</span><strong>{inspectedDefense.cost}g</strong></div>
+              {'damage' in inspectedDefense && <div><span>{t('damage')}</span><strong>{inspectedDefense.damage}</strong></div>}
+              {'range' in inspectedDefense && <div><span>{t('range')}</span><strong>{inspectedDefense.range}</strong></div>}
+              {'attackIntervalMs' in inspectedDefense && <div><span>{t('rate')}</span><strong>{(1000 / inspectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
+              {'damageType' in inspectedDefense && <div><span>{t('type')}</span><strong>{inspectedDefense.damageType}</strong></div>}
+              {'splashRadius' in inspectedDefense && <div><span>{t('splash')}</span><strong>{inspectedDefense.splashRadius}</strong></div>}
               {'slowPercent' in inspectedDefense && <div><span>SLOW</span><strong>{inspectedDefense.slowPercent}%</strong></div>}
-              {'squadSize' in inspectedDefense && <div><span>SQUAD</span><strong>{inspectedDefense.squadSize}</strong></div>}
-              {'unitHp' in inspectedDefense && <div><span>UNIT HP</span><strong>{inspectedDefense.unitHp}</strong></div>}
+              {'squadSize' in inspectedDefense && <div><span>{t('squad')}</span><strong>{inspectedDefense.squadSize}</strong></div>}
+              {'unitHp' in inspectedDefense && <div><span>{t('unitHp')}</span><strong>{inspectedDefense.unitHp}</strong></div>}
             </div>
             <p>{inspectedDefense.description}</p>
             <div className="defense-inspector__sell">
-              <span>SELL REFUND</span>
+              <span>{t('sellRefund')}</span>
               <strong>{selectedSellPreview.refund}g</strong>
               <small>{Math.round(SELL_ECONOMY.baseRefundRate * 100)}% of total invested gold</small>
               {selectedPlacedDefense && (
@@ -3355,7 +3355,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               )}
               {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && (!run || !isShopMode(run.mode) || Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) && !selectedPlacedDefense.evolution && (
                 <div className="tower-evolution-choice">
-                  <div className="tower-evolution-choice__title">CHOOSE EVOLUTION</div>
+                  <div className="tower-evolution-choice__title">{t('chooseEvolution')}</div>
                   {selectedEvolutionChoices.map((choice) => (
                     <button
                       key={choice.id}
@@ -3388,12 +3388,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <small>{isShopMode(run?.mode) ? 'TFT progression: 1/7 Lv.1 · 2–3/7 Lv.2 · 4–6/7 Lv.3 · 7/7 Lv.4 + evolution' : `Max level ${UPGRADE_CURVE.maxLevel} · evolution at Lv.4`}</small>
             </div>
             <div className="defense-inspector__targeting">
-              <span>TARGETING</span>
+              <span>{t('targeting')}</span>
               <strong>{selectedTargetingValue.rule}</strong>
               <small>Targeting value ×{selectedTargetingValue.multiplier.toFixed(2)}</small>
             </div>
             <div className="defense-inspector__instrumentation">
-              <span>ATTACK TELEMETRY</span>
+              <span>{t('attackTelemetry')}</span>
               <strong>{selectedAttackInstrumentation.sustainedDps} DPS</strong>
               <small>
                 {selectedAttackInstrumentation.attacksPerSecond}/s · {selectedAttackInstrumentation.projectileTravelMs}ms travel @ {selectedAttackInstrumentation.sampleDistance} range
@@ -3403,7 +3403,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {(run?.blessings ?? []).some((blessingId) => ['human-doctrine', 'brood-frenzy', 'alien-overmind', 'neutral-covenant'].includes(blessingId)) && (
             <div className="identity-blessing-panel" aria-label="Identity blessings">
-              <div className="identity-blessing-panel__title">IDENTITY BLESSINGS</div>
+              <div className="identity-blessing-panel__title">{t('identityBlessings')}</div>
               <div className="identity-blessing-panel__list">
                 {['human-doctrine', 'brood-frenzy', 'alien-overmind', 'neutral-covenant']
                   .filter((blessingId) => (run?.blessings ?? []).includes(blessingId))
@@ -3450,7 +3450,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {bossWaveIncoming && bossTuning && (
             <div className="boss-milestone" aria-label="Boss milestone">
-              <span>BOSS MILESTONE</span>
+              <span>{t('bossMilestone')}</span>
               <strong>{bossTuning.name}</strong>
               <small>HP {bossTuning.maxHp} · ARMOR {bossTuning.armor} · CORE DMG {bossTuning.bastionDamage} · REWARD +{bossTuning.goldReward}G</small>
             </div>
@@ -3458,7 +3458,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {rareWaveEvent && (
             <div className="rare-wave-event-panel" aria-label="Rare wave event">
-              <span>RARE EVENT</span>
+              <span>{t('rareEvent')}</span>
               <strong>{rareWaveEvent.name}</strong>
               <small>{rareWaveEvent.description}</small>
             </div>
@@ -3466,7 +3466,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {waveAffix && (
             <div className="wave-affix-panel" aria-label="Wave affix">
-              <span>WAVE AFFIX</span>
+              <span>{t('waveAffix')}</span>
               <strong>{waveAffix.name}</strong>
               <small>{waveAffix.description}</small>
             </div>
@@ -3474,7 +3474,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {activeWorldModifiers.length > 0 && (
             <div className="world-modifier" aria-label="World modifier">
-              <span>WORLD MODIFIER</span>
+              <span>{t('worldModifier')}</span>
               <strong>{activeWorldModifiers[0].name}</strong>
               <small>{activeWorldModifiers[0].description} · Threat ×{worldModifierEffects.threatMultiplier.toFixed(2)} · Gold ×{worldModifierEffects.waveGoldMultiplier.toFixed(2)} · Speed ×{worldModifierEffects.enemyMoveSpeedMultiplier.toFixed(2)}</small>
             </div>
@@ -3482,7 +3482,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           <div className="risk-reward-panel" aria-label="Risk reward choice">
             <div className="risk-reward-panel__header">
-              <span>RISK / REWARD</span>
+              <span>{t('riskReward')}</span>
               <strong>{riskRewardTier === 'pressure' ? 'PRESSURE ACTIVE' : 'SAFE'}</strong>
             </div>
             <div className="risk-reward-panel__choices">
@@ -3522,7 +3522,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-objective-status={run?.phase === RUN_PHASES.ACTIVE ? miniObjectiveLive.status : ''}
           >
             <div>
-              <span>WAVE QUEST</span>
+              <span>{t('waveQuest')}</span>
               <strong>{miniObjective.name}</strong>
             </div>
             <b>+{miniObjectiveReward}G</b>
@@ -3541,16 +3541,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </div>
           <div className="run-wave-preview" aria-label="Next wave preview">
             <div className="run-wave-preview__title">
-              <span>NEXT WAVE</span>
+              <span>{t('nextWave')}</span>
               <strong>WAVE {waveScaling.waveNumber}</strong>
             </div>
             <div className="run-wave-preview__grid">
-              <div><span>ENEMIES</span><strong>{threatWave.enemyCount}</strong></div>
-              <div><span>DIFFICULTY</span><strong>{waveScaling.bandId.toUpperCase()}</strong></div>
-              <div><span>TRAVEL</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
-              <div><span>SPAWN</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
-              <div><span>CORE DMG</span><strong>{waveScaling.bastionDamage}</strong></div>
-              <div><span>CLEAR GOLD</span><strong>+{
+              <div><span>{t('enemies')}</span><strong>{threatWave.enemyCount}</strong></div>
+              <div><span>{t('difficulty')}</span><strong>{waveScaling.bandId.toUpperCase()}</strong></div>
+              <div><span>{t('travel')}</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
+              <div><span>{t('spawn')}</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
+              <div><span>{t('coreDamage')}</span><strong>{waveScaling.bastionDamage}</strong></div>
+              <div><span>{t('clearGold')}</span><strong>+{
                 run?.mode === MODES.TRI_GATE
                   ? getTriGateWaveClearReward(waveScaling.waveNumber)
                   : run?.mode === MODES.SUDDEN_SIEGE
@@ -3560,22 +3560,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       : getWaveClearReward(waveScaling.waveNumber)
               }</strong></div>
               {isShopMode(run?.mode) && (
-                <div><span>BONUSES</span><strong>+1 PERFECT · +3 BOSS · +2 / 5 WAVES</strong></div>
+                <div><span>{t('bonuses')}</span><strong>+1 PERFECT · +3 BOSS · +2 / 5 WAVES</strong></div>
               )}
               {waveAffix && (
                 <div className="run-wave-preview__special">
-                  <span>AFFIX</span><strong>{waveAffix.name}</strong>
+                  <span>{t('affix')}</span><strong>{waveAffix.name}</strong>
                 </div>
               )}
               {rareWaveEvent && (
                 <div className="run-wave-preview__special run-wave-preview__special--rare">
-                  <span>RARE EVENT</span><strong>{rareWaveEvent.name} · +{rareWaveEvent.bonusGold}G</strong>
+                  <span>{t('rareEvent')}</span><strong>{rareWaveEvent.name} · +{rareWaveEvent.bonusGold}G</strong>
                 </div>
               )}
               {run?.mode === MODES.SUDDEN_SIEGE && suddenTelemetry && (
                 <>
-                  <div><span>SUDDEN STAGE</span><strong>{suddenTelemetry.stage}</strong></div>
-                  <div><span>HP PRESSURE</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
+                  <div><span>{t('suddenStage')}</span><strong>{suddenTelemetry.stage}</strong></div>
+                  <div><span>{t('hpPressure')}</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
                 </>
               )}
             </div>
@@ -3591,8 +3591,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               data-blessing-choice-selected={selectedBlessingPreviewId ?? ''}
             >
               <div className="blessing-choice__header">
-                <span>BOSS DEFEATED</span>
-                <strong>CHOOSE A BLESSING</strong>
+                <span>{t('bossDefeated')}</span>
+                <strong>{t('chooseBlessing')}</strong>
                 <small>Pick one reward for the next stage of the run. The selected effect applies immediately.</small>
               </div>
               <div className="blessing-choice__actions">
@@ -3693,12 +3693,12 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
             <small>{snapshot.won ? 'Winner' : `of ${snapshot.participantCount || '?'} defenders`}</small>
           </div>
         )}
-        <div className="stat-card"><span>WAVE</span><strong>{snapshot.wave}</strong><small>Completed progression</small></div>
-        <div className="stat-card"><span>SURVIVAL</span><strong>{formatSurvivalTime(snapshot.elapsedMs)}</strong><small>Official survival time</small></div>
-        <div className="stat-card"><span>KILLS</span><strong>{snapshot.kills}</strong><small>Enemies defeated</small></div>
-        <div className="stat-card"><span>GOLD</span><strong>{snapshot.gold}</strong><small>Gold remaining</small></div>
-        <div className="stat-card"><span>BASTION</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>Final core state</small></div>
-        <div className="stat-card"><span>MODE</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>Run format</small></div>
+        <div className="stat-card"><span>{t('wave')}</span><strong>{snapshot.wave}</strong><small>Completed progression</small></div>
+        <div className="stat-card"><span>{t('survival')}</span><strong>{formatSurvivalTime(snapshot.elapsedMs)}</strong><small>Official survival time</small></div>
+        <div className="stat-card"><span>{t('kills')}</span><strong>{snapshot.kills}</strong><small>Enemies defeated</small></div>
+        <div className="stat-card"><span>{t('gold')}</span><strong>{snapshot.gold}</strong><small>Gold remaining</small></div>
+        <div className="stat-card"><span>{t('bastion')}</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>Final core state</small></div>
+        <div className="stat-card"><span>{t('mode')}</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>Run format</small></div>
       </div>
 
       <div className="results-actions">
@@ -3799,11 +3799,11 @@ function Leaderboard({ session, onBack }) {
       <div className="table-card leaderboard-table">
         <div className="table-row table-row--head leaderboard-row">
           <span>#</span>
-          <span>DEFENDER</span>
-          <span>WAVE</span>
-          <span>SURVIVAL</span>
-          <span>SCORE</span>
-          <span>KILLS</span>
+          <span>{t('defender')}</span>
+          <span>{t('wave')}</span>
+          <span>{t('survival')}</span>
+          <span>{t('score')}</span>
+          <span>{t('kills')}</span>
         </div>
 
         {leaderboardStatus === 'loading' && (
@@ -3890,7 +3890,7 @@ function Profile({ session, onBack }) {
           <section className="profile-level-card" aria-label="Account level progression">
             <div className="profile-level-card__header">
               <div>
-                <span>ACCOUNT LEVEL</span>
+                <span>{t('accountLevel')}</span>
                 <strong>LV. {accountProgress.level}</strong>
               </div>
               <small>{accountProgress.currentXp.toLocaleString()} / {accountProgress.requiredXp.toLocaleString()} XP</small>
@@ -3902,10 +3902,10 @@ function Profile({ session, onBack }) {
           </section>
 
           <div className="profile-grid">
-            <div className="stat-card"><span>ACCOUNT XP</span><strong>{Number(profileData.profile.account_xp || 0).toLocaleString()}</strong><small>Permanent profile progression</small></div>
-            <div className="stat-card"><span>TOTAL RUNS</span><strong>{totalRuns}</strong><small>Verified completed runs</small></div>
-            <div className="stat-card"><span>LIFETIME KILLS</span><strong>{Number(profileData.profile.lifetime_kills || 0).toLocaleString()}</strong><small>Across verified runs</small></div>
-            <div className="stat-card"><span>SHARDS</span><strong>{profileData.profile.shards}</strong><small>Account progression currency</small></div>
+            <div className="stat-card"><span>{t('accountXp')}</span><strong>{Number(profileData.profile.account_xp || 0).toLocaleString()}</strong><small>Permanent profile progression</small></div>
+            <div className="stat-card"><span>{t('totalRuns')}</span><strong>{totalRuns}</strong><small>Verified completed runs</small></div>
+            <div className="stat-card"><span>{t('lifetimeKillsUpper')}</span><strong>{Number(profileData.profile.lifetime_kills || 0).toLocaleString()}</strong><small>Across verified runs</small></div>
+            <div className="stat-card"><span>{t('shards')}</span><strong>{profileData.profile.shards}</strong><small>Account progression currency</small></div>
           </div>
 
           <div className="profile-mode-grid">
@@ -4078,7 +4078,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
   return (
     <div className="auth-backdrop" onMouseDown={() => !busy && onClose()} role="presentation">
       <form className="auth-modal" onSubmit={submit} onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <p className="main-menu__kicker">BASTIONFALL ACCOUNT</p>
+        <p className="main-menu__kicker">{t('account')}</p>
         <h3 id="auth-title">{title}</h3>
         <p className="auth-modal__copy">
           {authMode === 'register'
