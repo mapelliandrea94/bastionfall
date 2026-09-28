@@ -1,3 +1,4 @@
+import './race-state-cleanup.mjs';
 import './standard-run-validation.mjs';
 import assert from 'node:assert/strict';
 import {
