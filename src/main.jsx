@@ -90,6 +90,7 @@ import { FLYING_ENEMY, createFlyingEnemyState, getFlyingEnemyBudget } from './ga
 import { ELITE_MODIFIER_SYSTEM, applyEliteModifiers, attachEliteModifierFoundation, getEliteModifierFoundationFixtures } from './game/elites/eliteModifiers.js';
 import { WORLD_MODIFIER_SYSTEM, getActiveWorldModifiers, getWorldModifierEffects, getWorldModifierFoundationFixtures } from './game/world/worldModifiers.js';
 import { GAME_FEEDBACK_EVENTS, emitGameFeedback, getGameFeedbackFixtures } from './game/feedback/gameFeedback.js';
+import { SUPPORTED_LANGUAGES, getLanguage, setLanguage, t } from './i18n/localization.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -659,7 +660,7 @@ function Shell({ title, kicker, subtitle, onBack, children }) {
   return (
     <main className="main-menu main-menu--inner">
       <section className="mode-screen" aria-labelledby="screen-title">
-        <button className="mode-screen__back" onClick={onBack} aria-label={`Back from ${title}`}>← BACK</button>
+        <button className="mode-screen__back" onClick={onBack} aria-label={`${t('back')} · ${title}`}>← {t('back')}</button>
         <p className="main-menu__kicker">{kicker}</p>
         <h2 id="screen-title">{title}</h2>
         {subtitle && <p className="mode-screen__subtitle">{subtitle}</p>}
@@ -673,45 +674,45 @@ function ModeSelect({ onBack, onSelect }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="CHOOSE YOUR DEFENSE"
-      title="SELECT MODE"
-      subtitle="Choose a survival format. Each mode has its own pre-run contract."
+      kicker={t('chooseDefense')}
+      title={t('selectMode')}
+      subtitle={t('selectModeSubtitle')}
     >
       <div className="mode-grid" role="group" aria-label="Game modes">
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.SINGLE_GATE)}>
-          <span className="mode-card__players">ONE FRONT</span>
+          <span className="mode-card__players">{t('oneFront')}</span>
           <strong>SINGLE GATE</strong>
-          <small>One front. One Bastion. Survive.</small>
-          <em>SELECT MODE</em>
+          <small>{t('singleGateDesc')}</small>
+          <em>{t('selectMode')}</em>
         </button>
 
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.TRI_GATE)}>
-          <span className="mode-card__players">THREE FRONTS</span>
+          <span className="mode-card__players">{t('threeFronts')}</span>
           <strong>TRI-GATE</strong>
-          <small>Three fronts. Total siege.</small>
-          <em>SELECT MODE</em>
+          <small>{t('triGateDesc')}</small>
+          <em>{t('selectMode')}</em>
         </button>
 
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.TFT_SHOP)}>
-          <span className="mode-card__players">SHOP SURVIVAL</span>
+          <span className="mode-card__players">{t('shopSurvival')}</span>
           <strong>TFT SHOP</strong>
-          <small>Roll tower copies, build from a bench, survive.</small>
-          <em>SELECT MODE</em>
+          <small>{t('tftShopDesc')}</small>
+          <em>{t('selectMode')}</em>
         </button>
 
         <button className="mode-card mode-card--ready mode-card--sudden" onClick={() => onSelect(MODES.SUDDEN_SIEGE)}>
-          <span className="mode-card__players">FAST SHOP SURVIVAL</span>
+          <span className="mode-card__players">{t('fastShopSurvival')}</span>
           <strong>SUDDEN SIEGE</strong>
-          <small>TFT rules. Faster waves. Harder scaling. Less time to breathe.</small>
-          <b className="mode-card__danger-badge">ESCALATING THREAT</b>
-          <em>SELECT MODE</em>
+          <small>{t('suddenSiegeDesc')}</small>
+          <b className="mode-card__danger-badge">{t('escalatingThreat')}</b>
+          <em>{t('selectMode')}</em>
         </button>
 
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.LAST_BASTION)}>
-          <span className="mode-card__players">COMPETITIVE SURVIVAL</span>
+          <span className="mode-card__players">{t('competitiveSurvival')}</span>
           <strong>LAST BASTION</strong>
-          <small>Same siege. Last survivor wins.</small>
-          <em>SELECT MODE</em>
+          <small>{t('lastBastionDesc')}</small>
+          <em>{t('selectMode')}</em>
         </button>
       </div>
     </Shell>
@@ -3941,19 +3942,37 @@ function Profile({ session, onBack }) {
   );
 }
 
-function Settings({ onBack }) {
+function Settings({ onBack, language, onLanguageChange }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="GAME OPTIONS"
-      title="SETTINGS"
-      subtitle="Basic client preferences."
+      kicker={t('gameOptions')}
+      title={t('settings')}
+      subtitle={t('settingsSubtitle')}
     >
       <div className="settings-card">
-        <label><span>Master Volume</span><input type="range" min="0" max="100" defaultValue="80" /></label>
-        <label><span>Music Volume</span><input type="range" min="0" max="100" defaultValue="65" /></label>
-        <label><span>Effects Volume</span><input type="range" min="0" max="100" defaultValue="90" /></label>
-        <div className="setting-line"><span>Language</span><strong>English</strong></div>
+        <label><span>{t('masterVolume')}</span><input type="range" min="0" max="100" defaultValue="80" /></label>
+        <label><span>{t('musicVolume')}</span><input type="range" min="0" max="100" defaultValue="65" /></label>
+        <label><span>{t('effectsVolume')}</span><input type="range" min="0" max="100" defaultValue="90" /></label>
+        <div className="setting-line setting-line--language">
+          <span>{t('language')}</span>
+          <div className="language-selector" role="group" aria-label={t('language')}>
+            <button
+              type="button"
+              className={language === SUPPORTED_LANGUAGES.IT_IT ? 'language-selector__option language-selector__option--active' : 'language-selector__option'}
+              onClick={() => onLanguageChange(SUPPORTED_LANGUAGES.IT_IT)}
+            >
+              🇮🇹 {t('languageItalian')}
+            </button>
+            <button
+              type="button"
+              className={language === SUPPORTED_LANGUAGES.EN_US ? 'language-selector__option language-selector__option--active' : 'language-selector__option'}
+              onClick={() => onLanguageChange(SUPPORTED_LANGUAGES.EN_US)}
+            >
+              🇺🇸 {t('languageEnglish')}
+            </button>
+          </div>
+        </div>
       </div>
     </Shell>
   );
@@ -3963,41 +3982,17 @@ function HowToPlay({ onBack }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="FIELD MANUAL"
-      title="HOW TO PLAY"
-      subtitle="Build a defense, survive endless waves, and push your record as far as possible."
+      kicker={t('fieldManual')}
+      title={t('howToPlay')}
+      subtitle={t('howToSubtitle')}
     >
       <div className="how-to-grid">
-        <section className="how-to-card">
-          <span>1</span>
-          <strong>CHOOSE A MODE</strong>
-          <small>Single Gate, Tri-Gate, and Last Bastion each test survival in a different format.</small>
-        </section>
-        <section className="how-to-card">
-          <span>2</span>
-          <strong>BUILD YOUR DEFENSE</strong>
-          <small>Spend run gold on towers and support structures. Every run starts from equal combat power.</small>
-        </section>
-        <section className="how-to-card">
-          <span>3</span>
-          <strong>HOLD THE BASTION</strong>
-          <small>Enemies follow their lanes toward your bastion. Survive wave after wave without losing the core.</small>
-        </section>
-        <section className="how-to-card">
-          <span>4</span>
-          <strong>ADAPT AS WAVES SCALE</strong>
-          <small>Enemy types, elites, bosses, blessings, and later modifiers increase the pressure over time.</small>
-        </section>
-        <section className="how-to-card">
-          <span>5</span>
-          <strong>CHASE RECORDS</strong>
-          <small>Single Gate and Tri-Gate keep separate records. Last Bastion also contributes to the matching survival record.</small>
-        </section>
-        <section className="how-to-card">
-          <span>6</span>
-          <strong>NO PAY-TO-WIN POWER</strong>
-          <small>Permanent account progress is prestige, cosmetic, and statistical only. Combat power resets every run.</small>
-        </section>
+        <section className="how-to-card"><span>1</span><strong>{t('chooseMode')}</strong><small>{t('chooseModeHelp')}</small></section>
+        <section className="how-to-card"><span>2</span><strong>{t('buildDefense')}</strong><small>{t('buildDefenseHelp')}</small></section>
+        <section className="how-to-card"><span>3</span><strong>{t('holdBastion')}</strong><small>{t('holdBastionHelp')}</small></section>
+        <section className="how-to-card"><span>4</span><strong>{t('adaptWaves')}</strong><small>{t('adaptWavesHelp')}</small></section>
+        <section className="how-to-card"><span>5</span><strong>{t('chaseRecords')}</strong><small>{t('chaseRecordsHelp')}</small></section>
+        <section className="how-to-card"><span>6</span><strong>{t('noP2w')}</strong><small>{t('noP2wHelp')}</small></section>
       </div>
     </Shell>
   );
@@ -4186,8 +4181,13 @@ function App() {
   const [completedMatchId, setCompletedMatchId] = useState(null);
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
+  const [language, setLanguageState] = useState(() => getLanguage());
   const lastStandardProgressRef = useRef(null);
   const hiddenAtRef = useRef(null);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -4716,26 +4716,32 @@ function App() {
   }
   if (screen === SCREENS.LEADERBOARD) return <Leaderboard session={session} onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.PROFILE) return <Profile session={session} onBack={() => setScreen(SCREENS.MENU)} />;
-  if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
+  if (screen === SCREENS.SETTINGS) return (
+    <Settings
+      language={language}
+      onLanguageChange={(nextLanguage) => setLanguageState(setLanguage(nextLanguage))}
+      onBack={() => setScreen(SCREENS.MENU)}
+    />
+  );
   if (screen === SCREENS.HOW_TO_PLAY) return <HowToPlay onBack={() => setScreen(SCREENS.MENU)} />;
 
   return (
     <main className="main-menu">
       <section className="main-menu__content" aria-label="Bastionfall main menu">
-        <p className="main-menu__kicker">ENDLESS TOWER DEFENSE</p>
+        <p className="main-menu__kicker">{t('endlessTowerDefense')}</p>
         <h1>BASTIONFALL</h1>
-        <p className="main-menu__tagline">Build. Hold. Survive.</p>
+        <p className="main-menu__tagline">{t('tagline')}</p>
 
         <div className="account-strip">
           {session ? (
             <>
               <span>ONLINE · {session.user.email}</span>
-              <button onClick={logout}>SIGN OUT</button>
+              <button onClick={logout}>{t('signOut')}</button>
             </>
           ) : (
             <>
-              <button onClick={() => setAuthMode('login')}>SIGN IN</button>
-              <button onClick={() => setAuthMode('register')}>CREATE ACCOUNT</button>
+              <button onClick={() => setAuthMode('login')}>{t('signIn')}</button>
+              <button onClick={() => setAuthMode('register')}>{t('createAccount')}</button>
             </>
           )}
         </div>
@@ -4744,13 +4750,11 @@ function App() {
           <button
             className="main-menu__button main-menu__button--primary"
             onClick={() => setScreen(SCREENS.PLAY)}
-          >
-            PLAY
-          </button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.PROFILE)}>PROFILE</button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.LEADERBOARD)}>LEADERBOARDS</button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.HOW_TO_PLAY)}>HOW TO PLAY</button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.SETTINGS)}>SETTINGS</button>
+          >{t('play')}</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.PROFILE)}>{t('profile')}</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.LEADERBOARD)}>{t('leaderboards')}</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.HOW_TO_PLAY)}>{t('howToPlay')}</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.SETTINGS)}>{t('settings')}</button>
         </nav>
 
         <p className="main-menu__version">Prototype v0.1.0</p>
