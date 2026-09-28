@@ -19,6 +19,10 @@ export function createRunEndSnapshot(run = {}, reason = RUN_END_REASONS.BASTION_
     coreHp: Math.max(0, Number(run.coreHp) || 0),
     coreMaxHp: Math.max(1, Number(run.coreMaxHp) || 1),
     kills: Math.max(0, Math.floor(Number(run.kills) || 0)),
+    towerMilestones: Object.freeze({
+      seven: Math.max(0, Math.floor(Number(run.towerMilestones?.seven) || 0)),
+      fourteen: Math.max(0, Math.floor(Number(run.towerMilestones?.fourteen) || 0))
+    }),
     startedAtMs: Number(run.startedAtMs ?? 0),
     endedAtMs: Number(run.endedAtMs ?? 0)
   });
