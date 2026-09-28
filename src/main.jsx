@@ -19,6 +19,7 @@ import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutio
 import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyle, getTowerArtStyleForTower } from './game/towers/towerArt.js';
 import { getEffectiveTowerRange, getTowerRangeKind } from './game/towers/towerRange.js';
 import { getTowerEvolutionIntegrityPass, getTowerEvolutionIntegrityQa } from './game/towers/towerEvolutionIntegrityQa.js';
+import { getLeaderboardPresentation } from './game/records/leaderboardPresentation.js';
 import { getNormalModeEvolutionFlowPass, getNormalModeEvolutionFlowQa } from './game/towers/normalModeEvolutionFlowQa.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
 import { TFT_BENCH, addCopyToBench, createEmptyBench, getTftBenchFixtures, removeCopyFromBench } from './game/tft/tftBench.js';
@@ -3608,6 +3609,8 @@ function Leaderboard({ session, onBack }) {
   }, [session?.access_token, mode]);
 
   const entries = leaderboardData?.entries ?? [];
+  const leaderboardView = getLeaderboardPresentation(entries, leaderboardData?.personalRecord ?? null);
+  const podiumOrder = [leaderboardView.podium[1], leaderboardView.podium[0], leaderboardView.podium[2]].filter(Boolean);
 
   return (
     <Shell
@@ -3631,6 +3634,40 @@ function Leaderboard({ session, onBack }) {
         </button>
       </div>
 
+      {leaderboardStatus === 'ready' && leaderboardView.podium.length > 0 && (
+        <div className="leaderboard-podium" aria-label="Global top three">
+          {podiumOrder.map((entry) => (
+            <div
+              key={`podium-${entry.rank}-${entry.displayName}`}
+              className={`leaderboard-podium__card leaderboard-podium__card--${entry.medal}${entry.isSelf ? ' leaderboard-podium__card--self' : ''}`}
+            >
+              <span className="leaderboard-podium__rank">#{entry.rank}</span>
+              <strong>{entry.displayName}</strong>
+              {entry.isSelf && <em>YOU</em>}
+              <small>WAVE {entry.bestWave} · {formatSurvivalTime(entry.bestSurvivalMs)}</small>
+              <b>{Number(entry.bestScore || 0).toLocaleString()} SCORE</b>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {leaderboardStatus === 'ready' && leaderboardView.personal && (
+        <div className="leaderboard-personal-record" aria-label="Your verified record">
+          <div>
+            <span>YOUR VERIFIED RECORD</span>
+            <strong>
+              {leaderboardView.personal.isTopTen
+                ? `GLOBAL #${leaderboardView.personal.rank}`
+                : 'OUTSIDE TOP 10'}
+            </strong>
+          </div>
+          <div>
+            <b>WAVE {leaderboardView.personal.bestWave}</b>
+            <small>{formatSurvivalTime(leaderboardView.personal.bestSurvivalMs)} · {Number(leaderboardView.personal.bestScore || 0).toLocaleString()} score · {Number(leaderboardView.personal.bestKills || 0).toLocaleString()} kills</small>
+          </div>
+        </div>
+      )}
+
       <div className="table-card leaderboard-table">
         <div className="table-row table-row--head leaderboard-row">
           <span>#</span>
@@ -3653,20 +3690,17 @@ function Leaderboard({ session, onBack }) {
           <div className="empty-state">No verified runs recorded for this mode yet.</div>
         )}
 
-        {leaderboardStatus === 'ready' && entries.slice(0, 10).map((entry, index) => {
-          const rank = index + 1;
-          const rankClass = rank === 1
-            ? ' leaderboard-row--gold'
-            : rank === 2
-              ? ' leaderboard-row--silver'
-              : rank === 3
-                ? ' leaderboard-row--bronze'
-                : '';
+        {leaderboardStatus === 'ready' && leaderboardView.rows.map((entry) => {
+          const rankClass = entry.medal ? ` leaderboard-row--${entry.medal}` : '';
+          const selfClass = entry.isSelf ? ' leaderboard-row--self' : '';
 
           return (
-            <div className={`table-row leaderboard-row${rankClass}`} key={`${entry.displayName}-${entry.updatedAt}-${index}`}>
-              <span className="leaderboard-rank">{rank <= 3 ? `#${rank} ★` : `#${rank}`}</span>
-              <span>{entry.displayName}</span>
+            <div className={`table-row leaderboard-row${rankClass}${selfClass}`} key={`${entry.displayName}-${entry.updatedAt}-${entry.rank}`}>
+              <span className="leaderboard-rank">{entry.podium ? `#${entry.rank} ★` : `#${entry.rank}`}</span>
+              <span className="leaderboard-defender">
+                {entry.displayName}
+                {entry.isSelf && <em>YOU</em>}
+              </span>
               <span>{entry.bestWave}</span>
               <span>{formatSurvivalTime(entry.bestSurvivalMs)}</span>
               <span>{Number(entry.bestScore || 0).toLocaleString()}</span>
