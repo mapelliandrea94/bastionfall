@@ -2923,6 +2923,56 @@ body { background:#1c3f61; }
   font-weight: 700;
 }
 
+.mini-objective-panel {
+  margin: 0 0 .8rem;
+  padding: .68rem .72rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .22rem .65rem;
+  align-items: center;
+  border: 1px solid rgba(111, 199, 151, .22);
+  background: rgba(20, 58, 40, .12);
+}
+
+.mini-objective-panel span,
+.mini-objective-panel strong,
+.mini-objective-panel small,
+.mini-objective-panel em {
+  display: block;
+}
+
+.mini-objective-panel span {
+  color: #8f9ca7;
+  font-size: .5rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.mini-objective-panel strong {
+  color: #dce9df;
+  font-size: .66rem;
+}
+
+.mini-objective-panel b {
+  color: #91e0a9;
+  font-size: .74rem;
+}
+
+.mini-objective-panel small {
+  grid-column: 1 / -1;
+  color: #9ba8a0;
+  font-size: .49rem;
+  line-height: 1.25;
+}
+
+.mini-objective-panel em {
+  grid-column: 1 / -1;
+  color: #f0d58a;
+  font-size: .54rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .tower-synergy strong {
   margin: .12rem 0;
   color: #efd68f;

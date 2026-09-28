@@ -51,6 +51,7 @@ import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balan
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
 import { applyRiskRewardGold, getRiskRewardConfig } from './game/balance/riskReward.js';
+import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
@@ -983,6 +984,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [movingPlacedDefenseId, setMovingPlacedDefenseId] = useState(null);
   const [riskRewardTier, setRiskRewardTier] = useState('safe');
+  const [miniObjectiveFeedback, setMiniObjectiveFeedback] = useState('');
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
   const [tftRollIndex, setTftRollIndex] = useState(() => matchingTftSnapshot?.tftRollIndex ?? 0);
@@ -1047,6 +1049,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const worldModifierEffects = getWorldModifierEffects(activeWorldModifiers);
   const riskRewardConfig = getRiskRewardConfig(run?.mode ?? MODES.SINGLE_GATE, riskRewardTier);
   const pressureRiskRewardConfig = getRiskRewardConfig(run?.mode ?? MODES.SINGLE_GATE, 'pressure');
+  const miniObjective = getMiniObjectiveForWave(waveScaling.waveNumber);
+  const miniObjectiveReward = getMiniObjectiveReward(run?.mode ?? MODES.SINGLE_GATE);
   const threatWave = generateWavePlan({
     seed: run?.seed ?? 'run',
     waveNumber: waveScaling.waveNumber,
@@ -1607,13 +1611,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     const timeoutId = window.setTimeout(() => {
       const blessingId = selectedBlessingPreviewId;
       const completedRiskRewardTier = riskRewardTier;
+      const objectiveCompleted = evaluateMiniObjective(miniObjective, {
+        coreHp: run?.coreHp,
+        waveStartCoreHp: run?.waveStartCoreHp,
+        placedTowerCount: placedDefenses.length
+      });
+      const objectiveGold = objectiveCompleted ? miniObjectiveReward : 0;
+      setMiniObjectiveFeedback(objectiveCompleted ? `OBJECTIVE COMPLETE · +${objectiveGold}G` : 'OBJECTIVE MISSED');
+      window.setTimeout(() => setMiniObjectiveFeedback(''), 1800);
       setSelectedBlessingPreviewId(null);
       setBlessingRerollCount(0);
       setRiskRewardTier('safe');
       onPhaseChange(RUN_PHASES.PREPARATION, {
         advanceWave: true,
         blessingId,
-        riskRewardTier: completedRiskRewardTier
+        riskRewardTier: completedRiskRewardTier,
+        miniObjectiveGold: objectiveGold
       });
     }, 350);
 
@@ -2840,6 +2853,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           </div>
 
+          <div className="mini-objective-panel" aria-label="Mini objective">
+            <div>
+              <span>MINI OBJECTIVE</span>
+              <strong>{miniObjective.name}</strong>
+            </div>
+            <b>+{miniObjectiveReward}G</b>
+            <small>{miniObjective.description}</small>
+            {miniObjectiveFeedback && <em>{miniObjectiveFeedback}</em>}
+          </div>
+
           <div className="run-sidebar__status">
             <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
             <strong>
@@ -3851,7 +3874,7 @@ function App() {
               ...current,
               phase: nextPhase,
               wave: advancingWave ? current.wave + 1 : current.wave,
-              gold: current.gold + waveClearGold,
+              gold: current.gold + waveClearGold + Math.max(0, Number(options.miniObjectiveGold) || 0),
               waveStartCoreHp: nextPhase === RUN_PHASES.ACTIVE ? current.coreHp : current.waveStartCoreHp,
               blessings: nextBlessings,
               coreMaxHp: nextMaxHp,
