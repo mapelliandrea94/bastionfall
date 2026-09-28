@@ -1813,10 +1813,14 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
   useEffect(() => {
     if (run?.phase === RUN_PHASES.ENDED || activeEnemies.length === 0) return;
-    const escapedEnemies = activeEnemies.filter((enemy) => Number(enemy?.progress ?? 0) >= 1);
+    const escapedEnemies = activeEnemies.filter(
+      (enemy) => Number(enemy?.hp ?? 0) > 0 && Number(enemy?.progress ?? 0) >= 1
+    );
     if (escapedEnemies.length === 0) return;
 
-    setActiveEnemies((current) => current.filter((enemy) => Number(enemy?.progress ?? 0) < 1));
+    setActiveEnemies((current) => current.filter(
+      (enemy) => Number(enemy?.hp ?? 0) > 0 && Number(enemy?.progress ?? 0) < 1
+    ));
     onDamageBastion(escapedEnemies.length * waveScaling.bastionDamage, escapedEnemies);
   }, [activeEnemies, run?.phase, waveScaling.bastionDamage, onDamageBastion]);
 
