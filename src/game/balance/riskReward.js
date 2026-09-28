@@ -6,7 +6,7 @@ export const RISK_REWARD = Object.freeze({
     'single-gate': Object.freeze({ threatMultiplier: 1.25, rewardMultiplier: 1.35, flatGoldBonus: 0 }),
     'tri-gate': Object.freeze({ threatMultiplier: 1.20, rewardMultiplier: 1.25, flatGoldBonus: 0 }),
     'tft-shop': Object.freeze({ threatMultiplier: 1.25, rewardMultiplier: 1, flatGoldBonus: 2 }),
-    'sudden-siege': Object.freeze({ threatMultiplier: 1.30, rewardMultiplier: 1, flatGoldBonus: 2 }),
+    'sudden-siege': Object.freeze({ threatMultiplier: 1.15, rewardMultiplier: 1, flatGoldBonus: 1 }),
     'last-bastion': Object.freeze({ threatMultiplier: 1.15, rewardMultiplier: 1.20, flatGoldBonus: 0 })
   })
 });
@@ -55,6 +55,8 @@ export function getRiskRewardFixtures() {
     pressuredSingleGold: applyRiskRewardGold(20, 'single-gate', 'pressure'),
     pressuredTriGold: applyRiskRewardGold(20, 'tri-gate', 'pressure'),
     pressuredTftGold: applyRiskRewardGold(5, 'tft-shop', 'pressure'),
+    pressuredSuddenGold: applyRiskRewardGold(5, 'sudden-siege', 'pressure'),
+    suddenPressureThreat: getRiskRewardConfig('sudden-siege', 'pressure').threatMultiplier,
     lastBastionThreat: getRiskRewardConfig('last-bastion', 'pressure').threatMultiplier,
     pressureVisualActiveDuringWave: activeVisual.active === true,
     pressureVisualHiddenDuringPrep: prepVisual.active === false,
