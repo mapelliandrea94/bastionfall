@@ -967,7 +967,7 @@ function ModePreRun({ mode, onBack, onStart, session }) {
 }
 
 
-function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold }) {
+function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled }) {
   const restoredTftSnapshot = useRef(run?.mode === MODES.TFT_SHOP ? loadTftRunSnapshot() : null);
   const matchingTftSnapshot = restoredTftSnapshot.current?.run?.seed === run?.seed ? restoredTftSnapshot.current : null;
   const [spawnQueue, setSpawnQueue] = useState([]);
@@ -1001,7 +1001,25 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const towerAttackTimesRef = useRef({});
   const projectileQueueRef = useRef([]);
   const projectileIdRef = useRef(0);
+  const defeatedEnemyIdsRef = useRef(new Set());
   const [projectiles, setProjectiles] = useState([]);
+
+  const removeAndCountDefeatedEnemies = (enemies) => {
+    const survivors = [];
+    for (const enemy of enemies) {
+      if (Number(enemy?.hp ?? 0) > 0) {
+        survivors.push(enemy);
+        continue;
+      }
+
+      const enemyId = String(enemy?.id || '');
+      if (enemyId && !defeatedEnemyIdsRef.current.has(enemyId)) {
+        defeatedEnemyIdsRef.current.add(enemyId);
+        onEnemyKilled?.(enemyId);
+      }
+    }
+    return survivors;
+  };
   const waveScaling = getWaveScaling(run?.wave ?? 0, run?.mode);
   const nextWaveNumber = Math.max(1, (run?.wave ?? 0) + 1);
   const upcomingBossWave = getUpcomingBossWave(nextWaveNumber);
@@ -1498,7 +1516,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           }
         }
 
-        return working.filter((enemy) => enemy.hp > 0).map(({ position, ...enemy }) => enemy);
+        return removeAndCountDefeatedEnemies(working).map(({ position, ...enemy }) => enemy);
       });
     }, 100);
 
@@ -1527,7 +1545,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     const intervalId = window.setInterval(() => {
       const now = performance.now();
-      setActiveEnemies((current) => current
+      setActiveEnemies((current) => removeAndCountDefeatedEnemies(current
         .map((enemy) => {
           const status = { ...(enemy.statusEffects ?? {}) };
           let next = enemy;
@@ -1551,8 +1569,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           }
 
           return { ...next, statusEffects: status };
-        })
-        .filter((enemy) => enemy.hp > 0));
+        })));
     }, 250);
 
     return () => window.clearInterval(intervalId);
@@ -3576,6 +3593,12 @@ function App() {
             if (!current || current.phase === RUN_PHASES.ENDED) return current;
             const gain = Math.max(0, Number(amount) || 0);
             return { ...current, gold: current.gold + gain };
+          });
+        }}
+        onEnemyKilled={() => {
+          setRunState((current) => {
+            if (!current || current.phase === RUN_PHASES.ENDED) return current;
+            return { ...current, kills: Math.max(0, Number(current.kills) || 0) + 1 };
           });
         }}
         onDamageBastion={(damage) => {
