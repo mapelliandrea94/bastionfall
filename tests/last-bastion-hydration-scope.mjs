@@ -12,6 +12,15 @@ assert(targetedHelperStart >= 0 && targetedHelperEnd > targetedHelperStart, 'Tar
 const targetedHelper = server.slice(targetedHelperStart, targetedHelperEnd);
 
 assert(targetedHelper.includes(".eq('id', requestedMatchId)"), 'Targeted hydration must fetch exactly one match id');
+assert(
+  targetedHelper.includes("resolve_stale_last_bastion_participants_for_match"),
+  'Targeted hydration must resolve abandons only for the requested match'
+);
+assert(
+  !targetedHelper.includes("resolve_stale_last_bastion_participants',"),
+  'Targeted hydration must not invoke the global abandon sweep'
+);
+
 assert(targetedHelper.includes(".eq('match_id', requestedMatchId)"), 'Targeted hydration must fetch participants only for one match id');
 assert(!targetedHelper.includes(".eq('status', 'active')"), 'Targeted hydration must not scan all active matches');
 assert(!targetedHelper.includes("recentFinishedMatchesRead"), 'Targeted hydration must not scan recent finished matches');
