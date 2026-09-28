@@ -2543,6 +2543,63 @@ body { background:#1c3f61; }
   outline: none;
 }
 
+.tower-range-indicator {
+  pointer-events: none;
+  fill: rgba(84, 196, 255, .07);
+  stroke: rgba(126, 220, 255, .34);
+  stroke-width: 3;
+  stroke-dasharray: 11 8;
+  vector-effect: non-scaling-stroke;
+  opacity: .48;
+  transition: opacity .12s ease, fill .12s ease, stroke .12s ease;
+}
+
+.tower-range-indicator--preview {
+  opacity: 0;
+  fill: rgba(255, 221, 126, .08);
+  stroke: rgba(255, 229, 145, .7);
+}
+
+.battlefield-map__tower-slot--occupied:hover .tower-range-indicator,
+.battlefield-map__tower-slot--hovered .tower-range-indicator,
+.battlefield-map__tower-slot--selected .tower-range-indicator {
+  opacity: .92;
+  fill: rgba(84, 196, 255, .12);
+  stroke: rgba(163, 235, 255, .95);
+}
+
+.battlefield-map__tower-slot:hover .tower-range-indicator--preview,
+.battlefield-map__tower-slot--hovered .tower-range-indicator--preview,
+.battlefield-map__tower-slot:focus-visible .tower-range-indicator--preview {
+  opacity: .88;
+}
+
+.tower-progress-badge {
+  pointer-events: none;
+}
+
+.tower-progress-badge rect {
+  fill: rgba(12, 25, 38, .88);
+  stroke: rgba(255, 218, 112, .84);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.tower-progress-badge text {
+  fill: #ffe38b;
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: 1px;
+  paint-order: stroke;
+  stroke: rgba(10, 22, 34, .95);
+  stroke-width: 2px;
+}
+
+.battlefield-map__tower-slot--selected .tower-progress-badge rect {
+  stroke: #fff0a6;
+  filter: drop-shadow(0 0 6px rgba(255, 226, 121, .72));
+}
+
 .battlefield-map__projectiles { pointer-events: none; }
 .battlefield-map__projectile {
   fill: #f8dc77;
@@ -4337,6 +4394,17 @@ button:focus-visible,
 .run-sidebar--tft .tft-confirm-setup--active {
   border-color: rgba(166, 226, 149, .88);
   box-shadow: inset 0 0 0 1px rgba(166, 226, 149, .16), 0 0 14px rgba(166, 226, 149, .12);
+}
+
+.run-sidebar--tft .tft-auto-start {
+  grid-column: 1 / -1;
+  min-height: 48px;
+}
+
+.run-sidebar--tft .tft-auto-start--active {
+  border-color: rgba(255, 211, 95, .95);
+  background: linear-gradient(180deg, rgba(155, 104, 22, .98), rgba(101, 59, 15, .98));
+  box-shadow: inset 0 0 0 1px rgba(255, 224, 132, .2), 0 0 16px rgba(255, 193, 72, .18);
 }
 
 .run-sidebar--tft .tft-wave-controls button:disabled {

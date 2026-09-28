@@ -1033,6 +1033,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
+  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(false);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
@@ -1267,6 +1268,21 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
 
+    if (isShopMode(run?.mode) && tftAutoStartEnabled) {
+      setPreparationRemaining(15);
+      const autoIntervalId = window.setInterval(() => {
+        setPreparationRemaining((current) => {
+          if (current <= 1) {
+            window.clearInterval(autoIntervalId);
+            onPhaseChange(RUN_PHASES.ACTIVE);
+            return 0;
+          }
+          return current - 1;
+        });
+      }, 1000);
+      return () => window.clearInterval(autoIntervalId);
+    }
+
     if (isShopMode(run?.mode) && !tftSetupConfirmed) {
       setPreparationRemaining(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
       return undefined;
@@ -1304,7 +1320,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     }, 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [run?.phase, run?.wave, run?.mode, run?.syncWaveStartsAtMs, tftSetupConfirmed]);
+  }, [run?.phase, run?.wave, run?.mode, run?.syncWaveStartsAtMs, tftSetupConfirmed, tftAutoStartEnabled]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE) return;
@@ -2059,6 +2075,21 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     : (run?.gold ?? 0) >= selectedDefense.cost;
                 const hovered = hoveredSlotId === slot.id;
                 const selectedPlaced = placed?.id === selectedPlacedDefenseId;
+                const placedRuntimeDefense = placed
+                  ? applyBlessingTowerIdentity(
+                      applyTowerSynergy(
+                        getRuntimeTowerDefinition(defenseDefinitions[placed.defenseId] ?? selectedDefense, placed),
+                        towerSynergyState
+                      ),
+                      run?.blessings ?? []
+                    )
+                  : null;
+                const previewRuntimeDefense = !placed
+                  ? applyBlessingTowerIdentity(applyTowerSynergy(previewDefense, towerSynergyState), run?.blessings ?? [])
+                  : null;
+                const visibleRange = Math.max(0, Number(placedRuntimeDefense?.range ?? previewRuntimeDefense?.range ?? 0));
+                const towerLevel = Math.max(1, Math.min(4, Number(placed?.level ?? 1)));
+                const copyProgress = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(placed?.copyProgress ?? 1)));
                 const slotClass = [
                   'battlefield-map__tower-slot',
                   placed ? 'battlefield-map__tower-slot--occupied' : 'battlefield-map__tower-slot--available',
@@ -2108,6 +2139,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       }
                     }}
                   >
+                    {visibleRange > 0 && (placed || affordable) && (
+                      <circle
+                        className={`tower-range-indicator ${placed ? 'tower-range-indicator--placed' : 'tower-range-indicator--preview'}`}
+                        cx="0"
+                        cy="0"
+                        r={visibleRange}
+                        data-range={visibleRange}
+                        aria-hidden="true"
+                      />
+                    )}
                     <rect className="tower-slot__shadow" x="-39" y="-25" width="78" height="58" rx="14" />
                     <rect className="tower-slot__stone" x="-36" y="-30" width="72" height="56" rx="12" />
                     <path className="tower-slot__grass" d="M-29 14Q-12 6 0 12T29 9V22H-29Z" />
@@ -2127,16 +2168,24 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     )}
 
                     {placed && (
-                      <g className={`tower-visual tower-visual--${placed.defenseId}`} data-evolution={placed.evolution ?? ''}>
-                        <ellipse className="tower-visual__shadow" cx="0" cy="20" rx="30" ry="10" />
-                        <foreignObject x="-42" y="-54" width="84" height="84" pointerEvents="none">
-                          <div
-                            className="tower-art-sprite"
-                            style={getTowerArtStyleForTower(placed.defenseId, placed.evolution)}
-                            aria-hidden="true"
-                          />
-                        </foreignObject>
-                      </g>
+                      <>
+                        <g className={`tower-visual tower-visual--${placed.defenseId}`} data-evolution={placed.evolution ?? ''}>
+                          <ellipse className="tower-visual__shadow" cx="0" cy="20" rx="30" ry="10" />
+                          <foreignObject x="-42" y="-54" width="84" height="84" pointerEvents="none">
+                            <div
+                              className="tower-art-sprite"
+                              style={getTowerArtStyleForTower(placed.defenseId, placed.evolution)}
+                              aria-hidden="true"
+                            />
+                          </foreignObject>
+                        </g>
+                        <g className="tower-progress-badge" aria-hidden="true">
+                          <rect x="-48" y="31" width="96" height="23" rx="10" />
+                          <text x="0" y="47" textAnchor="middle">
+                            {`${'★'.repeat(towerLevel)}${isShopMode(run?.mode) ? ` ${copyProgress}/${TFT_COPY_PROGRESSION.maxCopies}` : ''}`}
+                          </text>
+                        </g>
+                      </>
                     )}
                   </g>
                 );
@@ -2694,6 +2743,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 >
                   <span>START WAVE</span>
                   <small>{tftSetupConfirmed ? 'Launch immediately' : 'Confirm setup first'}</small>
+                </button>
+                <button
+                  type="button"
+                  className={`tft-auto-start ${tftAutoStartEnabled ? 'tft-auto-start--active' : ''}`}
+                  disabled={!run || run.phase === RUN_PHASES.ENDED}
+                  onClick={() => setTftAutoStartEnabled((enabled) => !enabled)}
+                >
+                  <span>{tftAutoStartEnabled ? 'STOP AUTO START' : 'AUTO START'}</span>
+                  <small>
+                    {tftAutoStartEnabled
+                      ? (run?.phase === RUN_PHASES.PREPARATION ? `Next wave in ${preparationRemaining}s` : '15s between waves · running')
+                      : '15s build time · loops every wave'}
+                  </small>
                 </button>
               </div>
             </div>
