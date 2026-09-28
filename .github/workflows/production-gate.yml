@@ -57,6 +57,8 @@ jobs:
         run: node tests/sudden-stage-transition.mjs
       - name: Sudden Siege Economy Parity QA
         run: node tests/sudden-economy-parity.mjs
+      - name: Sudden Siege Pressure Audit QA
+        run: node tests/sudden-pressure-audit.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA
