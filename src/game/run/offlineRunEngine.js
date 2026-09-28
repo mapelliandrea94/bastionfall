@@ -29,19 +29,12 @@ import { getEndlessMilestone } from './endlessMilestones.js';
 import { createRunEndSnapshot } from './runEndSnapshot.js';
 import { isBossWave } from '../boss/bossSchedule.js';
 import { getBossSummonAddsPlan } from '../boss/bossSummonAdds.js';
-import { WALL_SYSTEM } from '../structures/walls.js';
+import { WALL_PROGRESS_BY_ID, WALL_SYSTEM } from '../structures/walls.js';
 
 const SUPPORTED_MODES = new Set(['single-gate', 'tri-gate', 'tft-shop', 'sudden-siege']);
 const MAX_SIMULATION_STEPS = 1800;
 const MAX_OFFLINE_MS = 6 * 60 * 60 * 1000;
 const BASE_CORE_HP = 20;
-
-const WALL_PROGRESS_BY_ID = Object.freeze({
-  'wall-01': 0.18,
-  'wall-02': 0.40,
-  'wall-03': 0.61,
-  'wall-04': 0.82
-});
 
 function isShopMode(mode) {
   return mode === 'tft-shop' || mode === 'sudden-siege';
