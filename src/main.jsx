@@ -1827,7 +1827,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const handleWallPurchase = (wallId) => {
     if (!run || run.phase !== RUN_PHASES.PREPARATION) {
-      if (isShopMode(run?.mode)) setTftFeedback('WALLS CAN ONLY BE BOUGHT DURING PREPARATION');
+      if (isShopMode(run?.mode)) setTftFeedback(gameText('WALLS CAN ONLY BE BOUGHT DURING PREPARATION'));
       return;
     }
     if (!SINGLE_GATE_MAP.compatibleModes.includes(run.mode)) return;
@@ -1941,7 +1941,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const handleStartFieldMerge = () => {
     if (!isShopMode(run?.mode) || !selectedPlacedDefense || run?.phase === RUN_PHASES.ENDED) return;
     if (Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) {
-      setTftFeedback('TOWER ALREADY 14/14');
+      setTftFeedback(gameText('TOWER ALREADY 14/14'));
       return;
     }
     setMovingPlacedDefenseId(null);
@@ -1956,7 +1956,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     const targetTower = placedDefenses.find((tower) => tower.id === targetTowerId);
     if (!sourceTower || !targetTower) return false;
     if (sourceTower.defenseId !== targetTower.defenseId) {
-      setTftFeedback('WRONG TOWER TYPE');
+      setTftFeedback(gameText('WRONG TOWER TYPE'));
       return false;
     }
 
@@ -2048,7 +2048,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setMovingPlacedDefenseId(null);
     setMergingPlacedDefenseId(null);
     setSwappingPlacedDefenseId((current) => current === selectedPlacedDefense.id ? null : selectedPlacedDefense.id);
-    if (isShopMode(run.mode)) setTftFeedback('SELECT A TOWER TO SWAP');
+    if (isShopMode(run.mode)) setTftFeedback(gameText('SELECT A TOWER TO SWAP'));
   };
 
   const placeTftBenchCopyOnSlot = (benchIndex, slotId) => {
@@ -2083,7 +2083,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setTftBench((current) => removeCopyFromBench(current, benchIndex).bench);
     setSelectedTftBenchIndex(null);
     setMovingPlacedDefenseId(null);
-    setTftFeedback('TOWER PLACED · 1/7');
+    setTftFeedback(gameText('TOWER PLACED · 1/7'));
     emitGameFeedback(GAME_FEEDBACK_EVENTS.TOWER_BUILT, {
       towerId: copy.towerId,
       slotId,
@@ -2115,7 +2115,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         return;
       }
       if (!occupied) {
-        if (isShopMode(run.mode)) setTftFeedback('SELECT AN OCCUPIED TOWER TO SWAP');
+        if (isShopMode(run.mode)) setTftFeedback(gameText('SELECT AN OCCUPIED TOWER TO SWAP'));
         return;
       }
       if (occupied.id === swappingPlacedDefenseId) {
@@ -2137,7 +2137,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       }));
       setSelectedPlacedDefenseId(swappingPlacedDefenseId);
       setSwappingPlacedDefenseId(null);
-      if (isShopMode(run.mode)) setTftFeedback('TOWERS SWAPPED · 0G');
+      if (isShopMode(run.mode)) setTftFeedback(gameText('TOWERS SWAPPED · 0G'));
       return;
     }
 
@@ -2159,7 +2159,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       ));
       setSelectedPlacedDefenseId(movingPlacedDefenseId);
       setMovingPlacedDefenseId(null);
-      if (isShopMode(run.mode)) setTftFeedback('TOWER MOVED · 0G');
+      if (isShopMode(run.mode)) setTftFeedback(gameText('TOWER MOVED · 0G'));
       return;
     }
 
@@ -2270,7 +2270,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               aria-atomic="false"
             >
               <div className="last-bastion-status__header">
-                <span>{isLastBastionFinished ? 'MATCH COMPLETE' : isLastBastionSpectating ? 'SPECTATING' : 'LIVE MATCH'}</span>
+                <span>{gameText(isLastBastionFinished ? 'MATCH COMPLETE' : isLastBastionSpectating ? 'SPECTATING' : 'LIVE MATCH')}</span>
                 <strong>
                   {lastBastionFairness?.desynced ? `DESYNC +${lastBastionFairness.waveSpread}` : 'SYNC'} · {lastBastionAliveCount}/{lastBastionParticipants.length || 0} ALIVE
                 </strong>
@@ -2286,9 +2286,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       !participant.connected ? 'last-bastion-status__player--offline' : ''
                     ].filter(Boolean).join(' ')}
                   >
-                    <span>P{participant.slot}{participant.self ? ' · YOU' : ''}</span>
-                    <strong>{participant.alive ? `W${participant.wave}` : 'ELIMINATED'}</strong>
-                    <small>{participant.connected ? `${participant.coreHp} HP` : 'DISCONNECTED'}</small>
+                    <span>P{participant.slot}{participant.self ? ` · ${t('you')}` : ''}</span>
+                    <strong>{participant.alive ? `${t('wave')} ${participant.wave}` : gameText('ELIMINATED')}</strong>
+                    <small>{participant.connected ? `${participant.coreHp} HP` : gameText('DISCONNECTED')}</small>
                   </div>
                 ))}
               </div>
@@ -2309,18 +2309,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {(isLastBastionSpectating || isLastBastionFinished) && (
             <div className="last-bastion-spectate-banner" role="status" aria-live="assertive">
-              <span>{isLastBastionFinished ? 'LAST BASTION COMPLETE' : 'BASTION FALLEN — SPECTATOR MODE'}</span>
+              <span>{gameText(isLastBastionFinished ? 'LAST BASTION COMPLETE' : 'BASTION FALLEN — SPECTATOR MODE')}</span>
               <strong>
                 {isLastBastionFinished
                   ? run?.lastBastionWinnerSlot
                     ? `PLAYER ${run.lastBastionWinnerSlot} WINS`
-                    : 'MATCH DRAW'
-                  : 'WATCH THE REMAINING DEFENDERS'}
+                    : gameText('MATCH DRAW')
+                  : gameText('WATCH THE REMAINING DEFENDERS')}
               </strong>
               <small>
                 {isLastBastionFinished
-                  ? 'Final results processing follows.'
-                  : 'You are eliminated. Match status remains live until one defender remains.'}
+                  ? gameText('Final results processing follows.')
+                  : gameText('You are eliminated. Match status remains live until one defender remains.')}
               </small>
             </div>
           )}
@@ -2394,7 +2394,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <g className="pressure-wave-overlay__badge" transform="translate(800 64)">
                   <rect x="-152" y="-29" width="304" height="58" rx="22" />
                   <text x="0" y="7" textAnchor="middle">
-                    {riskRewardVisual.label} · THREAT ×{riskRewardVisual.threatMultiplier.toFixed(2)}
+                    {gameText(riskRewardVisual.label)} · {t('threat')} ×{riskRewardVisual.threatMultiplier.toFixed(2)}
                   </text>
                 </g>
               </g>
@@ -3074,7 +3074,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   />
                   <div className="tft-shop-card__copy">
                     <strong>{offer.name}</strong>
-                    <small>{offer.faction.toUpperCase()} · {offer.role.replaceAll('-', ' ').toUpperCase()}</small>
+                    <small>{String(gameText(offer.faction)).toUpperCase()} · {String(gameText(offer.role)).toUpperCase()}</small>
                   </div>
                   <span className="tft-shop-card__cost">{offer.cost}G</span>
                 </button>
@@ -3104,7 +3104,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       cost: selectedTftShopOffer.cost
                     });
                     if (!result.ok) {
-                      setTftFeedback('BENCH FULL');
+                      setTftFeedback(gameText('BENCH FULL'));
                       return;
                     }
                     setTftBench(result.bench);
@@ -3165,9 +3165,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       event.dataTransfer.effectAllowed = 'move';
                       event.dataTransfer.setData('text/plain', String(index));
                       setSelectedTftBenchIndex(index);
-                      setTftFeedback('DROP ON A MATCHING TOWER TO MERGE');
+                      setTftFeedback(gameText('DROP ON A MATCHING TOWER TO MERGE'));
                     }}
-                    onDragEnd={() => setTftFeedback((current) => current === 'DROP ON A MATCHING TOWER TO MERGE' ? '' : current)}
+                    onDragEnd={() => setTftFeedback((current) => current === gameText('DROP ON A MATCHING TOWER TO MERGE') ? '' : current)}
                   >
                     {copy ? (
                       <>
@@ -3221,8 +3221,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   disabled={!run || run.phase !== RUN_PHASES.PREPARATION}
                   onClick={() => setConfirmedTftSetupKey(tftSetupKey)}
                 >
-                  <span>{tftSetupConfirmed ? 'CONFIGURATION CONFIRMED' : 'CONFIRM SETUP'}</span>
-                  <small>{tftSetupConfirmed ? 'Current setup locked in' : 'Confirm towers and bench'}</small>
+                  <span>{gameText(tftSetupConfirmed ? 'CONFIGURATION CONFIRMED' : 'CONFIRM SETUP')}</span>
+                  <small>{gameText(tftSetupConfirmed ? 'Current setup locked in' : 'Confirm towers and bench')}</small>
                 </button>
                 <button
                   type="button"
@@ -3231,7 +3231,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
                 >
                   <span>{t('startWave')}</span>
-                  <small>{tftSetupConfirmed ? 'Launch immediately' : 'Confirm setup first'}</small>
+                  <small>{gameText(tftSetupConfirmed ? 'Launch immediately' : 'Confirm setup first')}</small>
                 </button>
                 <button
                   type="button"
@@ -3245,13 +3245,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     });
                   }}
                 >
-                  <span>{tftAutoStartEnabled ? 'AUTO START · 20S' : 'STANDARD · 40S'}</span>
+                  <span>{gameText(tftAutoStartEnabled ? 'AUTO START · 20S' : 'STANDARD · 40S')}</span>
                   <small>
                     {run?.phase === RUN_PHASES.PREPARATION
                       ? `Next wave in ${preparationRemaining}s`
                       : tftAutoStartEnabled
-                        ? '20s preparation between waves'
-                        : '40s preparation between waves'}
+                        ? gameText('20s preparation between waves')
+                        : gameText('40s preparation between waves')}
                   </small>
                 </button>
               </div>
@@ -3284,7 +3284,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       <div className="tower-card__copy">
                         <strong>{tower.name}</strong>
                         <span>{tower.cost}g</span>
-                        <small>{tower.faction.toUpperCase()} · {tower.role.replaceAll('-', ' ').toUpperCase()}</small>
+                        <small>{String(gameText(tower.faction)).toUpperCase()} · {String(gameText(tower.role)).toUpperCase()}</small>
                       </div>
                     </button>
                   ))}
@@ -3299,22 +3299,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           <section className="defense-inspector" aria-label="Selected defense inspection">
             <div className="defense-inspector__header">
-              <span>{selectedPlacedDefense ? 'PLACED DEFENSE' : 'SELECTED DEFENSE'}</span>
+              <span>{gameText(selectedPlacedDefense ? 'PLACED DEFENSE' : 'SELECTED DEFENSE')}</span>
               <strong>{inspectedDefense.name}</strong>
             </div>
             <div className="defense-inspector__grid">
-              <div><span>{t('role')}</span><strong>{inspectedDefense.role}</strong></div>
+              <div><span>{t('role')}</span><strong>{gameText(inspectedDefense.role)}</strong></div>
               <div><span>{t('cost')}</span><strong>{inspectedDefense.cost}g</strong></div>
               {'damage' in inspectedDefense && <div><span>{t('damage')}</span><strong>{inspectedDefense.damage}</strong></div>}
               {'range' in inspectedDefense && <div><span>{t('range')}</span><strong>{inspectedDefense.range}</strong></div>}
               {'attackIntervalMs' in inspectedDefense && <div><span>{t('rate')}</span><strong>{(1000 / inspectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
-              {'damageType' in inspectedDefense && <div><span>{t('type')}</span><strong>{inspectedDefense.damageType}</strong></div>}
+              {'damageType' in inspectedDefense && <div><span>{t('type')}</span><strong>{gameText(inspectedDefense.damageType)}</strong></div>}
               {'splashRadius' in inspectedDefense && <div><span>{t('splash')}</span><strong>{inspectedDefense.splashRadius}</strong></div>}
               {'slowPercent' in inspectedDefense && <div><span>{t('slow')}</span><strong>{inspectedDefense.slowPercent}%</strong></div>}
               {'squadSize' in inspectedDefense && <div><span>{t('squad')}</span><strong>{inspectedDefense.squadSize}</strong></div>}
               {'unitHp' in inspectedDefense && <div><span>{t('unitHp')}</span><strong>{inspectedDefense.unitHp}</strong></div>}
             </div>
-            <p>{inspectedDefense.description}</p>
+            <p>{gameText(inspectedDefense.description)}</p>
             <div className="defense-inspector__sell">
               <span>{t('sellRefund')}</span>
               <strong>{selectedSellPreview.refund}g</strong>
@@ -3326,7 +3326,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     className={movingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
                     onClick={handleToggleMoveSelectedTower}
                   >
-                    {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
+                    {gameText(movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G')}
                   </button>
                   <button type="button" onClick={handleSellSelectedTower}>
                     SELL · +{selectedSellPreview.refund}G
@@ -3344,7 +3344,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               )}
             </div>
             <div className="defense-inspector__upgrade">
-              <span>{selectedPlacedDefense ? `LEVEL ${selectedPlacedDefense.level}` : 'NEXT UPGRADE'}</span>
+              <span>{selectedPlacedDefense ? `LV. ${selectedPlacedDefense.level}` : gameText('NEXT UPGRADE')}</span>
               {!selectedPlacedDefense && !selectedUpgradePreview.maxed && (
                 <strong>LV.{selectedUpgradePreview.nextLevel} · {selectedUpgradePreview.upgradeCost}g</strong>
               )}
@@ -3373,7 +3373,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       />
                       <div className="tower-evolution-card__copy">
                         <strong>{choice.branch} · {choice.name}</strong>
-                        <small>{choice.description}</small>
+                        <small>{gameText(choice.description)}</small>
                       </div>
                     </button>
                   ))}
@@ -3384,7 +3384,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 return (
                   <div className="evolution-active-label">
                     <strong>EVOLUTION {evolution?.branch ?? selectedPlacedDefense.evolutionChoice ?? ''} · {evolution?.name ?? selectedPlacedDefense.evolution}</strong>
-                    <small>{evolution?.description ?? 'Extreme evolution active.'}</small>
+                    <small>{gameText(evolution?.description ?? 'Extreme evolution active.')}</small>
                   </div>
                 );
               })()}
@@ -3414,8 +3414,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     const blessing = BLESSINGS.find((entry) => entry.id === blessingId);
                     return blessing ? (
                       <div key={blessing.id} className="identity-blessing-panel__entry">
-                        <strong>{blessing.name}</strong>
-                        <small>{blessing.description}</small>
+                        <strong>{gameText(blessing.name)}</strong>
+                        <small>{gameText(blessing.description)}</small>
                       </div>
                     ) : null;
                   })}
@@ -3628,8 +3628,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       onClick={() => setSelectedBlessingPreviewId(blessing.id)}
                     >
                       <span>{blessing.rarity.toUpperCase()} · {blessing.category.toUpperCase()}</span>
-                      <strong>{blessing.name}</strong>
-                      <small>{blessing.description}</small>
+                      <strong>{gameText(blessing.name)}</strong>
+                      <small>{gameText(blessing.description)}</small>
                       <em>{selected ? 'SELECTED' : 'CHOOSE'}</em>
                     </button>
                   );
