@@ -2560,6 +2560,51 @@ body { background:#1c3f61; }
   filter: drop-shadow(0 0 5px rgba(255, 207, 82, .5));
 }
 
+.tower-synergy-aura {
+  --synergy-color: rgba(245, 207, 113, .9);
+  pointer-events: none;
+  opacity: .92;
+  filter: drop-shadow(0 0 8px var(--synergy-color));
+  animation: tower-synergy-aura-pulse 1.8s ease-in-out infinite;
+}
+
+.tower-synergy-aura__outer,
+.tower-synergy-aura__inner {
+  fill: none;
+  stroke: var(--synergy-color);
+  vector-effect: non-scaling-stroke;
+}
+
+.tower-synergy-aura__outer {
+  stroke-width: 3;
+  stroke-dasharray: 7 7;
+  opacity: .78;
+}
+
+.tower-synergy-aura__inner {
+  stroke-width: 2;
+  opacity: .45;
+}
+
+.tower-synergy-aura--human { --synergy-color: rgba(255, 205, 92, .95); }
+.tower-synergy-aura--insect { --synergy-color: rgba(133, 220, 91, .95); }
+.tower-synergy-aura--alien { --synergy-color: rgba(100, 211, 255, .95); }
+.tower-synergy-aura--neutral { --synergy-color: rgba(205, 149, 255, .95); }
+
+.tower-visual--synergy-active .tower-art-sprite {
+  filter: drop-shadow(0 0 7px var(--synergy-color, rgba(245, 207, 113, .9)));
+}
+
+.tower-visual--synergy-human { --synergy-color: rgba(255, 205, 92, .95); }
+.tower-visual--synergy-insect { --synergy-color: rgba(133, 220, 91, .95); }
+.tower-visual--synergy-alien { --synergy-color: rgba(100, 211, 255, .95); }
+.tower-visual--synergy-neutral { --synergy-color: rgba(205, 149, 255, .95); }
+
+@keyframes tower-synergy-aura-pulse {
+  0%, 100% { opacity: .62; transform: scale(.96); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
 .tower-progress-badge {
   pointer-events: none;
 }

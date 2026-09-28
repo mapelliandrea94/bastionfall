@@ -60,6 +60,16 @@ export function getNewlyActivatedTowerSynergies(previousActive = {}, synergyStat
   );
 }
 
+export function getTowerSynergyVisualCue(definition, synergyState) {
+  const faction = definition?.faction ?? null;
+  const entry = synergyState?.entries?.find((item) => item.faction === faction) ?? null;
+  return Object.freeze({
+    active: Boolean(faction && synergyState?.active?.[faction]),
+    faction,
+    name: entry?.name ?? null
+  });
+}
+
 export function applyTowerSynergy(definition, synergyState) {
   if (!definition) return definition;
   const faction = definition.faction;
@@ -121,11 +131,16 @@ export function getTowerSynergyFixtures() {
     state
   );
 
+  const humanCue = getTowerSynergyVisualCue({ faction: 'human' }, state);
+  const insectCue = getTowerSynergyVisualCue({ faction: 'insect' }, state);
+
   return Object.freeze({
     humanActivatesAtThree: state.active.human === true,
     neutralActivatesAtTwo: state.active.neutral === true,
     insectInactiveWithoutThree: state.active.insect === false,
     activationFeedbackIncludesHuman: newlyActivated.some((entry) => entry.faction === 'human'),
-    activationFeedbackIncludesNeutral: newlyActivated.some((entry) => entry.faction === 'neutral')
+    activationFeedbackIncludesNeutral: newlyActivated.some((entry) => entry.faction === 'neutral'),
+    humanVisualCueActive: humanCue.active === true && humanCue.name === TOWER_SYNERGIES.human.name,
+    insectVisualCueInactive: insectCue.active === false
   });
 }

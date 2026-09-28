@@ -37,6 +37,8 @@ jobs:
         run: node tests/tower-range.mjs
       - name: Tower Synergy Feedback QA
         run: node tests/tower-synergy-feedback.mjs
+      - name: Tower Synergy Visual QA
+        run: node tests/tower-synergy-visual.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA

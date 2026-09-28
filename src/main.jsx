@@ -10,7 +10,7 @@ import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
 import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.js';
-import { applyTowerSynergy, getNewlyActivatedTowerSynergies, getTowerSynergyState } from './game/towers/towerSynergies.js';
+import { applyTowerSynergy, getNewlyActivatedTowerSynergies, getTowerSynergyState, getTowerSynergyVisualCue } from './game/towers/towerSynergies.js';
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { getTowerAttackVisual } from './game/towers/attackVisuals.js';
@@ -2267,6 +2267,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   : null;
                 const visibleRange = getEffectiveTowerRange(placedRuntimeDefense ?? previewRuntimeDefense);
                 const visibleRangeKind = getTowerRangeKind(placedRuntimeDefense ?? previewRuntimeDefense);
+                const synergyVisual = placedRuntimeDefense
+                  ? getTowerSynergyVisualCue(placedRuntimeDefense, towerSynergyState)
+                  : null;
                 const towerLevel = Math.max(1, Math.min(4, Number(placed?.level ?? 1)));
                 const copyProgress = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(placed?.copyProgress ?? 1)));
                 const slotClass = [
@@ -2374,7 +2377,23 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
                     {placed && (
                       <>
-                        <g className={`tower-visual tower-visual--${placed.defenseId}`} data-evolution={placed.evolution ?? ''}>
+                        {synergyVisual?.active && (
+                          <g
+                            className={`tower-synergy-aura tower-synergy-aura--${synergyVisual.faction}`}
+                            data-synergy-active="true"
+                            data-synergy-faction={synergyVisual.faction}
+                            data-synergy-name={synergyVisual.name ?? ''}
+                            aria-hidden="true"
+                          >
+                            <circle className="tower-synergy-aura__outer" cx="0" cy="0" r="38" />
+                            <circle className="tower-synergy-aura__inner" cx="0" cy="0" r="29" />
+                          </g>
+                        )}
+                        <g
+                          className={`tower-visual tower-visual--${placed.defenseId}${synergyVisual?.active ? ` tower-visual--synergy-active tower-visual--synergy-${synergyVisual.faction}` : ''}`}
+                          data-evolution={placed.evolution ?? ''}
+                          data-synergy-active={synergyVisual?.active ? 'true' : 'false'}
+                        >
                           <ellipse className="tower-visual__shadow" cx="0" cy="20" rx="30" ry="10" />
                           <foreignObject x="-42" y="-54" width="84" height="84" pointerEvents="none">
                             <div
