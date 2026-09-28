@@ -57,6 +57,8 @@ import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.j
 import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeBattlefieldVisual, getSuddenSiegeStageTransition, getSuddenSiegeTelemetry, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
 import { applyRiskRewardGold, getRiskRewardConfig, getRiskRewardVisualState } from './game/balance/riskReward.js';
 import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveLiveState, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
+import { applyWaveAffix, getWaveAffix } from './game/waves/waveAffixes.js';
+import { applyRareWaveEvent, getRareWaveEvent } from './game/waves/rareWaveEvents.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
@@ -1213,11 +1215,28 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   );
   const miniObjective = getMiniObjectiveForWave(waveScaling.waveNumber);
   const miniObjectiveReward = getMiniObjectiveReward(run?.mode ?? MODES.SINGLE_GATE);
-  const miniObjectiveLive = getMiniObjectiveLiveState(miniObjective, {
+  const placedFactionCount = new Set(
+    placedDefenses
+      .map((tower) => defenseDefinitions[tower.defenseId]?.faction)
+      .filter(Boolean)
+  ).size;
+  const evolvedTowerCount = placedDefenses.filter((tower) => Boolean(tower.evolution)).length;
+  const miniObjectiveContext = {
     coreHp: run?.coreHp,
     waveStartCoreHp: run?.waveStartCoreHp,
-    placedTowerCount: placedDefenses.length
+    placedTowerCount: placedDefenses.length,
+    factionCount: placedFactionCount,
+    riskRewardTier,
+    gold: run?.gold ?? 0,
+    evolvedTowerCount
+  };
+  const miniObjectiveLive = getMiniObjectiveLiveState(miniObjective, miniObjectiveContext);
+  const rareWaveEvent = getRareWaveEvent(run?.seed ?? 'run', waveScaling.waveNumber, {
+    bossWave: bossWaveIncoming
   });
+  const waveAffix = rareWaveEvent
+    ? null
+    : getWaveAffix(run?.seed ?? 'run', waveScaling.waveNumber, { bossWave: bossWaveIncoming });
   const threatWave = generateWavePlan({
     seed: run?.seed ?? 'run',
     waveNumber: waveScaling.waveNumber,
@@ -1229,7 +1248,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           ? (waveScaling.suddenThreatMultiplier ?? 1)
           : 1) *
       worldModifierEffects.threatMultiplier *
-      riskRewardConfig.threatMultiplier
+      riskRewardConfig.threatMultiplier *
+      (rareWaveEvent?.threatMultiplier ?? 1)
   });
   const runScore = calculateRunScore(run ?? {});
   const triGateLaneById = Object.fromEntries(
@@ -1540,13 +1560,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         const modeScaledEnemy = run?.mode === MODES.SUDDEN_SIEGE
           ? applySuddenSiegeEnemyScaling(baseEnemyState, waveScaling.waveNumber)
           : baseEnemyState;
+        const affixScaledEnemy = applyWaveAffix(modeScaledEnemy, waveAffix);
+        const eventScaledEnemy = applyRareWaveEvent(affixScaledEnemy, rareWaveEvent);
         spawnedWaveRef.current = waveScaling.waveNumber;
-        setActiveEnemies((active) => [...active, applyEliteModifiers(modeScaledEnemy)]);
+        setActiveEnemies((active) => [...active, applyEliteModifiers(eventScaledEnemy)]);
         return remaining;
       });
     }, activeEnemies.length === 0
       ? 150 / waveSpeed
-      : waveScaling.spawnIntervalMs * worldModifierEffects.spawnIntervalMultiplier * 0.5 / waveSpeed);
+      : waveScaling.spawnIntervalMs *
+        worldModifierEffects.spawnIntervalMultiplier *
+        (waveAffix?.spawnIntervalMultiplier ?? 1) *
+        (rareWaveEvent?.spawnIntervalMultiplier ?? 1) *
+        0.5 / waveSpeed);
 
     return () => window.clearTimeout(timeoutId);
   }, [run?.phase, spawnQueue.length, activeEnemies.length, waveSpeed]);
@@ -1838,11 +1864,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       const blessingId = selectedBlessingPreviewId;
       const completedRiskRewardTier = riskRewardTier;
       const objectiveCompleted = evaluateMiniObjective(miniObjective, {
-        coreHp: run?.coreHp,
-        waveStartCoreHp: run?.waveStartCoreHp,
-        placedTowerCount: placedDefenses.length
+        ...miniObjectiveContext,
+        riskRewardTier: completedRiskRewardTier,
+        gold: run?.gold ?? 0
       });
       const objectiveGold = objectiveCompleted ? miniObjectiveReward : 0;
+      const rareEventGold = rareWaveEvent?.bonusGold ?? 0;
       setMiniObjectiveFeedback(objectiveCompleted ? `OBJECTIVE COMPLETE · +${objectiveGold}G` : 'OBJECTIVE MISSED');
       window.setTimeout(() => setMiniObjectiveFeedback(''), 1800);
       setSelectedBlessingPreviewId(null);
@@ -1852,7 +1879,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         advanceWave: true,
         blessingId,
         riskRewardTier: completedRiskRewardTier,
-        miniObjectiveGold: objectiveGold
+        miniObjectiveGold: objectiveGold,
+        rareEventGold
       });
     }, 350);
 
@@ -2374,7 +2402,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <g className="mini-objective-battlefield__card" transform="translate(250 824)">
                   <rect x="-205" y="-34" width="410" height="68" rx="18" />
                   <text className="mini-objective-battlefield__title" x="0" y="-7" textAnchor="middle">
-                    MINI OBJECTIVE · +{miniObjectiveReward}G
+                    WAVE QUEST · +{miniObjectiveReward}G
                   </text>
                   <text className="mini-objective-battlefield__status" x="0" y="16" textAnchor="middle">
                     {miniObjective.name} · {miniObjectiveLive.label} · {miniObjectiveLive.progress}
@@ -3448,6 +3476,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           )}
 
+          {rareWaveEvent && (
+            <div className="rare-wave-event-panel" aria-label="Rare wave event">
+              <span>RARE EVENT</span>
+              <strong>{rareWaveEvent.name}</strong>
+              <small>{rareWaveEvent.description}</small>
+            </div>
+          )}
+
+          {waveAffix && (
+            <div className="wave-affix-panel" aria-label="Wave affix">
+              <span>WAVE AFFIX</span>
+              <strong>{waveAffix.name}</strong>
+              <small>{waveAffix.description}</small>
+            </div>
+          )}
+
           {activeWorldModifiers.length > 0 && (
             <div className="world-modifier" aria-label="World modifier">
               <span>WORLD MODIFIER</span>
@@ -3498,7 +3542,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-objective-status={run?.phase === RUN_PHASES.ACTIVE ? miniObjectiveLive.status : ''}
           >
             <div>
-              <span>MINI OBJECTIVE</span>
+              <span>WAVE QUEST</span>
               <strong>{miniObjective.name}</strong>
             </div>
             <b>+{miniObjectiveReward}G</b>
@@ -3537,6 +3581,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               }</strong></div>
               {isShopMode(run?.mode) && (
                 <div><span>BONUSES</span><strong>+1 PERFECT · +3 BOSS · +2 / 5 WAVES</strong></div>
+              )}
+              {waveAffix && (
+                <div className="run-wave-preview__special">
+                  <span>AFFIX</span><strong>{waveAffix.name}</strong>
+                </div>
+              )}
+              {rareWaveEvent && (
+                <div className="run-wave-preview__special run-wave-preview__special--rare">
+                  <span>RARE EVENT</span><strong>{rareWaveEvent.name} · +{rareWaveEvent.bonusGold}G</strong>
+                </div>
               )}
               {run?.mode === MODES.SUDDEN_SIEGE && suddenTelemetry && (
                 <>
@@ -4611,7 +4665,11 @@ function App() {
               ...current,
               phase: nextPhase,
               wave: advancingWave ? current.wave + 1 : current.wave,
-              gold: current.gold + waveClearGold + Math.max(0, Number(options.miniObjectiveGold) || 0),
+              gold:
+                current.gold +
+                waveClearGold +
+                Math.max(0, Number(options.miniObjectiveGold) || 0) +
+                Math.max(0, Number(options.rareEventGold) || 0),
               waveStartCoreHp: nextPhase === RUN_PHASES.ACTIVE ? current.coreHp : current.waveStartCoreHp,
               blessings: nextBlessings,
               coreMaxHp: nextMaxHp,
