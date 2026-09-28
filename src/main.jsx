@@ -1087,7 +1087,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
-  const [tftAutoStartEnabled] = useState(true);
+  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(true);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
@@ -1335,6 +1335,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         });
       }, 1000);
       return () => window.clearInterval(autoIntervalId);
+    }
+
+    if (isShopMode(run?.mode) && !tftAutoStartEnabled) {
+      setPreparationRemaining(20);
+      return undefined;
     }
 
     if (isShopMode(run?.mode) && !tftSetupConfirmed) {
@@ -2925,15 +2930,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 </button>
                 <button
                   type="button"
-                  className="tft-auto-start tft-auto-start--active"
-                  disabled
-                  aria-label="Auto start is always active"
+                  className={`tft-auto-start ${tftAutoStartEnabled ? 'tft-auto-start--active' : ''}`}
+                  aria-pressed={tftAutoStartEnabled}
+                  onClick={() => {
+                    setTftAutoStartEnabled((current) => !current);
+                    setPreparationRemaining(20);
+                  }}
                 >
-                  <span>AUTO START · ON</span>
+                  <span>{tftAutoStartEnabled ? 'AUTO START · ON' : 'AUTO START · OFF'}</span>
                   <small>
-                    {run?.phase === RUN_PHASES.PREPARATION
-                      ? `Next wave in ${preparationRemaining}s`
-                      : '20s between waves · loops automatically'}
+                    {tftAutoStartEnabled
+                      ? run?.phase === RUN_PHASES.PREPARATION
+                        ? `Next wave in ${preparationRemaining}s`
+                        : '20s between waves · loops automatically'
+                      : 'Stopped · start waves manually or turn auto start back on'}
                   </small>
                 </button>
               </div>
