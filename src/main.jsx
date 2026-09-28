@@ -1217,7 +1217,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const miniObjectiveReward = getMiniObjectiveReward(run?.mode ?? MODES.SINGLE_GATE);
   const placedFactionCount = new Set(
     placedDefenses
-      .map((tower) => defenseDefinitions[tower.defenseId]?.faction)
+      .map((tower) => NORMAL_MODE_TOWERS_BY_ID[tower.defenseId]?.faction)
       .filter(Boolean)
   ).size;
   const evolvedTowerCount = placedDefenses.filter((tower) => Boolean(tower.evolution)).length;
