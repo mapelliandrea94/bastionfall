@@ -1928,7 +1928,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setSelectedTftBenchIndex(null);
     setTftFeedback(
       nextProgress === TFT_COPY_PROGRESSION.evolutionCopies
-        ? '7/14 — EVOLUTION UNLOCKED · CHOOSE A OR B'
+        ? '7/7 — EVOLUTION UNLOCKED · CHOOSE A OR B'
         : nextProgress === TFT_COPY_PROGRESSION.redAscensionCopies
           ? '10/14 — RED 4★ ASCENSION · +15%'
           : nextProgress === TFT_COPY_PROGRESSION.goldAscensionCopies
@@ -2012,7 +2012,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       residualProgress > 0
         ? `FIELD MERGE — 14/14 + ${residualProgress}/${getTftProgressDenominator(residualProgress)} · 1 COPY LOST`
         : mergedProgress === TFT_COPY_PROGRESSION.evolutionCopies
-          ? '7/14 — EVOLUTION UNLOCKED · CHOOSE A OR B'
+          ? '7/7 — EVOLUTION UNLOCKED · CHOOSE A OR B'
           : mergedProgress === TFT_COPY_PROGRESSION.redAscensionCopies
             ? '10/14 — RED 4★ ASCENSION · +15%'
             : mergedProgress === TFT_COPY_PROGRESSION.goldAscensionCopies
@@ -2426,6 +2426,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     : (run?.gold ?? 0) >= selectedDefense.cost;
                 const hovered = hoveredSlotId === slot.id;
                 const selectedPlaced = placed?.id === selectedPlacedDefenseId;
+                const matchingBenchCopy = Boolean(placed && benchCopy?.towerId === placed.defenseId);
                 const placedRuntimeDefense = placed
                   ? applyBlessingTowerIdentity(
                       applyTowerSynergy(
@@ -2458,6 +2459,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   !placed && !affordable ? 'battlefield-map__tower-slot--unaffordable' : '',
                   hovered ? 'battlefield-map__tower-slot--hovered' : '',
                   selectedPlaced ? 'battlefield-map__tower-slot--selected' : '',
+                  matchingBenchCopy ? 'battlefield-map__tower-slot--bench-match' : '',
                   movingTower && !placed ? 'battlefield-map__tower-slot--move-target' : '',
                   isShopMode(run?.mode) && placed && benchCopy && canMergeTftCopy(placed, benchCopy).ok
                     ? 'battlefield-map__tower-slot--merge-target'
@@ -2484,6 +2486,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     data-slot-id={slot.id}
                     data-occupied={Boolean(placed)}
                     data-defense-id={placed?.defenseId ?? ''}
+                    data-bench-match={matchingBenchCopy ? 'true' : 'false'}
                     onMouseEnter={() => setHoveredSlotId(slot.id)}
                     onMouseLeave={() => setHoveredSlotId((current) => current === slot.id ? null : current)}
                     onDragOver={(event) => {
@@ -3352,7 +3355,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   UPGRADE TO LV.{selectedPlacedDefense.level + 1} · {getUpgradeCost(inspectedDefenseBase, selectedPlacedDefense.level + 1)}g
                 </button>
               )}
-              {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && (!run || !isShopMode(run.mode) || Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) && !selectedPlacedDefense.evolution && (
+              {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && (!run || !isShopMode(run.mode) || Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.evolutionCopies) && !selectedPlacedDefense.evolution && (
                 <div className="tower-evolution-choice">
                   <div className="tower-evolution-choice__title">CHOOSE EVOLUTION</div>
                   {selectedEvolutionChoices.map((choice) => (
