@@ -1,10 +1,11 @@
 export const ECONOMY_BASELINE = Object.freeze({
-  version: 1,
-  startingGold: 240,
-  waveClearBaseGold: 18,
+  version: 2,
+  startingGold: 300,
+  waveClearBaseGold: 26,
   waveClearBandSize: 5,
-  waveClearBandBonus: 4,
-  waveClearMaxGold: 50
+  waveClearBandBonus: 5,
+  waveClearMaxGold: 70,
+  enemyKillRewardMultiplier: 2
 });
 
 export function getWaveClearReward(waveNumber) {
@@ -17,7 +18,8 @@ export function getWaveClearReward(waveNumber) {
 }
 
 export function getEnemyKillReward(enemy) {
-  return Math.max(0, Math.floor(Number(enemy?.goldReward ?? 0)));
+  const baseReward = Math.max(0, Math.floor(Number(enemy?.goldReward ?? 0)));
+  return baseReward * ECONOMY_BASELINE.enemyKillRewardMultiplier;
 }
 
 export function getOpeningAffordability(defenses) {
@@ -38,15 +40,15 @@ export function getEconomyBaselineFixtures(defenses) {
   const byId = Object.fromEntries(affordability.map((entry) => [entry.id, entry]));
 
   return Object.freeze({
-    startingGoldExpected: 240,
+    startingGoldExpected: 300,
     startingGoldActual: ECONOMY_BASELINE.startingGold,
-    archerCopiesExpected: 3,
+    archerCopiesExpected: 4,
     archerCopiesActual: byId.archer?.maxCopies ?? null,
     cannonCopiesExpected: 2,
     cannonCopiesActual: byId.cannon?.maxCopies ?? null,
-    wave1RewardExpected: 18,
+    wave1RewardExpected: 26,
     wave1RewardActual: getWaveClearReward(1),
-    wave6RewardExpected: 22,
+    wave6RewardExpected: 31,
     wave6RewardActual: getWaveClearReward(6)
   });
 }
