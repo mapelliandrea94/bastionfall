@@ -622,7 +622,9 @@ function getPathPosition(waypoints, progress) {
 
 function Shell({ title, kicker, subtitle, onBack, children }) {
   return (
-    <main className="main-menu">
+    <main className="main-menu main-menu--inner">
+      <div className="menu-creature menu-creature--left" aria-hidden="true"><img src="/assets/enemies/gryphon-knight.png" alt="" /></div>
+      <div className="menu-creature menu-creature--right" aria-hidden="true"><img src="/assets/enemies/rift-juggernaut.png" alt="" /></div>
       <section className="mode-screen" aria-labelledby="screen-title">
         <button className="mode-screen__back" onClick={onBack} aria-label={`Back from ${title}`}>← BACK</button>
         <p className="main-menu__kicker">{kicker}</p>
@@ -3925,6 +3927,8 @@ function App() {
 
   return (
     <main className="main-menu">
+      <div className="menu-creature menu-creature--left" aria-hidden="true"><img src="/assets/enemies/gryphon-knight.png" alt="" /></div>
+      <div className="menu-creature menu-creature--right" aria-hidden="true"><img src="/assets/enemies/rift-juggernaut.png" alt="" /></div>
       <section className="main-menu__content" aria-label="Bastionfall main menu">
         <p className="main-menu__kicker">ENDLESS TOWER DEFENSE</p>
         <h1>BASTIONFALL</h1>
