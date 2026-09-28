@@ -4,7 +4,7 @@ import { supabase } from './lib/supabase.js';
 import { normalizeRunSeed } from './lib/runSeed.js';
 import { SINGLE_GATE_MAP, getSingleGatePathForWalls } from './game/maps/singleGate.js';
 import { TRI_GATE_MAP, getTriGateMapFixtures } from './game/maps/triGate.js';
-import { TRI_GATE_SPAWN, getTriGateSpawnFixtures } from './game/spawning/triGateSpawn.js';
+import { TRI_GATE_SPAWN, distributeTriGateWave, flattenTriGateDistribution, getTriGateSpawnFixtures } from './game/spawning/triGateSpawn.js';
 import { WAVE_DIRECTOR, generateWavePlan, getWaveDirectorFixtures } from './game/spawning/waveDirector.js';
 import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
@@ -955,11 +955,11 @@ function ModePreRun({ mode, onBack, onStart, session }) {
         <p>Status: <strong>{contract.status}</strong></p>
         <button
           className="pre-run-start"
-          disabled={mode !== MODES.SINGLE_GATE && mode !== MODES.TFT_SHOP}
-          onClick={() => (mode === MODES.SINGLE_GATE || mode === MODES.TFT_SHOP) && onStart(mode)}
+          disabled={mode === MODES.LAST_BASTION}
+          onClick={() => mode !== MODES.LAST_BASTION && onStart(mode)}
         >
           START RUN
-          <small>{mode === MODES.SINGLE_GATE || mode === MODES.TFT_SHOP ? 'Initialize run' : contract.status}</small>
+          <small>{mode !== MODES.LAST_BASTION ? 'Initialize run' : contract.status}</small>
         </button>
       </div>
     </Shell>
@@ -1032,7 +1032,23 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       worldModifierEffects.threatMultiplier
   });
   const runScore = calculateRunScore(run ?? {});
+  const triGateLaneById = Object.fromEntries(
+    TRI_GATE_MAP.pathPlan.lanes.map((lane) => [lane.id, lane.waypoints])
+  );
   const activePath = SINGLE_GATE_MAP.path.waypoints;
+  const getEnemyPath = (enemy) =>
+    run?.mode === MODES.TRI_GATE
+      ? (triGateLaneById[enemy?.laneId] ?? TRI_GATE_MAP.pathPlan.lanes[0].waypoints)
+      : activePath;
+  const renderedPaths = run?.mode === MODES.TRI_GATE
+    ? TRI_GATE_MAP.pathPlan.lanes.map((lane) => lane.waypoints)
+    : [activePath];
+  const spawnAnchors = run?.mode === MODES.TRI_GATE
+    ? TRI_GATE_MAP.anchors.entrances
+    : [SINGLE_GATE_MAP.anchors.enemySpawn];
+  const bastionAnchor = run?.mode === MODES.TRI_GATE
+    ? TRI_GATE_MAP.anchors.bastion
+    : SINGLE_GATE_MAP.anchors.bastion;
   const wallTravelMultiplier = 1;
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? NORMAL_MODE_TOWERS[0];
@@ -1218,9 +1234,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     const waveComposition = threatWave.composition;
     if (!waveComposition.length) return;
 
+    const laneAwareComposition = run?.mode === MODES.TRI_GATE
+      ? flattenTriGateDistribution(distributeTriGateWave(waveComposition, spawnWaveNumber))
+      : waveComposition;
+
     queuedWaveRef.current = spawnWaveNumber;
     setSpawnQueue(
-      waveComposition.map((enemy, index) => attachEliteModifierFoundation({
+      laneAwareComposition.map((enemy, index) => attachEliteModifierFoundation({
         ...enemy,
         id: `wave-${spawnWaveNumber}-enemy-${index + 1}`
       }, {
@@ -1239,7 +1259,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     bossSummonTimeoutsRef.current = bossSummonPlan.pulses.map((pulse) =>
       window.setTimeout(() => {
-        setSpawnQueue((current) => [...current, ...pulse.adds]);
+        const adds = run?.mode === MODES.TRI_GATE
+          ? pulse.adds.map((enemy, index) => ({
+              ...enemy,
+              laneId: TRI_GATE_MAP.pathPlan.lanes[index % TRI_GATE_MAP.pathPlan.lanes.length].id
+            }))
+          : pulse.adds;
+        setSpawnQueue((current) => [...current, ...adds]);
       }, pulse.offsetMs)
     );
 
@@ -1357,7 +1383,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       setActiveEnemies((currentEnemies) => {
         let working = currentEnemies.map((enemy) => ({
           ...enemy,
-          position: getPathPosition(activePath, enemy.progress)
+          position: getPathPosition(getEnemyPath(enemy), enemy.progress)
         }));
 
         for (const placed of placedDefenses) {
@@ -1557,7 +1583,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const positionedEnemies = activeEnemies.map((enemy) => ({
     ...enemy,
-    position: getPathPosition(activePath, enemy.progress)
+    position: getPathPosition(getEnemyPath(enemy), enemy.progress)
   }));
 
   const handleWallPurchase = (wallId) => {
@@ -1834,9 +1860,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </defs>
             <image className="battlefield-map__art" href="/assets/maps/bastionfall-field-v2.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
             <g className="battlefield-map__road" aria-hidden="true">
-              <polyline className="battlefield-map__road-edge" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
-              <polyline className="battlefield-map__road-sand" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
-              <polyline className="battlefield-map__road-wear" points={activePath.map((point) => `${point.x},${point.y}`).join(' ')} />
+              {renderedPaths.map((path, pathIndex) => (
+                <g key={pathIndex}>
+                  <polyline className="battlefield-map__road-edge" points={path.map((point) => `${point.x},${point.y}`).join(' ')} />
+                  <polyline className="battlefield-map__road-sand" points={path.map((point) => `${point.x},${point.y}`).join(' ')} />
+                  <polyline className="battlefield-map__road-wear" points={path.map((point) => `${point.x},${point.y}`).join(' ')} />
+                </g>
+              ))}
             </g>
             <g className="battlefield-map__build-slots">
               {SINGLE_GATE_MAP.buildSlots.slots.map((slot) => {
@@ -1916,7 +1946,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 );
               })}
             </g>
-            <g className="battlefield-map__wall-slots" aria-label="Purchasable wall sockets">
+            <g className="battlefield-map__wall-slots" aria-label="Purchasable wall sockets" style={{ display: run?.mode === MODES.TRI_GATE ? 'none' : undefined }}>
               {SINGLE_GATE_MAP.wallSlots.sockets.map((wall) => {
                 const built = activeWallIds.includes(wall.id);
                 const wallHp = built ? Math.max(0, Number(wallHpById[wall.id] ?? WALL_SYSTEM.maxHp)) : 0;
@@ -1970,12 +2000,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 );
               })}
             </g>
-            <circle
-              className="battlefield-map__spawn"
-              cx={SINGLE_GATE_MAP.anchors.enemySpawn.x}
-              cy={SINGLE_GATE_MAP.anchors.enemySpawn.y}
-              r="42"
-            />
+            {spawnAnchors.map((spawn) => (
+              <circle
+                key={spawn.id}
+                className="battlefield-map__spawn"
+                cx={spawn.x}
+                cy={spawn.y}
+                r="42"
+              />
+            ))}
             {positionedEnemies.map((enemy) => {
               const hpRatio = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0;
               const shieldRatio = enemy.maxShield > 0 ? Math.max(0, Math.min(1, enemy.shield / enemy.maxShield)) : 0;
@@ -2055,7 +2088,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </g>
             <g
               className={`battlefield-map__bastion ${bastionStateClass}`}
-              transform={`translate(${SINGLE_GATE_MAP.anchors.bastion.x} ${SINGLE_GATE_MAP.anchors.bastion.y})`}
+              transform={`translate(${bastionAnchor.x} ${bastionAnchor.y})`}
               aria-label="Bastion structure"
               data-hit-id={run?.bastionHitId ?? 0}
             >
@@ -2080,18 +2113,21 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               </text>
               <path className="battlefield-map__bastion-gate" d="M -18 48 V 18 Q 0 2 18 18 V 48 Z" />
             </g>
-            <text
-              className="battlefield-map__label"
-              x={SINGLE_GATE_MAP.anchors.enemySpawn.x}
-              y={SINGLE_GATE_MAP.anchors.enemySpawn.y + 8}
-              textAnchor="middle"
-            >
-              SPAWN
-            </text>
+            {spawnAnchors.map((spawn) => (
+              <text
+                key={`${spawn.id}-label`}
+                className="battlefield-map__label"
+                x={spawn.x}
+                y={spawn.y + 8}
+                textAnchor="middle"
+              >
+                {run?.mode === MODES.TRI_GATE ? 'GATE' : 'SPAWN'}
+              </text>
+            ))}
             <text
               className="battlefield-map__label battlefield-map__label--bastion"
-              x={SINGLE_GATE_MAP.anchors.bastion.x}
-              y={SINGLE_GATE_MAP.anchors.bastion.y + 102}
+              x={bastionAnchor.x}
+              y={bastionAnchor.y + 102}
               textAnchor="middle"
             >
               BASTION

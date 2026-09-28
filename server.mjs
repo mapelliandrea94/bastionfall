@@ -340,7 +340,7 @@ app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowM
       p_core_hp: 20,
       p_core_max_hp: 20,
       p_kills: 0,
-      p_gold: mode === 'tri-gate' ? 240 : 240,
+      p_gold: mode === 'tri-gate' ? 320 : 240,
       p_reported_at: startedAt
     });
     if (error) {
