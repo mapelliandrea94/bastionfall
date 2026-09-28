@@ -449,6 +449,43 @@ async function reportStandardRunProgress(session, run) {
   return { ok: true, payload };
 }
 
+async function saveOnlineRunSnapshot(session, snapshot) {
+  if (!session?.access_token || !snapshot?.run?.matchToken || !snapshot?.run?.matchId) {
+    return { ok: false, error: 'snapshot_not_ready' };
+  }
+
+  const response = await fetch('/api/run/snapshot', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({
+      matchToken: snapshot.run.matchToken,
+      snapshot
+    })
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: payload?.error || 'snapshot_save_failed' };
+  return { ok: true, payload };
+}
+
+async function fetchActiveOnlineRun(session) {
+  if (!session?.access_token) return { ok: false, error: 'authentication_required' };
+
+  const response = await fetch('/api/run/active', {
+    cache: 'no-store',
+    headers: {
+      Authorization: `Bearer ${session.access_token}`
+    }
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: payload?.error || 'snapshot_load_failed' };
+  return { ok: true, activeRun: payload?.activeRun ?? null };
+}
+
 async function completeServerRun(session, run) {
   if (!session?.access_token || !run?.matchToken || !run?.endSnapshot) {
     return { ok: false, error: 'completion_not_ready' };
@@ -985,7 +1022,7 @@ function TowerAttackEffect({ shot, speed = 1 }) {
   );
 }
 
-function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled, onEnemyKilledDetail, onTowerMilestone }) {
+function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled, onEnemyKilledDetail, onTowerMilestone }) {
   const [cleanEnemyArt, setCleanEnemyArt] = useState({});
   useEffect(() => {
     let active = true;
@@ -998,6 +1035,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }, []);
   const restoredTftSnapshot = useRef(isShopMode(run?.mode) ? loadTftRunSnapshot() : null);
   const matchingTftSnapshot = restoredTftSnapshot.current?.run?.seed === run?.seed ? restoredTftSnapshot.current : null;
+  const matchingOnlineSnapshot = onlineSnapshot?.run?.seed === run?.seed ? onlineSnapshot : null;
   const towerMilestoneAwardsRef = useRef(new Set());
   const reportTowerMilestones = (towerId, previousProgress, nextProgress) => {
     if (!towerId || typeof onTowerMilestone !== 'function') return;
@@ -1009,12 +1047,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       onTowerMilestone(threshold);
     });
   };
-  const [spawnQueue, setSpawnQueue] = useState([]);
-  const [activeEnemies, setActiveEnemies] = useState([]);
-  const [preparationRemaining, setPreparationRemaining] = useState(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
+  const [spawnQueue, setSpawnQueue] = useState(() => matchingOnlineSnapshot?.spawnQueue ?? []);
+  const [activeEnemies, setActiveEnemies] = useState(() => matchingOnlineSnapshot?.activeEnemies ?? []);
+  const [preparationRemaining, setPreparationRemaining] = useState(() => matchingOnlineSnapshot?.preparationRemaining ?? run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
   const [selectedDefenseId, setSelectedDefenseId] = useState('human-aa');
   const [placedDefenses, setPlacedDefenses] = useState(() => {
-    const restored = matchingTftSnapshot?.placedDefenses ?? [];
+    const restored = matchingOnlineSnapshot?.placedDefenses ?? matchingTftSnapshot?.placedDefenses ?? [];
     if (!isShopMode(run?.mode)) return restored;
     return restored.map((tower, index) => ({
       ...tower,
@@ -1023,8 +1061,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         : `field-restored:${tower.id ?? tower.defenseId ?? 'tower'}:${index}`
     }));
   });
-  const [activeWallIds, setActiveWallIds] = useState(() => matchingTftSnapshot?.activeWallIds ?? []);
-  const [wallHpById, setWallHpById] = useState(() => matchingTftSnapshot?.wallHpById ?? {});
+  const [activeWallIds, setActiveWallIds] = useState(() => matchingOnlineSnapshot?.activeWallIds ?? matchingTftSnapshot?.activeWallIds ?? []);
+  const [wallHpById, setWallHpById] = useState(() => matchingOnlineSnapshot?.wallHpById ?? matchingTftSnapshot?.wallHpById ?? {});
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [movingPlacedDefenseId, setMovingPlacedDefenseId] = useState(null);
@@ -1036,18 +1074,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [suddenStageTransition, setSuddenStageTransition] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
-  const [tftRollIndex, setTftRollIndex] = useState(() => matchingTftSnapshot?.tftRollIndex ?? 0);
-  const [tftShopLocked, setTftShopLocked] = useState(() => matchingTftSnapshot?.tftShopLocked ?? false);
+  const [tftRollIndex, setTftRollIndex] = useState(() => matchingOnlineSnapshot?.tftRollIndex ?? matchingTftSnapshot?.tftRollIndex ?? 0);
+  const [tftShopLocked, setTftShopLocked] = useState(() => matchingOnlineSnapshot?.tftShopLocked ?? matchingTftSnapshot?.tftShopLocked ?? false);
   const [tftPurchasedSlotIds, setTftPurchasedSlotIds] = useState(
-    () => matchingTftSnapshot?.tftPurchasedSlotIds ?? []
+    () => matchingOnlineSnapshot?.tftPurchasedSlotIds ?? matchingTftSnapshot?.tftPurchasedSlotIds ?? []
   );
-  const [tftBench, setTftBench] = useState(() => matchingTftSnapshot?.tftBench ?? createEmptyBench());
-  const [tftFeedback, setTftFeedback] = useState(() => matchingTftSnapshot ? 'RUN RESTORED' : '');
+  const [tftBench, setTftBench] = useState(() => matchingOnlineSnapshot?.tftBench ?? matchingTftSnapshot?.tftBench ?? createEmptyBench());
+  const [tftFeedback, setTftFeedback] = useState(() => matchingOnlineSnapshot ? 'ONLINE RUN RESTORED' : matchingTftSnapshot ? 'RUN RESTORED' : '');
   const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
-  const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
+  const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingOnlineSnapshot?.selectedTftBenchIndex ?? matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
   const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(false);
-  const [waveSpeed, setWaveSpeed] = useState(1);
+  const [waveSpeed, setWaveSpeed] = useState(() => matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1);
   const waveClockRef = useRef({ real: performance.now(), virtual: performance.now(), speed: 1 });
   const getWaveNow = () => {
     const clock = waveClockRef.current;
@@ -1339,6 +1377,41 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     return () => window.clearInterval(intervalId);
   }, [run?.phase, run?.mode, activeWallIds.join('|'), waveSpeed]);
+
+  useEffect(() => {
+    if (!run?.matchId || !run?.matchToken || run?.phase === RUN_PHASES.ENDED || typeof onPersistOnlineSnapshot !== 'function') return;
+    onPersistOnlineSnapshot({
+      version: 1,
+      savedAt: Date.now(),
+      run,
+      placedDefenses,
+      activeWallIds,
+      wallHpById,
+      tftBench,
+      selectedTftBenchIndex,
+      tftRollIndex,
+      tftShopLocked,
+      tftPurchasedSlotIds,
+      spawnQueue,
+      activeEnemies,
+      preparationRemaining,
+      waveSpeed
+    });
+  }, [
+    run,
+    placedDefenses,
+    activeWallIds,
+    wallHpById,
+    tftBench,
+    selectedTftBenchIndex,
+    tftRollIndex,
+    tftShopLocked,
+    tftPurchasedSlotIds,
+    spawnQueue,
+    activeEnemies,
+    preparationRemaining,
+    waveSpeed
+  ]);
 
   useEffect(() => {
     if (!isShopMode(run?.mode) || run?.phase === RUN_PHASES.ENDED) return;
@@ -4241,6 +4314,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
 
 function App() {
   const [savedTftRun, setSavedTftRun] = useState(() => loadTftRunSnapshot());
+  const [onlineRun, setOnlineRun] = useState(null);
   const towerPlacementQa = (
     ['127.0.0.1', 'localhost'].includes(window.location.hostname) &&
     new URLSearchParams(window.location.search).get('qa') === 'tower-placement'
@@ -4256,6 +4330,7 @@ function App() {
   const [authMode, setAuthMode] = useState(null);
   const [language, setLanguageState] = useState(() => getLanguage());
   const lastStandardProgressRef = useRef(null);
+  const lastOnlineSnapshotAtRef = useRef(0);
   const hiddenAtRef = useRef(null);
 
   useEffect(() => {
@@ -4269,18 +4344,7 @@ function App() {
         return;
       }
 
-      const hiddenAt = hiddenAtRef.current;
       hiddenAtRef.current = null;
-      if (
-        hiddenAt &&
-        Date.now() - hiddenAt > TFT_PERSISTENCE.maxResumeAgeMs &&
-        screen === SCREENS.SINGLE_GATE_RUN &&
-        isShopMode(runState?.mode)
-      ) {
-        clearTftRunSnapshot();
-        setRunState(null);
-        setScreen(SCREENS.MODE_PREP);
-      }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -4302,6 +4366,27 @@ function App() {
   async function logout() {
     await supabase?.auth.signOut();
   }
+
+  useEffect(() => {
+    if (!session?.access_token) {
+      setOnlineRun(null);
+      return;
+    }
+    let cancelled = false;
+    fetchActiveOnlineRun(session).then((result) => {
+      if (!cancelled && result.ok) setOnlineRun(result.activeRun);
+    });
+    return () => { cancelled = true; };
+  }, [session?.access_token]);
+
+  const persistOnlineSnapshot = (snapshot) => {
+    const now = Date.now();
+    if (now - lastOnlineSnapshotAtRef.current < 2500) return;
+    lastOnlineSnapshotAtRef.current = now;
+    saveOnlineRunSnapshot(session, snapshot).then((result) => {
+      if (!result.ok) console.warn('Online run snapshot failed:', result.error);
+    });
+  };
 
   useEffect(() => {
     if (
@@ -4595,6 +4680,8 @@ function App() {
     return (
       <SoloRun
         run={runState}
+        onlineSnapshot={onlineRun?.snapshot?.run?.matchId === runState?.matchId ? onlineRun.snapshot : null}
+        onPersistOnlineSnapshot={persistOnlineSnapshot}
         onTimerTick={(elapsedMs) => {
           setRunState((current) => {
             if (!current || current.phase === RUN_PHASES.ENDED) return current;
@@ -4857,6 +4944,17 @@ function App() {
             className="main-menu__button main-menu__button--primary"
             onClick={() => setScreen(SCREENS.PLAY)}
           >{t('play')}</button>
+          {onlineRun?.snapshot?.run && (
+            <button
+              className="main-menu__button"
+              onClick={() => {
+                const snapshot = onlineRun.snapshot;
+                setSelectedMode(snapshot.run.mode);
+                setRunState(snapshot.run);
+                setScreen(SCREENS.SINGLE_GATE_RUN);
+              }}
+            >{language === 'it' ? 'RIPRENDI PARTITA ONLINE' : 'RESUME ONLINE RUN'}</button>
+          )}
           {savedTftRun && (
             <button
               className="main-menu__button"
