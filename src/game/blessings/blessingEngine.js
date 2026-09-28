@@ -113,10 +113,30 @@ export function applyBlessingTowerIdentity(definition, ownedBlessings = []) {
 
   if (faction === 'neutral') {
     next.damage = Number((Number(next.damage ?? 0) * modifiers.neutralDamageMultiplier).toFixed(2));
-    if (next.slowPercent) next.slowPercent = Number((next.slowPercent * modifiers.neutralSupportMultiplier).toFixed(2));
-    if (next.vulnerabilityPercent) next.vulnerabilityPercent = Number((next.vulnerabilityPercent * modifiers.neutralSupportMultiplier).toFixed(2));
-    if (next.buffDamageMultiplier) next.buffDamageMultiplier = Number((1 + (next.buffDamageMultiplier - 1) * modifiers.neutralSupportMultiplier).toFixed(3));
-    if (next.buffAttackSpeedMultiplier) next.buffAttackSpeedMultiplier = Number((1 + (next.buffAttackSpeedMultiplier - 1) * modifiers.neutralSupportMultiplier).toFixed(3));
+    if (next.slowPercent) {
+      next.slowPercent = Math.min(
+        75,
+        Number((next.slowPercent * modifiers.neutralSupportMultiplier).toFixed(2))
+      );
+    }
+    if (next.vulnerabilityPercent) {
+      next.vulnerabilityPercent = Math.min(
+        55,
+        Number((next.vulnerabilityPercent * modifiers.neutralSupportMultiplier).toFixed(2))
+      );
+    }
+    if (next.buffDamageMultiplier) {
+      next.buffDamageMultiplier = Math.min(
+        1.4,
+        Number((1 + (next.buffDamageMultiplier - 1) * modifiers.neutralSupportMultiplier).toFixed(3))
+      );
+    }
+    if (next.buffAttackSpeedMultiplier) {
+      next.buffAttackSpeedMultiplier = Math.min(
+        1.4,
+        Number((1 + (next.buffAttackSpeedMultiplier - 1) * modifiers.neutralSupportMultiplier).toFixed(3))
+      );
+    }
   }
 
   return Object.freeze(next);
