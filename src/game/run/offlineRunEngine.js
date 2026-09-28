@@ -406,6 +406,43 @@ function spawnBossAddsIfDue(snapshot, engine) {
   snapshot.bossSummonFiredKeys = Array.from(fired);
 }
 
+function applyOfflineWallDamage(snapshot, dtMs) {
+  const activeWallIds = [...(snapshot.activeWallIds ?? [])];
+  if (activeWallIds.length === 0) return;
+
+  const waveSpeed = Math.max(1, Number(snapshot.waveSpeed ?? 1));
+  const tickDurationMs = WALL_SYSTEM.damageTickMs / waveSpeed;
+  const tickScale = Math.max(0, Number(dtMs) || 0) / Math.max(1, tickDurationMs);
+  if (tickScale <= 0) return;
+
+  const nextHp = { ...(snapshot.wallHpById ?? {}) };
+  const destroyed = [];
+
+  for (const wallId of activeWallIds) {
+    const targetProgress = WALL_PROGRESS_BY_ID[wallId];
+    if (!Number.isFinite(targetProgress)) continue;
+
+    let damagePerTick = 0;
+    for (const enemy of snapshot.activeEnemies ?? []) {
+      if (enemy?.airborne || Number(enemy?.hp ?? 0) <= 0) continue;
+      if (Math.abs(Number(enemy?.progress ?? 0) - targetProgress) > 0.045) continue;
+      damagePerTick += enemy.unitType === 'armored'
+        ? WALL_SYSTEM.armoredDamagePerTick
+        : WALL_SYSTEM.infantryDamagePerTick;
+    }
+
+    if (damagePerTick <= 0) continue;
+    const hp = Math.max(0, Number(nextHp[wallId] ?? WALL_SYSTEM.maxHp) - damagePerTick * tickScale);
+    nextHp[wallId] = hp;
+    if (hp <= 0) destroyed.push(wallId);
+  }
+
+  snapshot.wallHpById = nextHp;
+  if (destroyed.length > 0) {
+    snapshot.activeWallIds = activeWallIds.filter((wallId) => !destroyed.includes(wallId));
+  }
+}
+
 function activeStep(snapshot, dtMs, engine) {
   const run = { ...snapshot.run };
   const ctx = waveContext(snapshot);
@@ -452,6 +489,7 @@ function activeStep(snapshot, dtMs, engine) {
   });
 
   snapshot.activeEnemies = enemies;
+  applyOfflineWallDamage(snapshot, dtMs);
   snapshot.activeEnemies = simulateTowerAttacks(snapshot, dtMs, virtualNow, engine);
 
   const dead = snapshot.activeEnemies.filter((enemy) => Number(enemy.hp ?? 0) <= 0);
@@ -598,9 +636,54 @@ export function getOfflineRunEngineFixtures() {
   };
 
   const advanced = advanceOfflineRunSnapshot(snapshot, 1500);
+
+  const wallSnapshot = {
+    run: {
+      mode: 'single-gate',
+      seed: 'offline-wall-fixture',
+      phase: 'active',
+      wave: 0,
+      gold: ECONOMY_BASELINE.startingGold,
+      coreHp: BASE_CORE_HP,
+      coreMaxHp: BASE_CORE_HP,
+      waveStartCoreHp: BASE_CORE_HP,
+      kills: 0,
+      blessings: [],
+      startedAtMs: Date.now()
+    },
+    placedDefenses: [],
+    activeWallIds: ['wall-01'],
+    wallHpById: { 'wall-01': 10 },
+    spawnQueue: [],
+    activeEnemies: [{
+      id: 'wall-attacker',
+      hp: 1000,
+      maxHp: 1000,
+      shield: 0,
+      maxShield: 0,
+      armor: 0,
+      moveSpeed: 1,
+      progress: WALL_PROGRESS_BY_ID['wall-01'],
+      airborne: false,
+      unitType: 'infantry',
+      faction: 'human',
+      bastionDamage: 1,
+      goldReward: 0,
+      statusEffects: {}
+    }],
+    preparationRemaining: 0,
+    waveSpeed: 1,
+    riskRewardTier: 'safe',
+    queuedWaveNumber: 1,
+    spawnedWaveNumber: 1
+  };
+  const wallAdvanced = advanceOfflineRunSnapshot(wallSnapshot, 1000);
+
   return Object.freeze({
     supportedModeAdvances: advanced.advancedMs > 0,
     preparationCanStartWave: advanced.snapshot.run.phase === 'active' || advanced.snapshot.run.phase === 'resolving' || advanced.snapshot.run.phase === 'ended',
-    generatedWaveQueue: advanced.snapshot.spawnQueue.length > 0 || advanced.snapshot.activeEnemies.length > 0 || advanced.snapshot.run.phase !== 'active'
+    generatedWaveQueue: advanced.snapshot.spawnQueue.length > 0 || advanced.snapshot.activeEnemies.length > 0 || advanced.snapshot.run.phase !== 'active',
+    offlineWallsTakeDamage: Number(wallAdvanced.snapshot.wallHpById?.['wall-01'] ?? 0) < 10,
+    offlineWallsCanBeDestroyed: !wallAdvanced.snapshot.activeWallIds?.includes('wall-01')
   });
 }
