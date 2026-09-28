@@ -387,6 +387,8 @@ function applyWaveClear(snapshot) {
   snapshot.preparationRemaining = getPreparationSeconds(run.mode, snapshot);
   snapshot.spawnQueue = [];
   snapshot.activeEnemies = [];
+  snapshot.queuedWaveNumber = null;
+  snapshot.spawnedWaveNumber = null;
   snapshot.riskRewardTier = 'safe';
   snapshot.offlineBlockedReason = null;
 }
@@ -525,13 +527,30 @@ export function advanceOfflineRunSnapshot(inputSnapshot, offlineElapsedMs) {
         snapshot.preparationRemaining = 0;
         snapshot.run = { ...snapshot.run, phase: 'active', waveStartCoreHp: snapshot.run.coreHp };
         snapshot.spawnQueue = buildWaveQueue(snapshot);
+        snapshot.queuedWaveNumber = Math.max(1, Number(snapshot.run.wave ?? 0) + 1);
+        snapshot.spawnedWaveNumber = null;
         snapshot.activeEnemies ??= [];
         engine.spawnAccumulatorMs = Math.max(0, dt - prepMs);
         engine.currentWaveElapsedMs = 0;
         engine.towerCooldownMs = {};
       }
     } else if (snapshot.run.phase === 'active') {
-      activeStep(snapshot, dt, engine);
+      const currentWave = Math.max(1, Number(snapshot.run.wave ?? 0) + 1);
+      const queueKnown = Number(snapshot.queuedWaveNumber) === currentWave;
+      const spawnedKnown = Number(snapshot.spawnedWaveNumber) === currentWave;
+
+      if ((snapshot.spawnQueue?.length ?? 0) === 0 && (snapshot.activeEnemies?.length ?? 0) === 0 && !queueKnown) {
+        snapshot.spawnQueue = buildWaveQueue(snapshot);
+        snapshot.queuedWaveNumber = currentWave;
+        engine.spawnAccumulatorMs = 0;
+        engine.currentWaveElapsedMs = 0;
+      } else if ((snapshot.spawnQueue?.length ?? 0) === 0 && (snapshot.activeEnemies?.length ?? 0) === 0 && queueKnown && spawnedKnown) {
+        snapshot.run = { ...snapshot.run, phase: 'resolving' };
+        if (isBossWave(currentWave)) snapshot.offlineBlockedReason = 'blessing-choice';
+      } else {
+        activeStep(snapshot, dt, engine);
+        if ((snapshot.activeEnemies?.length ?? 0) > 0) snapshot.spawnedWaveNumber = currentWave;
+      }
     } else if (snapshot.run.phase === 'resolving') {
       if (isBossWave(Number(snapshot.run.wave ?? 0) + 1)) {
         snapshot.offlineBlockedReason = 'blessing-choice';
