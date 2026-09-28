@@ -1,6 +1,6 @@
 export const SELL_ECONOMY = Object.freeze({
   version: 1,
-  baseRefundRate: 0.70,
+  baseRefundRate: 0.30,
   minimumRefund: 1,
   refundRounding: 'floor'
 });

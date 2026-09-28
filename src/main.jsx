@@ -979,6 +979,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [wallHpById, setWallHpById] = useState(() => matchingTftSnapshot?.wallHpById ?? {});
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
+  const [movingPlacedDefenseId, setMovingPlacedDefenseId] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
   const [tftRollIndex, setTftRollIndex] = useState(() => matchingTftSnapshot?.tftRollIndex ?? 0);
@@ -1059,7 +1060,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const inspectedDefense = selectedPlacedDefense
     ? getRuntimeTowerDefinition(inspectedDefenseBase, selectedPlacedDefense)
     : inspectedDefenseBase;
-  const selectedSellPreview = getSellPreview(inspectedDefenseBase);
+  const selectedSellPreview = getSellPreview(
+    inspectedDefenseBase,
+    selectedPlacedDefense
+      ? Math.max(0, Number(selectedPlacedDefense.investedGold ?? inspectedDefenseBase.cost) - Number(inspectedDefenseBase.cost ?? 0))
+      : 0
+  );
   const selectedUpgradePreview = getNextUpgradePreview(inspectedDefenseBase, selectedPlacedDefense?.level ?? 1);
   const selectedEvolutionChoices = selectedPlacedDefense ? getEvolutionChoices(selectedPlacedDefense.defenseId) : [];
   const selectedTargetingValue = getTargetingValue(inspectedDefense);
@@ -1683,8 +1689,40 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setTftFeedback(nextProgress === TFT_COPY_PROGRESSION.maxCopies ? '7/7 — CHOOSE EVOLUTION A OR B' : `MERGED — ${nextProgress}/7`);
   };
 
+  const handleSellSelectedTower = () => {
+    if (!selectedPlacedDefense || !run || run.phase === RUN_PHASES.ENDED) return;
+    const refund = selectedSellPreview.refund;
+    setPlacedDefenses((current) => current.filter((tower) => tower.id !== selectedPlacedDefense.id));
+    setSelectedPlacedDefenseId(null);
+    setMovingPlacedDefenseId(null);
+    towerAttackTimesRef.current[selectedPlacedDefense.id] = 0;
+    if (refund > 0) onGainGold(refund);
+    if (run.mode === MODES.TFT_SHOP) setTftFeedback(`TOWER SOLD · +${refund}G`);
+  };
+
+  const handleToggleMoveSelectedTower = () => {
+    if (!selectedPlacedDefense || !run || run.phase !== RUN_PHASES.PREPARATION) return;
+    setMovingPlacedDefenseId((current) => current === selectedPlacedDefense.id ? null : selectedPlacedDefense.id);
+  };
+
   const handleBuildSlot = (slotId) => {
     const occupied = placedDefenses.find((entry) => entry.slotId === slotId);
+
+    if (movingPlacedDefenseId) {
+      if (!run || run.phase !== RUN_PHASES.PREPARATION) {
+        setMovingPlacedDefenseId(null);
+        return;
+      }
+      if (occupied) return;
+      setPlacedDefenses((current) => current.map((tower) =>
+        tower.id === movingPlacedDefenseId ? { ...tower, slotId } : tower
+      ));
+      setSelectedPlacedDefenseId(movingPlacedDefenseId);
+      setMovingPlacedDefenseId(null);
+      if (run.mode === MODES.TFT_SHOP) setTftFeedback('TOWER MOVED · 0G');
+      return;
+    }
+
     if (occupied) {
       setSelectedPlacedDefenseId(occupied.id);
       return;
@@ -1872,12 +1910,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               {SINGLE_GATE_MAP.buildSlots.slots.map((slot) => {
                 const placed = placedDefenses.find((entry) => entry.slotId === slot.id) ?? null;
                 const benchCopy = selectedTftBenchIndex == null ? null : tftBench[selectedTftBenchIndex];
-                const previewDefense = run?.mode === MODES.TFT_SHOP && benchCopy
-                  ? defenseDefinitions[benchCopy.towerId] ?? selectedDefense
-                  : selectedDefense;
-                const affordable = run?.mode === MODES.TFT_SHOP
-                  ? Boolean(benchCopy)
-                  : (run?.gold ?? 0) >= selectedDefense.cost;
+                const movingTower = movingPlacedDefenseId
+                  ? placedDefenses.find((entry) => entry.id === movingPlacedDefenseId) ?? null
+                  : null;
+                const previewDefense = movingTower
+                  ? defenseDefinitions[movingTower.defenseId] ?? selectedDefense
+                  : run?.mode === MODES.TFT_SHOP && benchCopy
+                    ? defenseDefinitions[benchCopy.towerId] ?? selectedDefense
+                    : selectedDefense;
+                const affordable = movingTower
+                  ? true
+                  : run?.mode === MODES.TFT_SHOP
+                    ? Boolean(benchCopy)
+                    : (run?.gold ?? 0) >= selectedDefense.cost;
                 const hovered = hoveredSlotId === slot.id;
                 const selectedPlaced = placed?.id === selectedPlacedDefenseId;
                 const slotClass = [
@@ -2552,7 +2597,25 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             <div className="defense-inspector__sell">
               <span>SELL REFUND</span>
               <strong>{selectedSellPreview.refund}g</strong>
-              <small>{Math.round(SELL_ECONOMY.baseRefundRate * 100)}% of invested gold · preview only until a placed defense is selected</small>
+              <small>{Math.round(SELL_ECONOMY.baseRefundRate * 100)}% of total invested gold</small>
+              {selectedPlacedDefense && (
+                <div className="defense-inspector__tower-actions">
+                  <button
+                    type="button"
+                    className={movingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
+                    disabled={run?.phase !== RUN_PHASES.PREPARATION}
+                    onClick={handleToggleMoveSelectedTower}
+                  >
+                    {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
+                  </button>
+                  <button type="button" onClick={handleSellSelectedTower}>
+                    SELL · +{selectedSellPreview.refund}G
+                  </button>
+                </div>
+              )}
+              {movingPlacedDefenseId === selectedPlacedDefense?.id && (
+                <small>Choose any empty tower pad to move this tower.</small>
+              )}
             </div>
             <div className="defense-inspector__upgrade">
               <span>{selectedPlacedDefense ? `LEVEL ${selectedPlacedDefense.level}` : 'NEXT UPGRADE'}</span>

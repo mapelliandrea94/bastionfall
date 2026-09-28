@@ -1952,6 +1952,37 @@ button { font: inherit; }
   line-height: 1.4;
 }
 
+.defense-inspector__tower-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.defense-inspector__tower-actions button {
+  min-height: 30px;
+  border: 1px solid rgba(230, 190, 99, .45);
+  border-radius: 6px;
+  background: rgba(16, 27, 39, .92);
+  color: #ead39a;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  cursor: pointer;
+}
+
+.defense-inspector__tower-actions button:hover,
+.defense-inspector__tower-actions button.is-active {
+  border-color: #f0ca6a;
+  background: rgba(77, 57, 23, .92);
+}
+
+.defense-inspector__tower-actions button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
 
 /* BATCH 41 — upgrade curves / efficiency */
 .defense-inspector__upgrade {
