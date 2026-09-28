@@ -15,6 +15,10 @@ assert(server.includes("app.get('/api/run/active'"), 'online snapshot resume end
 assert(server.includes("snapshot_identity_mismatch"), 'snapshot identity binding missing');
 assert(server.includes("serialized.length > 750000"), 'snapshot size guard missing');
 assert(server.includes('advanceOfflineRunSnapshot(snapshot, offlineElapsedMs)'), 'server must advance stale online snapshots before resume');
+assert(server.includes("res.setHeader('X-Frame-Options', 'DENY')"), 'production server must block framing');
+assert(server.includes("res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')"), 'production server must restrict unused browser capabilities');
+assert(server.includes("rateLimitUser('lb-status'"), 'Last Bastion status must be rate limited');
+assert(server.includes("rateLimitUser('lb-heartbeat'"), 'Last Bastion heartbeat must be rate limited');
 
 assert(main.includes('waveClockNow: getWaveNow()'), 'snapshot must persist virtual combat clock');
 assert(main.includes('onlineClockRebasedRef'), 'resume must rebase virtual combat timestamps');
