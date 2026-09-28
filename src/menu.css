@@ -5591,3 +5591,52 @@ button:focus-visible,
 .run-wave-preview__special--rare strong {
   color: #ffe09a;
 }
+
+
+/* Italian localization selector */
+.setting-line--language {
+  align-items: center;
+  gap: 18px;
+}
+
+.language-selector {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  min-width: min(100%, 330px);
+}
+
+.language-selector__option {
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.035);
+  color: #c7d0da;
+  font-weight: 850;
+  letter-spacing: .04em;
+  cursor: pointer;
+}
+
+.language-selector__option:hover {
+  border-color: rgba(222,187,111,.45);
+  color: #fff0c8;
+}
+
+.language-selector__option--active {
+  border-color: rgba(231,190,101,.78);
+  background: linear-gradient(180deg, rgba(181,126,34,.28), rgba(93,60,15,.2));
+  color: #fff0c8;
+  box-shadow: inset 0 0 18px rgba(233,184,78,.06);
+}
+
+@media (max-width: 640px) {
+  .setting-line--language {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .language-selector {
+    width: 100%;
+    min-width: 0;
+  }
+}
