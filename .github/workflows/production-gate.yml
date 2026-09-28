@@ -45,6 +45,8 @@ jobs:
         run: node tests/mini-objective-visual.mjs
       - name: Identity Blessing Visual QA
         run: node tests/identity-blessing-visual.mjs
+      - name: Extreme Evolution Visual QA
+        run: node tests/extreme-evolution-visual.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA
