@@ -1345,6 +1345,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         .map((enemy) => {
           const effectiveSpeed =
             getEnemyEffectiveSpeed(enemy, now) *
+            0.60 *
             blessingModifiers.enemyMoveSpeedMultiplier *
             worldModifierEffects.enemyMoveSpeedMultiplier;
           const naturalProgress = Math.min(
