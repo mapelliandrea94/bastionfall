@@ -54,7 +54,7 @@ import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balan
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
 import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
-import { applyRiskRewardGold, getRiskRewardConfig } from './game/balance/riskReward.js';
+import { applyRiskRewardGold, getRiskRewardConfig, getRiskRewardVisualState } from './game/balance/riskReward.js';
 import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
@@ -1154,6 +1154,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const worldModifierEffects = getWorldModifierEffects(activeWorldModifiers);
   const riskRewardConfig = getRiskRewardConfig(run?.mode ?? MODES.SINGLE_GATE, riskRewardTier);
   const pressureRiskRewardConfig = getRiskRewardConfig(run?.mode ?? MODES.SINGLE_GATE, 'pressure');
+  const riskRewardVisual = getRiskRewardVisualState(
+    run?.mode ?? MODES.SINGLE_GATE,
+    riskRewardTier,
+    run?.phase ?? RUN_PHASES.PREPARATION
+  );
   const miniObjective = getMiniObjectiveForWave(waveScaling.waveNumber);
   const miniObjectiveReward = getMiniObjectiveReward(run?.mode ?? MODES.SINGLE_GATE);
   const threatWave = generateWavePlan({
@@ -2279,7 +2284,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           )}
 
           <svg
-            className="battlefield-map"
+            className={riskRewardVisual.active ? 'battlefield-map battlefield-map--pressure' : 'battlefield-map'}
+            data-risk-reward-tier={riskRewardTier}
+            data-pressure-active={riskRewardVisual.active ? 'true' : 'false'}
             viewBox={`0 0 ${SINGLE_GATE_MAP.size.width} ${SINGLE_GATE_MAP.size.height}`}
             preserveAspectRatio="none"
             role="img"
@@ -2295,6 +2302,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <pattern id="bf-grass-texture" width="112" height="94" patternUnits="userSpaceOnUse"><path d="M12 25l4-5m2 5 3-6M77 67l3-5m3 5 4-7M51 12l3-4M100 36l4-6" stroke="#d9e5a1" strokeWidth="2" opacity=".43"/><circle cx="38" cy="61" r="2" fill="#f2eac8"/><circle cx="94" cy="14" r="2" fill="#e8d9a0"/></pattern>
             </defs>
             <image className="battlefield-map__art" href="/assets/maps/bastionfall-field-v2.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
+            {riskRewardVisual.active && (
+              <g className="pressure-wave-overlay" aria-hidden="true">
+                <rect className="pressure-wave-overlay__frame" x="10" y="10" width="1580" height="880" rx="34" />
+                <rect className="pressure-wave-overlay__vignette" x="0" y="0" width="1600" height="900" />
+                <g className="pressure-wave-overlay__badge" transform="translate(800 64)">
+                  <rect x="-152" y="-29" width="304" height="58" rx="22" />
+                  <text x="0" y="7" textAnchor="middle">
+                    {riskRewardVisual.label} · THREAT ×{riskRewardVisual.threatMultiplier.toFixed(2)}
+                  </text>
+                </g>
+              </g>
+            )}
             <g className="battlefield-map__road" aria-hidden="true">
               {renderedPaths.map((path, pathIndex) => (
                 <g key={pathIndex}>
