@@ -10,6 +10,7 @@ import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
 import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.js';
+import { applyTowerSynergy, getTowerSynergyState } from './game/towers/towerSynergies.js';
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
@@ -1070,14 +1071,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     : SINGLE_GATE_MAP.anchors.bastion;
   const wallTravelMultiplier = 1;
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
+  const towerSynergyState = getTowerSynergyState(placedDefenses, defenseDefinitions);
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? NORMAL_MODE_TOWERS[0];
   const selectedPlacedDefense = placedDefenses.find((entry) => entry.id === selectedPlacedDefenseId) ?? null;
   const inspectedDefenseBase = selectedPlacedDefense
     ? defenseDefinitions[selectedPlacedDefense.defenseId] ?? selectedDefense
     : selectedDefense;
-  const inspectedDefense = selectedPlacedDefense
-    ? getRuntimeTowerDefinition(inspectedDefenseBase, selectedPlacedDefense)
-    : inspectedDefenseBase;
+  const inspectedDefense = applyTowerSynergy(
+    selectedPlacedDefense
+      ? getRuntimeTowerDefinition(inspectedDefenseBase, selectedPlacedDefense)
+      : inspectedDefenseBase,
+    towerSynergyState
+  );
   const selectedSellPreview = getSellPreview(
     selectedPlacedDefense
       ? { id: inspectedDefenseBase.id, cost: Math.max(0, Number(selectedPlacedDefense.investedGold ?? inspectedDefenseBase.cost)) }
@@ -1410,7 +1415,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         for (const placed of placedDefenses) {
           const baseDefinition = defenseDefinitions[placed.defenseId];
           if (!baseDefinition) continue;
-          const definition = getRuntimeTowerDefinition(baseDefinition, placed);
+          const definition = applyTowerSynergy(
+            getRuntimeTowerDefinition(baseDefinition, placed),
+            towerSynergyState
+          );
 
           const attackInterval = getEffectiveTowerAttackInterval(definition, placed, placedDefenses, defenseDefinitions);
           const lastAttackAt = Number(towerAttackTimesRef.current[placed.id] ?? 0);
@@ -2006,6 +2014,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     data-defense-id={placed?.defenseId ?? ''}
                     onMouseEnter={() => setHoveredSlotId(slot.id)}
                     onMouseLeave={() => setHoveredSlotId((current) => current === slot.id ? null : current)}
+                    onDragOver={(event) => {
+                      if (run?.mode === MODES.TFT_SHOP && placed) {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = 'move';
+                      }
+                    }}
+                    onDrop={(event) => {
+                      if (run?.mode !== MODES.TFT_SHOP || !placed) return;
+                      event.preventDefault();
+                      const benchIndex = Number(event.dataTransfer.getData('text/plain'));
+                      if (!Number.isInteger(benchIndex)) return;
+                      handleMergeTftCopy(benchIndex, placed.id, true);
+                    }}
                     onClick={() => handleBuildSlot(slot.id)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -2526,6 +2547,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     onClick={() => copy && setSelectedTftBenchIndex(index)}
                     data-bench-slot={index + 1}
                     data-bench-tower-id={copy?.towerId ?? ''}
+                    draggable={Boolean(copy)}
+                    onDragStart={(event) => {
+                      if (!copy) return;
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', String(index));
+                      setSelectedTftBenchIndex(index);
+                      setTftFeedback('DROP ON A MATCHING TOWER TO MERGE');
+                    }}
+                    onDragEnd={() => setTftFeedback((current) => current === 'DROP ON A MATCHING TOWER TO MERGE' ? '' : current)}
                   >
                     {copy ? (
                       <>
@@ -2728,6 +2758,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               </small>
             </div>
           </section>
+
+          <div className="tower-synergy-panel" aria-label="Tower synergies">
+            <div className="tower-synergy-panel__title">TOWER SYNERGIES</div>
+            <div className="tower-synergy-panel__grid">
+              {towerSynergyState.entries.map((entry) => (
+                <div
+                  key={entry.faction}
+                  className={entry.active ? 'tower-synergy tower-synergy--active' : 'tower-synergy'}
+                >
+                  <span>{entry.name}</span>
+                  <strong>{entry.count}/{entry.threshold}</strong>
+                  <small>{entry.description}</small>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className={bossWaveIncoming ? 'boss-schedule boss-schedule--incoming' : 'boss-schedule'}>
             <span>{bossWaveIncoming ? 'BOSS WAVE' : 'NEXT BOSS'}</span>

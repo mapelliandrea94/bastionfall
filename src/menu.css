@@ -2815,6 +2815,67 @@ body { background:#1c3f61; }
 }
 
 
+.tower-synergy-panel {
+  margin: 0 0 .8rem;
+  padding: .72rem;
+  border: 1px solid rgba(114, 177, 221, .18);
+  background: rgba(16, 29, 40, .5);
+}
+
+.tower-synergy-panel__title {
+  margin-bottom: .5rem;
+  color: #d7e7f3;
+  font-size: .68rem;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+.tower-synergy-panel__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .4rem;
+}
+
+.tower-synergy {
+  min-width: 0;
+  padding: .48rem;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.025);
+  opacity: .62;
+}
+
+.tower-synergy--active {
+  border-color: rgba(245, 207, 113, .65);
+  background: rgba(161, 120, 35, .14);
+  box-shadow: 0 0 14px rgba(225,176,77,.1);
+  opacity: 1;
+}
+
+.tower-synergy span,
+.tower-synergy strong,
+.tower-synergy small {
+  display: block;
+}
+
+.tower-synergy span {
+  color: #d8e3eb;
+  font-size: .56rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.tower-synergy strong {
+  margin: .12rem 0;
+  color: #efd68f;
+  font-size: .72rem;
+}
+
+.tower-synergy small {
+  color: #8f9ca7;
+  font-size: .47rem;
+  line-height: 1.2;
+}
+
 /* BATCH 84 — boss schedule foundation */
 .boss-schedule {
   display: flex;
