@@ -13,7 +13,7 @@ import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
-import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyleForTower } from './game/towers/towerArt.js';
+import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyle, getTowerArtStyleForTower } from './game/towers/towerArt.js';
 import { getTowerEvolutionIntegrityPass, getTowerEvolutionIntegrityQa } from './game/towers/towerEvolutionIntegrityQa.js';
 import { getNormalModeEvolutionFlowPass, getNormalModeEvolutionFlowQa } from './game/towers/normalModeEvolutionFlowQa.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
@@ -1647,6 +1647,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const handleDefenseSelection = (defenseId) => {
     setSelectedDefenseId(defenseId);
     setSelectedPlacedDefenseId(null);
+    setMovingPlacedDefenseId(null);
   };
 
   const handleUpgradeSelectedTower = () => {
@@ -1742,7 +1743,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     }
 
     if (occupied) {
-      setSelectedPlacedDefenseId(occupied.id);
+      if (selectedPlacedDefenseId === occupied.id) {
+        setMovingPlacedDefenseId((current) => current === occupied.id ? null : occupied.id);
+      } else {
+        setSelectedPlacedDefenseId(occupied.id);
+        setMovingPlacedDefenseId(null);
+      }
       return;
     }
 
@@ -1965,7 +1971,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   placed ? 'battlefield-map__tower-slot--occupied' : 'battlefield-map__tower-slot--available',
                   !placed && !affordable ? 'battlefield-map__tower-slot--unaffordable' : '',
                   hovered ? 'battlefield-map__tower-slot--hovered' : '',
-                  selectedPlaced ? 'battlefield-map__tower-slot--selected' : ''
+                  selectedPlaced ? 'battlefield-map__tower-slot--selected' : '',
+                  movingTower && !placed ? 'battlefield-map__tower-slot--move-target' : ''
                 ].filter(Boolean).join(' ');
 
                 return (
@@ -2469,9 +2476,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <button
                 type="button"
                 className="tft-shop-roll"
-                disabled={tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost}
+                disabled={(run?.gold ?? 0) < TFT_SHOP.rerollCost}
                 onClick={() => {
-                  if (tftShopLocked || (run?.gold ?? 0) < TFT_SHOP.rerollCost) return;
+                  if ((run?.gold ?? 0) < TFT_SHOP.rerollCost) return;
                   onSpendGold(TFT_SHOP.rerollCost);
                   setTftPurchasedSlotIds([]);
                   setSelectedTftShopSlotId(null);
@@ -2485,10 +2492,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
             <button
               type="button"
-              className={`tft-shop-lock ${tftShopLocked ? 'tft-shop-lock--active' : ''}`}
-              onClick={() => setTftShopLocked((locked) => !locked)}
+              className="tft-shop-lock"
+              disabled={!selectedPlacedDefense || run?.phase === RUN_PHASES.ENDED}
+              onClick={handleSellSelectedTower}
             >
-              {tftShopLocked ? 'UNLOCK SHOP' : 'LOCK SHOP'} · FREE
+              {selectedPlacedDefense ? `VENDI · +${selectedSellPreview.refund}G` : 'VENDI · SELEZIONA TORRE'}
             </button>
             <div className="tft-bench">
               <div className="tft-bench__header">
@@ -2666,9 +2674,23 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               )}
               {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && (!run || run.mode !== MODES.TFT_SHOP || Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) && !selectedPlacedDefense.evolution && (
                 <div className="tower-evolution-choice">
+                  <div className="tower-evolution-choice__title">CHOOSE EVOLUTION</div>
                   {selectedEvolutionChoices.map((choice) => (
-                    <button key={choice.id} type="button" onClick={() => handleEvolutionChoice(choice.id)}>
-                      {choice.branch} · {choice.name}
+                    <button
+                      key={choice.id}
+                      type="button"
+                      className="tower-evolution-card"
+                      onClick={() => handleEvolutionChoice(choice.id)}
+                    >
+                      <div
+                        className="tower-evolution-card__art"
+                        style={getTowerArtStyle(choice.id)}
+                        aria-hidden="true"
+                      />
+                      <div className="tower-evolution-card__copy">
+                        <strong>{choice.branch} · {choice.name}</strong>
+                        <small>{choice.description}</small>
+                      </div>
                     </button>
                   ))}
                 </div>

@@ -2050,6 +2050,79 @@ button { font: inherit; }
 }
 
 
+.tower-evolution-choice {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.tower-evolution-choice__title {
+  grid-column: 1 / -1;
+  color: #f0d58a;
+  font-size: 9px;
+  font-weight: 950;
+  letter-spacing: .12em;
+  text-align: center;
+}
+
+.tower-evolution-card {
+  min-width: 0;
+  min-height: 132px;
+  padding: 7px;
+  display: grid;
+  grid-template-rows: 72px auto;
+  gap: 5px;
+  justify-items: center;
+  border: 1px solid rgba(230, 190, 99, .34);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(29,42,55,.96), rgba(12,18,26,.96));
+  color: #e8edf2;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.tower-evolution-card:hover {
+  border-color: #f0ca6a;
+  box-shadow: 0 0 0 1px rgba(240,202,106,.2), 0 6px 16px rgba(0,0,0,.24);
+}
+
+.tower-evolution-card__art {
+  width: 72px;
+  height: 72px;
+  background-repeat: no-repeat;
+  border-radius: 7px;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,.32));
+}
+
+.tower-evolution-card__copy {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  text-align: center;
+}
+
+.tower-evolution-card__copy strong {
+  color: #f0dfb8;
+  font-size: 9px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.tower-evolution-card__copy small {
+  color: #aeb9c4;
+  font-size: 7px;
+  line-height: 1.25;
+}
+
+@media (max-width: 760px) {
+  .tower-evolution-choice {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* BATCH 41 — upgrade curves / efficiency */
 .defense-inspector__upgrade {
   padding-top: 9px;
@@ -2526,6 +2599,12 @@ body { background:#1c3f61; }
   stroke: #fff0a6;
   stroke-width: 5;
   filter: drop-shadow(0 0 14px rgba(255, 226, 121, .82));
+}
+
+.battlefield-map__tower-slot--move-target .tower-slot__stone {
+  stroke: #8fffd0;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 14px rgba(92, 255, 196, .72));
 }
 
 .tower-visual {
