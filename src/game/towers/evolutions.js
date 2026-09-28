@@ -1,5 +1,6 @@
 import { TOWER_ROSTER } from './towerRoster.js';
 import { getUpgradedDefenseStats, UPGRADE_CURVE } from '../balance/upgradeCurves.js';
+import { getTftAscensionMultiplier } from '../tft/tftCopyProgression.js';
 
 const evolution = (id, name, towerId, branch, description, effect) => Object.freeze({
   id,
@@ -124,8 +125,26 @@ export function getRuntimeTowerDefinition(baseDefinition, placedTower) {
     ? applyEvolutionEffect({ ...baseDefinition, ...upgraded }, chosenEvolution.effect)
     : { ...baseDefinition, ...upgraded };
 
+  const ascensionMultiplier = getTftAscensionMultiplier(placedTower?.copyProgress);
+  const ascended = { ...evolved };
+  const scale = (key, digits = 2) => {
+    if (ascensionMultiplier === 1 || ascended[key] == null) return;
+    ascended[key] = Number((Number(ascended[key]) * ascensionMultiplier).toFixed(digits));
+  };
+
+  // Ascension is deliberately a restrained +15%/+30% potency bump.
+  // Range and attack cadence stay unchanged so the late-game sink does not explode DPS geometrically.
+  ['damage', 'poisonDamagePerSecond', 'armorShred', 'slowPercent', 'vulnerabilityPercent', 'splashRadius', 'buffRadius']
+    .forEach((key) => scale(key));
+  if (ascensionMultiplier !== 1 && ascended.buffDamageMultiplier) {
+    ascended.buffDamageMultiplier = Number((1 + (ascended.buffDamageMultiplier - 1) * ascensionMultiplier).toFixed(3));
+  }
+  if (ascensionMultiplier !== 1 && ascended.buffAttackSpeedMultiplier) {
+    ascended.buffAttackSpeedMultiplier = Number((1 + (ascended.buffAttackSpeedMultiplier - 1) * ascensionMultiplier).toFixed(3));
+  }
+
   return Object.freeze({
-    ...evolved,
+    ...ascended,
     id: baseDefinition.id,
     faction: baseDefinition.faction,
     counterType: baseDefinition.counterType,
