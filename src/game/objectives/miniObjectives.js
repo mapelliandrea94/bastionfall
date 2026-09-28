@@ -87,6 +87,7 @@ export function getMiniObjectiveFixtures() {
     wave10Lean: getMiniObjectiveForWave(10).id === 'lean-defense',
     wave11Flawless: getMiniObjectiveForWave(11).id === 'flawless',
     tftReward: getMiniObjectiveReward('tft-shop') === 1,
+    suddenReward: getMiniObjectiveReward('sudden-siege') === 1,
     triReward: getMiniObjectiveReward('tri-gate') === 10,
     flawlessLiveOnTrack: flawlessOk.status === 'on-track',
     flawlessLiveFailsAfterDamage: flawlessFailed.status === 'failed',
