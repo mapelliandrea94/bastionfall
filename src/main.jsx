@@ -1766,13 +1766,21 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
           const attackInterval = getEffectiveTowerAttackInterval(definition, placed, combatPlacedDefenses, defenseDefinitions);
           const lastAttackAt = Number(towerAttackTimesRef.current[placed.id] ?? 0);
-          if (now - lastAttackAt < attackInterval) continue;
+          const elapsedSinceAttack = lastAttackAt > 0 ? Math.max(0, now - lastAttackAt) : attackInterval;
+          if (elapsedSinceAttack < attackInterval) continue;
 
+          const attacksDue = Math.max(1, Math.min(6, Math.floor(elapsedSinceAttack / attackInterval)));
           const candidates = getTowerTargets(definition, placed, working.filter((enemy) => enemy.hp > 0));
           const primary = candidates[0];
-          if (!primary) continue;
+          if (!primary) {
+            // Do not bank an unlimited burst while the tower has no valid target.
+            towerAttackTimesRef.current[placed.id] = now - attackInterval;
+            continue;
+          }
 
-          towerAttackTimesRef.current[placed.id] = now;
+          towerAttackTimesRef.current[placed.id] = lastAttackAt > 0
+            ? Math.min(now, lastAttackAt + attacksDue * attackInterval)
+            : now;
           playTowerAttackSound(definition);
 
           const primaryIndex = working.findIndex((enemy) => enemy.id === primary.id);
@@ -1843,14 +1851,14 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             working[enemyIndex] = damaged;
           };
 
-          hitEnemyAtIndex(primaryIndex, 1);
+          hitEnemyAtIndex(primaryIndex, attacksDue);
 
           if (definition.splashRadius) {
             working.forEach((enemy, index) => {
               if (enemy.id === primary.id || enemy.hp <= 0) return;
               const dx = Number(enemy.position?.x ?? 0) - Number(primary.position?.x ?? 0);
               const dy = Number(enemy.position?.y ?? 0) - Number(primary.position?.y ?? 0);
-              if (Math.hypot(dx, dy) <= definition.splashRadius) hitEnemyAtIndex(index, 0.72);
+              if (Math.hypot(dx, dy) <= definition.splashRadius) hitEnemyAtIndex(index, 0.72 * attacksDue);
             });
           }
 
@@ -1880,7 +1888,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                   expiresAt: now + 430
                 });
               }
-              if (index >= 0) hitEnemyAtIndex(index, Math.pow(definition.chainFalloff ?? 0.65, chainIndex + 1));
+              if (index >= 0) hitEnemyAtIndex(index, Math.pow(definition.chainFalloff ?? 0.65, chainIndex + 1) * attacksDue);
             });
           }
         }
