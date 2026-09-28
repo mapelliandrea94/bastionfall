@@ -2626,7 +2626,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                         <g className={`tower-progress-badge tower-progress-badge--${ascensionTier}`} aria-hidden="true">
                           <rect x="-48" y="31" width="96" height="23" rx="10" />
                           <text x="0" y="47" textAnchor="middle">
-                            {`${'★'.repeat(towerLevel)}${isShopMode(run?.mode) ? ` ${copyProgress}/${copyProgressDenominator}` : ''}`}
+                            <tspan className="tower-progress-stars">{'★'.repeat(towerLevel)}</tspan>
+                            {isShopMode(run?.mode) && <tspan className="tower-progress-count">{` ${copyProgress}/${copyProgressDenominator}`}</tspan>}
                           </text>
                         </g>
 
