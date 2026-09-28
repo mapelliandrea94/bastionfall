@@ -3667,9 +3667,9 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
       title={lastBastionWon ? t('lastBastionStanding') : isLastBastion ? t('eliminated') : t('bastionFallen')}
       subtitle={isLastBastion
         ? lastBastionWon
-          ? 'You outlasted every other defender.'
-          : 'Your final competitive result is locked.'
-        : 'Your run has ended. Review the final snapshot before trying again.'}
+          ? t('lastBastionWinSubtitle')
+          : t('lastBastionLossSubtitle')
+        : t('runEndedSubtitle')}
     >
       <div className="results-hero">
         <span>{personalBestResult?.isPersonalBest ? t('newPersonalBest') : t('finalScore')}</span>
@@ -3678,9 +3678,9 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
           {personalBestResult?.isPersonalBest
             ? `Improved by ${personalBestResult.reason}`
             : snapshot.reason === 'last-bastion-win'
-              ? 'Last defender standing'
+              ? t('lastDefenderStanding')
               : snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED
-                ? 'Bastion destroyed'
+                ? t('bastionDestroyed')
                 : snapshot.reason}
         </small>
       </div>
@@ -3690,15 +3690,15 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
           <div className="stat-card">
             <span>{t('placement')}</span>
             <strong>#{snapshot.placement}</strong>
-            <small>{snapshot.won ? 'Winner' : `of ${snapshot.participantCount || '?'} defenders`}</small>
+            <small>{snapshot.won ? t('winner') : `of ${snapshot.participantCount || '?'} defenders`}</small>
           </div>
         )}
-        <div className="stat-card"><span>{t('wave')}</span><strong>{snapshot.wave}</strong><small>Completed progression</small></div>
-        <div className="stat-card"><span>{t('survival')}</span><strong>{formatSurvivalTime(snapshot.elapsedMs)}</strong><small>Official survival time</small></div>
-        <div className="stat-card"><span>{t('kills')}</span><strong>{snapshot.kills}</strong><small>Enemies defeated</small></div>
-        <div className="stat-card"><span>{t('gold')}</span><strong>{snapshot.gold}</strong><small>Gold remaining</small></div>
-        <div className="stat-card"><span>{t('bastion')}</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>Final core state</small></div>
-        <div className="stat-card"><span>{t('mode')}</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>Run format</small></div>
+        <div className="stat-card"><span>{t('wave')}</span><strong>{snapshot.wave}</strong><small>{t('completedProgression')}</small></div>
+        <div className="stat-card"><span>{t('survival')}</span><strong>{formatSurvivalTime(snapshot.elapsedMs)}</strong><small>{t('officialSurvival')}</small></div>
+        <div className="stat-card"><span>{t('kills')}</span><strong>{snapshot.kills}</strong><small>{t('enemiesDefeated')}</small></div>
+        <div className="stat-card"><span>{t('gold')}</span><strong>{snapshot.gold}</strong><small>{t('goldRemaining')}</small></div>
+        <div className="stat-card"><span>{t('bastion')}</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>{t('finalCoreState')}</small></div>
+        <div className="stat-card"><span>{t('mode')}</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>{t('runFormat')}</small></div>
       </div>
 
       <div className="results-actions">
@@ -3785,7 +3785,7 @@ function Leaderboard({ session, onBack }) {
             <span>{t('yourVerifiedRecord')}</span>
             <strong>
               {leaderboardView.personal.isTopTen
-                ? `GLOBAL #${leaderboardView.personal.rank}`
+                ? `${t('global')} #${leaderboardView.personal.rank}`
                 : t('outsideTop10')}
             </strong>
           </div>
@@ -3811,7 +3811,7 @@ function Leaderboard({ session, onBack }) {
         )}
 
         {leaderboardStatus !== 'loading' && leaderboardStatus !== 'ready' && (
-          <div className="empty-state">Leaderboard unavailable: {leaderboardStatus}</div>
+          <div className="empty-state">{t('leaderboardUnavailable')}: {leaderboardStatus}</div>
         )}
 
         {leaderboardStatus === 'ready' && entries.length === 0 && (
@@ -3876,14 +3876,14 @@ function Profile({ session, onBack }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="DEFENDER RECORD"
-      title={profileData?.profile?.display_name || 'PROFILE'}
-      subtitle="Verified account and mode statistics from the live Bastionfall database."
+      kicker={t('defenderRecord')}
+      title={profileData?.profile?.display_name || t('profile')}
+      subtitle={t('profileSubtitle')}
     >
       {profileStatus !== 'ready' ? (
         <div className="profile-state">
-          <strong>{profileStatus === 'loading' ? 'LOADING PROFILE…' : 'PROFILE UNAVAILABLE'}</strong>
-          <small>{profileStatus === 'loading' ? 'Fetching verified stats.' : profileStatus}</small>
+          <strong>{profileStatus === 'loading' ? t('loadingProfile') : t('profileUnavailable')}</strong>
+          <small>{profileStatus === 'loading' ? t('fetchingStats') : profileStatus}</small>
         </div>
       ) : (
         <>
@@ -3898,42 +3898,42 @@ function Profile({ session, onBack }) {
             <div className="profile-xp-track" role="progressbar" aria-valuemin="0" aria-valuemax={accountProgress.requiredXp} aria-valuenow={accountProgress.currentXp}>
               <div className="profile-xp-fill" style={{ width: `${Math.round(accountProgress.progress * 100)}%` }} />
             </div>
-            <p>Run XP: +{ACCOUNT_PROGRESSION.runBaseXp} base · +{ACCOUNT_PROGRESSION.xpPerWave}/wave · +{ACCOUNT_PROGRESSION.towerSevenBonusXp} at 7/7 · +{ACCOUNT_PROGRESSION.towerFourteenBonusXp} at 14/14.</p>
+            <p>{t('runXp')}: +{ACCOUNT_PROGRESSION.runBaseXp} {t('base')} · +{ACCOUNT_PROGRESSION.xpPerWave}/{t('perWave')} · +{ACCOUNT_PROGRESSION.towerSevenBonusXp} @ 7/7 · +{ACCOUNT_PROGRESSION.towerFourteenBonusXp} @ 14/14.</p>
           </section>
 
           <div className="profile-grid">
-            <div className="stat-card"><span>{t('accountXp')}</span><strong>{Number(profileData.profile.account_xp || 0).toLocaleString()}</strong><small>Permanent profile progression</small></div>
-            <div className="stat-card"><span>{t('totalRuns')}</span><strong>{totalRuns}</strong><small>Verified completed runs</small></div>
-            <div className="stat-card"><span>{t('lifetimeKillsUpper')}</span><strong>{Number(profileData.profile.lifetime_kills || 0).toLocaleString()}</strong><small>Across verified runs</small></div>
-            <div className="stat-card"><span>{t('shards')}</span><strong>{profileData.profile.shards}</strong><small>Account progression currency</small></div>
+            <div className="stat-card"><span>{t('accountXp')}</span><strong>{Number(profileData.profile.account_xp || 0).toLocaleString()}</strong><small>{t('profilePermanent')}</small></div>
+            <div className="stat-card"><span>{t('totalRuns')}</span><strong>{totalRuns}</strong><small>{t('verifiedRuns')}</small></div>
+            <div className="stat-card"><span>{t('lifetimeKillsUpper')}</span><strong>{Number(profileData.profile.lifetime_kills || 0).toLocaleString()}</strong><small>{t('acrossVerifiedRuns')}</small></div>
+            <div className="stat-card"><span>{t('shards')}</span><strong>{profileData.profile.shards}</strong><small>{t('progressionCurrency')}</small></div>
           </div>
 
           <div className="profile-mode-grid">
             <section className="profile-mode-card">
               <span>SINGLE GATE</span>
-              <strong>Wave {single?.best_wave ?? 0}</strong>
+              <strong>{t('wave')} {single?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(single?.best_survival_ms ?? 0)} · Score {(single?.best_score ?? 0).toLocaleString()} · Kills {(single?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>TRI-GATE</span>
-              <strong>Wave {tri?.best_wave ?? 0}</strong>
+              <strong>{t('wave')} {tri?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(tri?.best_survival_ms ?? 0)} · Score {(tri?.best_score ?? 0).toLocaleString()} · Kills {(tri?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>TFT SHOP</span>
-              <strong>Wave {tft?.best_wave ?? 0}</strong>
+              <strong>{t('wave')} {tft?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(tft?.best_survival_ms ?? 0)} · Score {(tft?.best_score ?? 0).toLocaleString()} · Kills {(tft?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>SUDDEN SIEGE</span>
-              <strong>Wave {sudden?.best_wave ?? 0}</strong>
+              <strong>{t('wave')} {sudden?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(sudden?.best_survival_ms ?? 0)} · Score {(sudden?.best_score ?? 0).toLocaleString()} · Kills {(sudden?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>LAST BASTION</span>
-              <strong>{last?.runs ?? 0} Runs</strong>
+              <strong>{last?.runs ?? 0} {t('runs')}</strong>
               <small>Best Wave {last?.best_wave ?? 0} · Best Survival {formatSurvivalTime(last?.best_survival_ms ?? 0)} · Best Score {(last?.best_score ?? 0).toLocaleString()}</small>
-              <small>Lifetime Kills {(last?.lifetime_kills ?? 0).toLocaleString()} · Total Survival {formatSurvivalTime(totalSurvivalMs)}</small>
+              <small>{t('lifetimeKills')} {(last?.lifetime_kills ?? 0).toLocaleString()} · {t('totalSurvival')} {formatSurvivalTime(totalSurvivalMs)}</small>
             </section>
           </div>
         </>
@@ -4010,7 +4010,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
   async function submit(e) {
     e.preventDefault();
     if (!supabase) {
-      setError('Online authentication is not configured.');
+      setError(t('authNotConfigured'));
       return;
     }
 
@@ -4024,14 +4024,14 @@ function AuthModal({ mode, onClose, onSuccess }) {
           redirectTo: window.location.origin
         });
         if (resetError) throw resetError;
-        setNotice('If an account exists for this email, a password reset link has been sent.');
+        setNotice(t('authResetSent'));
         return;
       }
 
       if (authMode === 'reset-password') {
         const { error: updateError } = await supabase.auth.updateUser({ password });
         if (updateError) throw updateError;
-        setNotice('Password updated. You can continue with your account.');
+        setNotice(t('authPasswordUpdated'));
         window.history.replaceState({}, document.title, window.location.pathname);
         setTimeout(() => {
           onSuccess();
@@ -4070,10 +4070,10 @@ function AuthModal({ mode, onClose, onSuccess }) {
   }
 
   const title =
-    authMode === 'register' ? 'CREATE DEFENDER' :
-    authMode === 'forgot' ? 'RESET PASSWORD' :
-    authMode === 'reset-password' ? 'CHOOSE NEW PASSWORD' :
-    'SIGN IN';
+    authMode === 'register' ? t('createDefender') :
+    authMode === 'forgot' ? t('resetPassword') :
+    authMode === 'reset-password' ? t('chooseNewPassword') :
+    t('signIn');
 
   return (
     <div className="auth-backdrop" onMouseDown={() => !busy && onClose()} role="presentation">
@@ -4082,17 +4082,17 @@ function AuthModal({ mode, onClose, onSuccess }) {
         <h3 id="auth-title">{title}</h3>
         <p className="auth-modal__copy">
           {authMode === 'register'
-            ? 'Your account is active immediately. No email confirmation.'
+            ? t('authRegisterCopy')
             : authMode === 'forgot'
-              ? 'Enter your account email and we will send a secure reset link.'
+              ? t('authForgotCopy')
               : authMode === 'reset-password'
-                ? 'Set a new password for your Bastionfall account.'
-                : 'Continue your records from any device.'}
+                ? t('authResetCopy')
+                : t('authLoginCopy')}
         </p>
 
         {authMode === 'register' && (
           <label>
-            <span>Defender name</span>
+            <span>{t('defenderName')}</span>
             <input value={name} onChange={e => setName(e.target.value)} maxLength="40" required placeholder="Joker" />
           </label>
         )}
@@ -4124,14 +4124,14 @@ function AuthModal({ mode, onClose, onSuccess }) {
 
         <button className="auth-submit" type="submit" disabled={busy}>
           {busy
-            ? 'CONNECTING...'
+            ? t('connecting')
             : authMode === 'register'
-              ? 'CREATE ACCOUNT'
+              ? t('authRegister')
               : authMode === 'forgot'
-                ? 'SEND RESET LINK'
+                ? t('sendResetLink')
                 : authMode === 'reset-password'
-                  ? 'SAVE NEW PASSWORD'
-                  : 'SIGN IN'}
+                  ? t('saveNewPassword')
+                  : t('authLogin')}
         </button>
 
         {authMode === 'login' && (
