@@ -30,6 +30,7 @@ export function createTftRunSnapshot({
   riskRewardTier = 'safe',
   tftAutoStartEnabled = false,
   waveClockNow = null,
+  waveTimelineStartedAt = null,
   queuedWaveNumber = null,
   spawnedWaveNumber = null,
   bossSummonFiredKeys = []
@@ -69,6 +70,7 @@ export function createTftRunSnapshot({
     riskRewardTier: String(riskRewardTier ?? 'safe'),
     tftAutoStartEnabled: Boolean(tftAutoStartEnabled),
     waveClockNow: Number.isFinite(Number(waveClockNow)) ? Number(waveClockNow) : null,
+    waveTimelineStartedAt: Number.isFinite(Number(waveTimelineStartedAt)) ? Number(waveTimelineStartedAt) : null,
     queuedWaveNumber: queuedWaveNumber == null ? null : clampInt(queuedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
     spawnedWaveNumber: spawnedWaveNumber == null ? null : clampInt(spawnedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
     bossSummonFiredKeys: Object.freeze(Array.isArray(bossSummonFiredKeys) ? [...new Set(bossSummonFiredKeys.map(String))] : [])
@@ -125,6 +127,7 @@ export function normalizeTftRunSnapshot(snapshot) {
     riskRewardTier: String(snapshot.riskRewardTier ?? 'safe'),
     tftAutoStartEnabled: Boolean(snapshot.tftAutoStartEnabled),
     waveClockNow: Number.isFinite(Number(snapshot.waveClockNow)) ? Number(snapshot.waveClockNow) : null,
+    waveTimelineStartedAt: Number.isFinite(Number(snapshot.waveTimelineStartedAt)) ? Number(snapshot.waveTimelineStartedAt) : null,
     queuedWaveNumber: snapshot.queuedWaveNumber == null ? null : clampInt(snapshot.queuedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
     spawnedWaveNumber: snapshot.spawnedWaveNumber == null ? null : clampInt(snapshot.spawnedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
     bossSummonFiredKeys: Array.isArray(snapshot.bossSummonFiredKeys) ? [...new Set(snapshot.bossSummonFiredKeys.map(String))] : []
@@ -185,6 +188,7 @@ export function getTftPersistenceFixtures() {
     riskRewardTier: 'pressure',
     tftAutoStartEnabled: true,
     waveClockNow: 1500,
+    waveTimelineStartedAt: 900,
     queuedWaveNumber: 9,
     spawnedWaveNumber: 9,
     bossSummonFiredKeys: ['10:0']
@@ -216,6 +220,7 @@ export function getTftPersistenceFixtures() {
       restored?.activeEnemies?.[0]?.progress === 0.42 &&
       restored?.waveSpeed === 2 &&
       restored?.riskRewardTier === 'pressure' &&
+      restored?.waveTimelineStartedAt === 900 &&
       restored?.queuedWaveNumber === 9 &&
       restored?.spawnedWaveNumber === 9,
     suddenSiegeSupported: sudden?.run?.mode === 'sudden-siege',
