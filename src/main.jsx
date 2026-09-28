@@ -1083,7 +1083,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const [movingPlacedDefenseId, setMovingPlacedDefenseId] = useState(null);
   const [swappingPlacedDefenseId, setSwappingPlacedDefenseId] = useState(null);
   const [mergingPlacedDefenseId, setMergingPlacedDefenseId] = useState(null);
-  const [riskRewardTier, setRiskRewardTier] = useState('safe');
+  const [riskRewardTier, setRiskRewardTier] = useState(() => matchingOnlineSnapshot?.riskRewardTier ?? 'safe');
   const [miniObjectiveFeedback, setMiniObjectiveFeedback] = useState('');
   const [synergyFeedback, setSynergyFeedback] = useState(null);
   const [suddenStageTransition, setSuddenStageTransition] = useState(null);
@@ -1099,7 +1099,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingOnlineSnapshot?.selectedTftBenchIndex ?? matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
-  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(false);
+  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(() => Boolean(matchingOnlineSnapshot?.tftAutoStartEnabled));
   const [waveSpeed, setWaveSpeed] = useState(() => matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1);
   const waveClockRef = useRef({ real: performance.now(), virtual: performance.now(), speed: matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1 });
   const onlineClockRebasedRef = useRef(false);
@@ -1446,6 +1446,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       preparationRemaining,
       waveSpeed,
       waveClockNow: getWaveNow(),
+      riskRewardTier,
+      tftAutoStartEnabled,
       bossSummonFiredKeys: Array.from(bossSummonFiredRef.current)
     });
   }, [
@@ -1461,7 +1463,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     spawnQueue,
     activeEnemies,
     preparationRemaining,
-    waveSpeed
+    waveSpeed,
+    riskRewardTier,
+    tftAutoStartEnabled
   ]);
 
   useEffect(() => {
@@ -5019,7 +5023,7 @@ function App() {
                 const snapshot = onlineRun.snapshot;
                 setSelectedMode(snapshot.run.mode);
                 setRunState(snapshot.run);
-                setScreen(SCREENS.SINGLE_GATE_RUN);
+                setScreen(snapshot.run.phase === RUN_PHASES.ENDED ? SCREENS.RESULTS : SCREENS.SINGLE_GATE_RUN);
               }}
             >{language === 'it' ? 'RIPRENDI PARTITA ONLINE' : 'RESUME ONLINE RUN'}</button>
           )}
