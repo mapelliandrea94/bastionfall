@@ -62,6 +62,27 @@ export function getBlessingModifiers(ownedBlessings = []) {
 }
 
 
+const IDENTITY_BLESSING_BY_FACTION = Object.freeze({
+  human: 'human-doctrine',
+  insect: 'brood-frenzy',
+  alien: 'alien-overmind',
+  neutral: 'neutral-covenant'
+});
+
+export function getBlessingIdentityVisualCue(definition, ownedBlessings = []) {
+  const faction = definition?.faction ?? null;
+  const blessingId = faction ? IDENTITY_BLESSING_BY_FACTION[faction] ?? null : null;
+  const blessing = blessingId ? getBlessingById(blessingId) : null;
+  const active = Boolean(blessingId && ownedBlessings.includes(blessingId));
+
+  return Object.freeze({
+    active,
+    faction,
+    blessingId,
+    name: active ? blessing?.name ?? blessingId : null
+  });
+}
+
 export function applyBlessingTowerIdentity(definition, ownedBlessings = []) {
   if (!definition) return definition;
   const modifiers = applyBlessingModifierCaps(getBlessingModifiers(ownedBlessings));
@@ -143,6 +164,8 @@ export function getBlessingEngineFixtures() {
   const boostedHp = getBlessingAdjustedMaxHp(20, ['unyielding-core']);
   const humanIdentity = applyBlessingTowerIdentity({ faction: 'human', damage: 100, range: 200, attackIntervalMs: 1000 }, ['human-doctrine']);
   const alienIdentity = applyBlessingTowerIdentity({ faction: 'alien', damage: 100, range: 200, attackIntervalMs: 1000 }, ['alien-overmind']);
+  const humanVisual = getBlessingIdentityVisualCue({ faction: 'human' }, ['human-doctrine']);
+  const insectVisual = getBlessingIdentityVisualCue({ faction: 'insect' }, ['human-doctrine']);
 
   return Object.freeze({
     stackedDamageAboveBase: getBlessingModifiers(['golden-tempest']).towerDamageMultiplier > 1.16,
@@ -153,6 +176,8 @@ export function getBlessingEngineFixtures() {
     boostedHpExpected: 24,
     boostedHpActual: boostedHp,
     humanDoctrineBoostsHuman: humanIdentity.damage === 118,
-    alienOvermindAddsRangeAndChain: alienIdentity.range === 224 && alienIdentity.chainTargets === 2
+    alienOvermindAddsRangeAndChain: alienIdentity.range === 224 && alienIdentity.chainTargets === 2,
+    humanIdentityVisualActive: humanVisual.active === true && humanVisual.name === 'Human Doctrine',
+    unrelatedIdentityVisualInactive: insectVisual.active === false
   });
 }
