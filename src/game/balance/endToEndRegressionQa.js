@@ -133,10 +133,10 @@ export function getEndToEndRegressionQa() {
       airPairs
         .filter((entry) => entry.counterType === 'air')
         .every((entry) => entry.canTarget && entry.selectedByCombatTargeting),
-    nonAntiAirOffenseDoesNotTargetAir:
+    allOffenseCanTargetAir:
       airPairs
-        .filter((entry) => entry.counterType !== 'air')
-        .every((entry) => !entry.canTarget && !entry.selectedByCombatTargeting),
+        .filter((entry) => entry.counterType !== 'support')
+        .every((entry) => entry.canTarget && entry.selectedByCombatTargeting),
     allOffenseCanTargetGround:
       groundPairs
         .filter((entry) => entry.counterType !== 'support')
