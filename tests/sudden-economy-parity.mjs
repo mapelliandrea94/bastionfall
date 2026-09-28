@@ -18,6 +18,6 @@ const cumulativeSudden = Array.from({ length: 25 }, (_, index) => getSuddenSiege
   .reduce((sum, gold) => sum + gold, 0);
 
 assert.equal(cumulativeSudden, cumulativeTft);
-assert.equal(cumulativeSudden, 125);
+assert.equal(cumulativeSudden, TFT_SHOP.waveClearGold * 25);
 
 console.log('SUDDEN_ECONOMY_PARITY_PASS');
