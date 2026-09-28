@@ -23,6 +23,8 @@ assert(main.includes('matchingOnlineSnapshot?.activeEnemies ?? []'), 'resume mus
 assert(main.includes('matchingOnlineSnapshot?.spawnQueue ?? []'), 'resume must restore spawn queue');
 assert(main.includes('matchingOnlineSnapshot?.riskRewardTier ?? \'safe\''), 'resume must restore risk/reward state');
 assert(main.includes('matchingOnlineSnapshot?.tftAutoStartEnabled'), 'resume must restore TFT auto-start state');
+assert(main.includes('onlineSnapshotInFlightRef'), 'online snapshot saves must prevent overlapping requests');
+assert(main.includes('pendingOnlineSnapshotRef'), 'online snapshot saves must coalesce to the latest pending state');
 
 const engine = getOfflineRunEngineFixtures();
 assert.equal(engine.supportedModeAdvances, true, 'offline server engine must advance supported runs');
