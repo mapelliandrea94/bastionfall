@@ -5156,3 +5156,114 @@ button:focus-visible,
 @media (prefers-reduced-motion: reduce) {
   .battlefield-map__bastion-hp-fill, .battlefield-map__nexus-bar-shine, .run-hud__nexus-track > span { transition: none; }
 }
+
+
+/* MB18 — Sudden Siege identity polish */
+.mode-card--sudden {
+  position: relative;
+  border-color: rgba(255, 104, 72, .28);
+  background:
+    linear-gradient(180deg, rgba(102, 25, 18, .16), rgba(24, 14, 16, .04)),
+    rgba(255,255,255,.025);
+}
+
+.mode-card--sudden:hover,
+.mode-card--sudden:focus-visible {
+  border-color: rgba(255, 122, 82, .65);
+  box-shadow: 0 0 24px rgba(255, 76, 48, .14);
+}
+
+.mode-card__danger-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: .42rem;
+  padding: .2rem .44rem;
+  border: 1px solid rgba(255, 125, 91, .48);
+  background: rgba(128, 28, 18, .24);
+  color: #ffb097;
+  font-size: .54rem;
+  font-weight: 950;
+  letter-spacing: .09em;
+}
+
+.run-sidebar--sudden {
+  box-shadow: inset 0 0 0 1px rgba(255, 103, 73, .12);
+}
+
+.sudden-siege-hud {
+  margin: 0 0 .7rem;
+  padding: .68rem .72rem;
+  border: 1px solid rgba(255, 106, 76, .42);
+  background:
+    linear-gradient(135deg, rgba(118, 28, 20, .24), rgba(34, 17, 20, .18));
+  box-shadow: 0 0 16px rgba(255, 77, 49, .08);
+}
+
+.sudden-siege-hud__header {
+  display: flex;
+  justify-content: space-between;
+  gap: .6rem;
+  align-items: center;
+  margin-bottom: .5rem;
+}
+
+.sudden-siege-hud__header span {
+  color: #ffb19a;
+  font-size: .58rem;
+  font-weight: 950;
+  letter-spacing: .11em;
+}
+
+.sudden-siege-hud__header strong {
+  padding: .16rem .38rem;
+  border: 1px solid rgba(255, 154, 112, .44);
+  background: rgba(105, 29, 20, .28);
+  color: #ffd1bd;
+  font-size: .56rem;
+  letter-spacing: .08em;
+}
+
+.sudden-siege-hud__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .35rem;
+}
+
+.sudden-siege-hud__grid > div {
+  min-width: 0;
+  padding: .34rem;
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.025);
+}
+
+.sudden-siege-hud__grid span,
+.sudden-siege-hud__grid strong {
+  display: block;
+}
+
+.sudden-siege-hud__grid span {
+  color: #a99999;
+  font-size: .45rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+}
+
+.sudden-siege-hud__grid strong {
+  margin-top: .1rem;
+  color: #ffe1d6;
+  font-size: .68rem;
+}
+
+.sudden-siege-hud > small {
+  display: block;
+  margin-top: .45rem;
+  color: #bca9a5;
+  font-size: .48rem;
+  line-height: 1.3;
+}
+
+@media (max-width: 640px) {
+  .sudden-siege-hud__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
