@@ -55,7 +55,7 @@ import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/b
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
 import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
 import { applyRiskRewardGold, getRiskRewardConfig, getRiskRewardVisualState } from './game/balance/riskReward.js';
-import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
+import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveLiveState, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
@@ -1161,6 +1161,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   );
   const miniObjective = getMiniObjectiveForWave(waveScaling.waveNumber);
   const miniObjectiveReward = getMiniObjectiveReward(run?.mode ?? MODES.SINGLE_GATE);
+  const miniObjectiveLive = getMiniObjectiveLiveState(miniObjective, {
+    coreHp: run?.coreHp,
+    waveStartCoreHp: run?.waveStartCoreHp,
+    placedTowerCount: placedDefenses.length
+  });
   const threatWave = generateWavePlan({
     seed: run?.seed ?? 'run',
     waveNumber: waveScaling.waveNumber,
@@ -2302,6 +2307,23 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <pattern id="bf-grass-texture" width="112" height="94" patternUnits="userSpaceOnUse"><path d="M12 25l4-5m2 5 3-6M77 67l3-5m3 5 4-7M51 12l3-4M100 36l4-6" stroke="#d9e5a1" strokeWidth="2" opacity=".43"/><circle cx="38" cy="61" r="2" fill="#f2eac8"/><circle cx="94" cy="14" r="2" fill="#e8d9a0"/></pattern>
             </defs>
             <image className="battlefield-map__art" href="/assets/maps/bastionfall-field-v2.webp" x="0" y="0" width="1600" height="900" preserveAspectRatio="none" aria-hidden="true" />
+            {run?.phase === RUN_PHASES.ACTIVE && (
+              <g
+                className={`mini-objective-battlefield mini-objective-battlefield--${miniObjectiveLive.status}`}
+                data-objective-status={miniObjectiveLive.status}
+                aria-hidden="true"
+              >
+                <g className="mini-objective-battlefield__card" transform="translate(250 76)">
+                  <rect x="-205" y="-34" width="410" height="68" rx="18" />
+                  <text className="mini-objective-battlefield__title" x="0" y="-7" textAnchor="middle">
+                    MINI OBJECTIVE · +{miniObjectiveReward}G
+                  </text>
+                  <text className="mini-objective-battlefield__status" x="0" y="16" textAnchor="middle">
+                    {miniObjective.name} · {miniObjectiveLive.label} · {miniObjectiveLive.progress}
+                  </text>
+                </g>
+              </g>
+            )}
             {riskRewardVisual.active && (
               <g className="pressure-wave-overlay" aria-hidden="true">
                 <rect className="pressure-wave-overlay__frame" x="10" y="10" width="1580" height="880" rx="34" />
@@ -3314,7 +3336,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           </div>
 
-          <div className="mini-objective-panel" aria-label="Mini objective">
+          <div
+            className={[
+              'mini-objective-panel',
+              miniObjectiveFeedback.startsWith('OBJECTIVE COMPLETE') ? 'mini-objective-panel--complete' : '',
+              miniObjectiveFeedback === 'OBJECTIVE MISSED' ? 'mini-objective-panel--missed' : ''
+            ].filter(Boolean).join(' ')}
+            aria-label="Mini objective"
+            data-objective-status={run?.phase === RUN_PHASES.ACTIVE ? miniObjectiveLive.status : ''}
+          >
             <div>
               <span>MINI OBJECTIVE</span>
               <strong>{miniObjective.name}</strong>
