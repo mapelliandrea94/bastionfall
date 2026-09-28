@@ -25,6 +25,8 @@ assert(main.includes('matchingOnlineSnapshot?.riskRewardTier ?? \'safe\''), 'res
 assert(main.includes('matchingOnlineSnapshot?.tftAutoStartEnabled'), 'resume must restore TFT auto-start state');
 assert(main.includes('onlineSnapshotInFlightRef'), 'online snapshot saves must prevent overlapping requests');
 assert(main.includes('pendingOnlineSnapshotRef'), 'online snapshot saves must coalesce to the latest pending state');
+assert(main.includes("window.addEventListener('pagehide'"), 'latest online snapshot must flush on page exit');
+assert(main.includes('keepalive: true'), 'page-exit snapshot must use fetch keepalive when payload is safe');
 
 const engine = getOfflineRunEngineFixtures();
 assert.equal(engine.supportedModeAdvances, true, 'offline server engine must advance supported runs');
