@@ -18,19 +18,53 @@ export function getCleanEnemyArt(archetype) {
         context.drawImage(image, 0, 0);
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
         const { data } = pixels;
-        const floorStart = Math.floor(canvas.height * 0.62);
+        const width = canvas.width;
+        const height = canvas.height;
+        const floorStart = Math.floor(height * 0.46);
+        const visited = new Uint8Array(width * height);
+        const isPale = (index) => {
+          const offset = index * 4;
+          const red = data[offset];
+          const green = data[offset + 1];
+          const blue = data[offset + 2];
+          return data[offset + 3] > 0
+            && Math.min(red, green, blue) >= 165
+            && Math.max(red, green, blue) - Math.min(red, green, blue) <= 55;
+        };
 
-        for (let y = floorStart; y < canvas.height; y += 1) {
-          for (let x = 0; x < canvas.width; x += 1) {
-            const offset = (y * canvas.width + x) * 4;
-            const red = data[offset];
-            const green = data[offset + 1];
-            const blue = data[offset + 2];
-            const lightest = Math.max(red, green, blue);
-            const darkest = Math.min(red, green, blue);
-            if (lightest - darkest > 30 || darkest < 200) continue;
-            const whiteness = Math.min(1, Math.max(0, (darkest - 200) / 30));
-            data[offset + 3] = Math.round(data[offset + 3] * (1 - whiteness));
+        // Follow pale connected regions rather than erasing isolated armor highlights.
+        for (let y = floorStart; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const start = y * width + x;
+            if (visited[start] || !isPale(start)) continue;
+            visited[start] = 1;
+            const region = [start];
+            let bright = 0;
+            let bottom = 0;
+            let touchesClear = false;
+
+            for (let head = 0; head < region.length; head += 1) {
+              const index = region[head];
+              const py = Math.floor(index / width);
+              const px = index % width;
+              if (Math.min(data[index * 4], data[index * 4 + 1], data[index * 4 + 2]) > 230) bright += 1;
+              if (py >= height * 0.68) bottom += 1;
+              for (const neighbor of [px ? index - 1 : -1, px < width - 1 ? index + 1 : -1, py > floorStart ? index - width : -1, py < height - 1 ? index + width : -1]) {
+                if (neighbor < 0) continue;
+                if (data[neighbor * 4 + 3] < 20) touchesClear = true;
+                if (visited[neighbor] || !isPale(neighbor)) continue;
+                visited[neighbor] = 1;
+                region.push(neighbor);
+              }
+            }
+
+            if (region.length < 40 || bright < 12 || bottom < region.length * 0.2 || !touchesClear) continue;
+            for (const index of region) {
+              const offset = index * 4;
+              const neutral = Math.min(data[offset], data[offset + 1], data[offset + 2]);
+              const remaining = Math.max(0, Math.min(1, (215 - neutral) / 50));
+              data[offset + 3] = Math.round(data[offset + 3] * remaining);
+            }
           }
         }
 
