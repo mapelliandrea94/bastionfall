@@ -23,7 +23,7 @@ import { getLeaderboardPresentation } from './game/records/leaderboardPresentati
 import { getNormalModeEvolutionFlowPass, getNormalModeEvolutionFlowQa } from './game/towers/normalModeEvolutionFlowQa.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
 import { TFT_BENCH, addCopyToBench, createEmptyBench, getTftBenchFixtures, removeCopyFromBench } from './game/tft/tftBench.js';
-import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftAscensionTier, getTftCopyProgressionFixtures, getTftLevelForCopyProgress, getTftProgressDenominator, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
+import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftAscensionTier, getTftCopyProgressionFixtures, getTftFieldMergeOutcome, getTftLevelForCopyProgress, getTftProgressDenominator, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
 import { TFT_PERSISTENCE, clearTftRunSnapshot, createTftRunSnapshot, getTftPersistenceFixtures, loadTftRunSnapshot, saveTftRunSnapshot } from './game/tft/tftPersistence.js';
 import { getTftEvolutionFlowPass, getTftEvolutionFlowQa } from './game/tft/tftEvolutionFlowQa.js';
 import { getEvolutionPersistenceSellReconnectPass, getEvolutionPersistenceSellReconnectQa } from './game/tft/evolutionPersistenceSellReconnectQa.js';
@@ -1999,39 +1999,62 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     const sourceProgress = Number(sourceTower.copyProgress ?? 1);
     const targetProgress = Number(targetTower.copyProgress ?? 1);
-    const mergedProgress = sourceProgress + targetProgress;
-    if (mergedProgress > TFT_COPY_PROGRESSION.maxCopies) {
-      setTftFeedback(`MERGE BLOCKED · ${targetProgress}/${getTftProgressDenominator(targetProgress)} + ${sourceProgress}/${getTftProgressDenominator(sourceProgress)} EXCEEDS 14/14`);
-      return false;
-    }
+    const mergeOutcome = getTftFieldMergeOutcome(sourceProgress, targetProgress);
+    const mergedProgress = mergeOutcome.targetProgress;
+    const residualProgress = mergeOutcome.sourceProgress;
 
     const towerName = defenseDefinitions[targetTower.defenseId]?.name ?? targetTower.defenseId;
+    const outcomeLabel = residualProgress > 0
+      ? `${mergedProgress}/14 + ${residualProgress}/${getTftProgressDenominator(residualProgress)} · 1 COPY LOST`
+      : `${mergedProgress}/${getTftProgressDenominator(mergedProgress)}`;
     const confirmed = window.confirm(
-      `Merge these two ${towerName} towers? ${targetProgress}/${getTftProgressDenominator(targetProgress)} + ${sourceProgress}/${getTftProgressDenominator(sourceProgress)} → ${mergedProgress}/${getTftProgressDenominator(mergedProgress)}. The selected source tower will be consumed. Cost: 0 Gold.`
+      `Merge these two ${towerName} towers? ${targetProgress}/${getTftProgressDenominator(targetProgress)} + ${sourceProgress}/${getTftProgressDenominator(sourceProgress)} → ${outcomeLabel}. Cost: 0 Gold.`
     );
     if (!confirmed) return false;
 
+    const combinedInvestedGold = Number(targetTower.investedGold ?? 0) + Number(sourceTower.investedGold ?? 0);
+    const survivingCopies = mergedProgress + residualProgress;
+    const targetGoldShare = survivingCopies > 0
+      ? Math.round((combinedInvestedGold * mergedProgress) / survivingCopies)
+      : combinedInvestedGold;
+    const sourceGoldShare = Math.max(0, combinedInvestedGold - targetGoldShare);
+
     setPlacedDefenses((current) => current
-      .filter((tower) => tower.id !== sourceTower.id)
-      .map((tower) => tower.id === targetTower.id
-        ? {
+      .filter((tower) => tower.id !== sourceTower.id || residualProgress > 0)
+      .map((tower) => {
+        if (tower.id === targetTower.id) {
+          return {
             ...tower,
             copyProgress: mergedProgress,
             level: getTftLevelForCopyProgress(mergedProgress),
-            investedGold: Number(tower.investedGold ?? 0) + Number(sourceTower.investedGold ?? 0)
-          }
-        : tower));
-    towerAttackTimesRef.current[sourceTower.id] = 0;
+            investedGold: targetGoldShare
+          };
+        }
+        if (tower.id === sourceTower.id && residualProgress > 0) {
+          return {
+            ...tower,
+            copyProgress: residualProgress,
+            level: getTftLevelForCopyProgress(residualProgress),
+            evolution: residualProgress >= TFT_COPY_PROGRESSION.evolutionCopies ? tower.evolution : null,
+            evolutionChoice: residualProgress >= TFT_COPY_PROGRESSION.evolutionCopies ? tower.evolutionChoice : null,
+            investedGold: sourceGoldShare
+          };
+        }
+        return tower;
+      }));
+    if (residualProgress === 0) towerAttackTimesRef.current[sourceTower.id] = 0;
     setSelectedPlacedDefenseId(targetTower.id);
     setMergingPlacedDefenseId(null);
     setTftFeedback(
-      mergedProgress === TFT_COPY_PROGRESSION.evolutionCopies
-        ? '7/14 — EVOLUTION UNLOCKED · CHOOSE A OR B'
-        : mergedProgress === TFT_COPY_PROGRESSION.redAscensionCopies
-          ? '10/14 — RED 4★ ASCENSION · +15%'
-          : mergedProgress === TFT_COPY_PROGRESSION.goldAscensionCopies
-            ? '14/14 — GOLD 4★ ASCENSION · +30%'
-            : `FIELD MERGE — ${mergedProgress}/${getTftProgressDenominator(mergedProgress)}`
+      residualProgress > 0
+        ? `FIELD MERGE — 14/14 + ${residualProgress}/${getTftProgressDenominator(residualProgress)} · 1 COPY LOST`
+        : mergedProgress === TFT_COPY_PROGRESSION.evolutionCopies
+          ? '7/14 — EVOLUTION UNLOCKED · CHOOSE A OR B'
+          : mergedProgress === TFT_COPY_PROGRESSION.redAscensionCopies
+            ? '10/14 — RED 4★ ASCENSION · +15%'
+            : mergedProgress === TFT_COPY_PROGRESSION.goldAscensionCopies
+              ? '14/14 — GOLD 4★ ASCENSION · +30%'
+              : `FIELD MERGE — ${mergedProgress}/${getTftProgressDenominator(mergedProgress)}`
     );
     return true;
   };
@@ -2476,8 +2499,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     : '',
                   mergingPlacedDefenseId && placed && placed.id !== mergingPlacedDefenseId && (() => {
                     const source = placedDefenses.find((tower) => tower.id === mergingPlacedDefenseId);
-                    return source && source.defenseId === placed.defenseId &&
-                      Number(source.copyProgress ?? 1) + Number(placed.copyProgress ?? 1) <= TFT_COPY_PROGRESSION.maxCopies;
+                    return source && source.defenseId === placed.defenseId;
                   })()
                     ? 'battlefield-map__tower-slot--merge-target'
                     : ''
