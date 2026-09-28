@@ -864,8 +864,32 @@ app.get('/api/leaderboards/:mode', requireUser, async (req, res) => {
   }
 
   const records = recordsResult.data || [];
+
+  const personalRecordResult = await serverDb
+    .from('mode_records')
+    .select('user_id,mode,best_wave,best_survival_ms,best_score,best_kills,updated_at')
+    .eq('mode', mode)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (personalRecordResult.error) {
+    console.error('Leaderboard personal record read failed:', personalRecordResult.error.message);
+    return res.status(500).json({ error: 'leaderboard_personal_record_read_failed' });
+  }
+
   if (records.length === 0) {
-    return res.json({ mode, entries: [], limit });
+    const personalRecord = personalRecordResult.data
+      ? {
+          displayName: req.user.user_metadata?.full_name || 'Defender',
+          bestWave: personalRecordResult.data.best_wave,
+          bestSurvivalMs: personalRecordResult.data.best_survival_ms,
+          bestScore: personalRecordResult.data.best_score,
+          bestKills: personalRecordResult.data.best_kills,
+          updatedAt: personalRecordResult.data.updated_at,
+          isSelf: true
+        }
+      : null;
+    return res.json({ mode, entries: [], personalRecord, limit });
   }
 
   const userIds = [...new Set(records.map((record) => record.user_id))];
@@ -889,12 +913,26 @@ app.get('/api/leaderboards/:mode', requireUser, async (req, res) => {
     bestSurvivalMs: record.best_survival_ms,
     bestScore: record.best_score,
     bestKills: record.best_kills,
-    updatedAt: record.updated_at
+    updatedAt: record.updated_at,
+    isSelf: record.user_id === req.user.id
   }));
+
+  const personalRecord = personalRecordResult.data
+    ? {
+        displayName: namesByUser.get(req.user.id) || req.user.user_metadata?.full_name || 'Defender',
+        bestWave: personalRecordResult.data.best_wave,
+        bestSurvivalMs: personalRecordResult.data.best_survival_ms,
+        bestScore: personalRecordResult.data.best_score,
+        bestKills: personalRecordResult.data.best_kills,
+        updatedAt: personalRecordResult.data.updated_at,
+        isSelf: true
+      }
+    : null;
 
   return res.json({
     mode,
     entries,
+    personalRecord,
     limit
   });
 });
