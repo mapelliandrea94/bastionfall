@@ -22,10 +22,24 @@ assert(server.includes("rateLimitUser('lb-heartbeat'"), 'Last Bastion heartbeat 
 
 assert(main.includes('waveClockNow: getWaveNow()'), 'snapshot must persist virtual combat clock');
 assert(main.includes('onlineClockRebasedRef'), 'resume must rebase virtual combat timestamps');
-assert(main.includes("matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE ? restoredWaveNumber : null"), 'resume must restore queued-wave identity');
-assert(main.includes('matchingOnlineSnapshot?.activeEnemies ?? []'), 'resume must restore active enemies');
-assert(main.includes('matchingOnlineSnapshot?.spawnQueue ?? []'), 'resume must restore spawn queue');
-assert(main.includes('matchingOnlineSnapshot?.riskRewardTier ?? \'safe\''), 'resume must restore risk/reward state');
+assert(
+  main.includes('matchingOnlineSnapshot?.queuedWaveNumber') &&
+  main.includes('matchingTftSnapshot?.queuedWaveNumber') &&
+  main.includes('restoredWaveNumber'),
+  'resume must restore queued-wave identity from online or local TFT snapshots'
+);
+assert(
+  main.includes('matchingOnlineSnapshot?.activeEnemies ?? matchingTftSnapshot?.activeEnemies ?? []'),
+  'resume must restore active enemies from online or local TFT snapshots'
+);
+assert(
+  main.includes('matchingOnlineSnapshot?.spawnQueue ?? matchingTftSnapshot?.spawnQueue ?? []'),
+  'resume must restore spawn queue from online or local TFT snapshots'
+);
+assert(
+  main.includes("matchingOnlineSnapshot?.riskRewardTier ?? matchingTftSnapshot?.riskRewardTier ?? 'safe'"),
+  'resume must restore risk/reward state from online or local TFT snapshots'
+);
 assert(main.includes('matchingOnlineSnapshot?.tftAutoStartEnabled'), 'resume must restore TFT auto-start state');
 assert(main.includes('onlineSnapshotInFlightRef'), 'online snapshot saves must prevent overlapping requests');
 assert(main.includes('pendingOnlineSnapshotRef'), 'online snapshot saves must coalesce to the latest pending state');
