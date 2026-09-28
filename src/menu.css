@@ -5779,3 +5779,84 @@ button:focus-visible,
     font-size: 12px;
   }
 }
+
+
+/* Tower combos, endless milestones, death recap */
+.tower-combo-panel,
+.endless-milestone-banner,
+.death-recap {
+  border: 1px solid rgba(214, 171, 76, .55);
+  background: linear-gradient(180deg, rgba(19, 23, 31, .96), rgba(9, 12, 18, .96));
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .28);
+}
+
+.tower-combo-panel {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.tower-combo-panel__title,
+.endless-milestone-banner > span,
+.death-recap > span {
+  font-size: 11px;
+  letter-spacing: .16em;
+  font-weight: 800;
+  opacity: .78;
+}
+
+.tower-combo-panel__entry {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-left: 3px solid #d6ab4c;
+  background: rgba(214, 171, 76, .08);
+}
+
+.tower-combo-panel__entry strong {
+  font-size: 13px;
+  letter-spacing: .05em;
+}
+
+.tower-combo-panel__entry small {
+  opacity: .8;
+}
+
+.endless-milestone-banner {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  text-align: center;
+  animation: milestonePulse 1.8s ease-in-out infinite alternate;
+}
+
+.endless-milestone-banner strong {
+  font-size: 20px;
+  letter-spacing: .08em;
+}
+
+.endless-milestone-banner small {
+  font-weight: 800;
+}
+
+.death-recap {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.death-recap strong {
+  font-size: 18px;
+  letter-spacing: .08em;
+}
+
+.death-recap small {
+  opacity: .82;
+  line-height: 1.45;
+}
+
+@keyframes milestonePulse {
+  from { transform: translateY(0); box-shadow: 0 12px 30px rgba(0, 0, 0, .28); }
+  to { transform: translateY(-1px); box-shadow: 0 12px 34px rgba(214, 171, 76, .24); }
+}
