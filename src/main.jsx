@@ -2913,6 +2913,10 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
               const hpRatio = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0;
               const shieldRatio = enemy.maxShield > 0 ? Math.max(0, Math.min(1, enemy.shield / enemy.maxShield)) : 0;
               const slowActive = (enemy.statusEffects?.slowUntilMs ?? 0) > getWaveNow();
+              const debuffActive =
+                slowActive ||
+                (enemy.statusEffects?.vulnerabilityUntilMs ?? 0) > getWaveNow() ||
+                (enemy.statusEffects?.armorShredUntilMs ?? 0) > getWaveNow();
               const artId = ENEMY_ROSTER.byId[enemy.archetype]
                 ? enemy.archetype : LEGACY_ENEMY_ART[enemy.archetype];
               const enemyArtHref = artId
@@ -2929,7 +2933,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                   data-armored={enemy.armor > 0}
                   data-shielded={enemy.maxShield > 0}
                   data-slowed={slowActive}
+                  data-debuffed={debuffActive}
                 >
+                  {debuffActive && <circle className="battlefield-map__enemy-debuff-aura" r="32" aria-hidden="true" />}
                   {enemyArtHref ? (
                     <>
                       <g className="battlefield-map__enemy-fallback" opacity="0">
