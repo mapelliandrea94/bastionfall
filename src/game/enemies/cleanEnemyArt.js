@@ -20,7 +20,8 @@ export function getCleanEnemyArt(archetype) {
         const { data } = pixels;
         const width = canvas.width;
         const height = canvas.height;
-        const floorStart = Math.floor(height * 0.46);
+        // White cutout remnants can extend above the feet (wings, shields, void trails).
+        const floorStart = 0;
         const visited = new Uint8Array(width * height);
         const isPale = (index) => {
           const offset = index * 4;
@@ -28,8 +29,8 @@ export function getCleanEnemyArt(archetype) {
           const green = data[offset + 1];
           const blue = data[offset + 2];
           return data[offset + 3] > 0
-            && Math.min(red, green, blue) >= 165
-            && Math.max(red, green, blue) - Math.min(red, green, blue) <= 55;
+            && Math.min(red, green, blue) >= 185
+            && Math.max(red, green, blue) - Math.min(red, green, blue) <= 38;
         };
 
         // Follow pale connected regions rather than erasing isolated armor highlights.
@@ -58,7 +59,10 @@ export function getCleanEnemyArt(archetype) {
               }
             }
 
-            if (region.length < 40 || bright < 12 || bottom < region.length * 0.2 || !touchesClear) continue;
+            // Ignore small bright details on the creature; remove exposed studio
+            // backdrop even if it runs up between limbs or around flying wings.
+            if (region.length < 100 || bright < 20 || !touchesClear ||
+              (bottom < region.length * 0.2 && region.length < width * height * 0.01)) continue;
             for (const index of region) {
               const offset = index * 4;
               const neutral = Math.min(data[offset], data[offset + 1], data[offset + 2]);
