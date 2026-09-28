@@ -50,6 +50,7 @@ import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/b
 import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balance/endToEndRegressionQa.js';
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
+import { applyRiskRewardGold, getRiskRewardConfig } from './game/balance/riskReward.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
@@ -981,6 +982,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [movingPlacedDefenseId, setMovingPlacedDefenseId] = useState(null);
+  const [riskRewardTier, setRiskRewardTier] = useState('safe');
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
   const [tftRollIndex, setTftRollIndex] = useState(() => matchingTftSnapshot?.tftRollIndex ?? 0);
@@ -1043,13 +1045,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     .filter((offer) => !tftPurchasedSlotIds.includes(offer.slotId));
   const selectedTftShopOffer = tftShopOffers.find((offer) => offer.slotId === selectedTftShopSlotId) ?? null;
   const worldModifierEffects = getWorldModifierEffects(activeWorldModifiers);
+  const riskRewardConfig = getRiskRewardConfig(run?.mode ?? MODES.SINGLE_GATE, riskRewardTier);
+  const pressureRiskRewardConfig = getRiskRewardConfig(run?.mode ?? MODES.SINGLE_GATE, 'pressure');
   const threatWave = generateWavePlan({
     seed: run?.seed ?? 'run',
     waveNumber: waveScaling.waveNumber,
     mode: run?.mode ?? MODES.SINGLE_GATE,
     budgetMultiplier:
       (run?.mode === MODES.TRI_GATE ? TRI_GATE_PACING.threatMultiplier : 1) *
-      worldModifierEffects.threatMultiplier
+      worldModifierEffects.threatMultiplier *
+      riskRewardConfig.threatMultiplier
   });
   const runScore = calculateRunScore(run ?? {});
   const triGateLaneById = Object.fromEntries(
@@ -1601,13 +1606,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     const timeoutId = window.setTimeout(() => {
       const blessingId = selectedBlessingPreviewId;
+      const completedRiskRewardTier = riskRewardTier;
       setSelectedBlessingPreviewId(null);
       setBlessingRerollCount(0);
-      onPhaseChange(RUN_PHASES.PREPARATION, { advanceWave: true, blessingId });
+      setRiskRewardTier('safe');
+      onPhaseChange(RUN_PHASES.PREPARATION, {
+        advanceWave: true,
+        blessingId,
+        riskRewardTier: completedRiskRewardTier
+      });
     }, 350);
 
     return () => window.clearTimeout(timeoutId);
-  }, [run?.phase, run?.wave, blessingChoiceVisible, selectedBlessingPreviewId]);
+  }, [run?.phase, run?.wave, blessingChoiceVisible, selectedBlessingPreviewId, riskRewardTier]);
 
   const positionedEnemies = activeEnemies.map((enemy) => ({
     ...enemy,
@@ -2797,6 +2808,38 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           )}
 
+          <div className="risk-reward-panel" aria-label="Risk reward choice">
+            <div className="risk-reward-panel__header">
+              <span>RISK / REWARD</span>
+              <strong>{riskRewardTier === 'pressure' ? 'PRESSURE ACTIVE' : 'SAFE'}</strong>
+            </div>
+            <div className="risk-reward-panel__choices">
+              <button
+                type="button"
+                className={riskRewardTier === 'safe' ? 'is-active' : ''}
+                disabled={run?.phase !== RUN_PHASES.PREPARATION}
+                onClick={() => setRiskRewardTier('safe')}
+              >
+                SAFE
+                <small>Normal threat · normal reward</small>
+              </button>
+              <button
+                type="button"
+                className={riskRewardTier === 'pressure' ? 'is-active' : ''}
+                disabled={run?.phase !== RUN_PHASES.PREPARATION}
+                onClick={() => setRiskRewardTier('pressure')}
+              >
+                PRESSURE
+                <small>
+                  +{Math.round((pressureRiskRewardConfig.threatMultiplier - 1) * 100)}% threat · 
+                  {pressureRiskRewardConfig.flatGoldBonus > 0
+                    ? `+${pressureRiskRewardConfig.flatGoldBonus}G clear`
+                    : `+${Math.round((pressureRiskRewardConfig.rewardMultiplier - 1) * 100)}% clear gold`}
+                </small>
+              </button>
+            </div>
+          </div>
+
           <div className="run-sidebar__status">
             <span>{(run?.phase || RUN_PHASES.PREPARATION).toUpperCase()}</span>
             <strong>
@@ -3793,10 +3836,13 @@ function App() {
               : current.blessings ?? [];
             const activeModifiersForClear = getActiveWorldModifiers(current.seed ?? 'run', completedWaveNumber);
             const worldEffectsForClear = getWorldModifierEffects(activeModifiersForClear);
-            const waveClearGold = advancingWave
+            const modeAdjustedWaveClearGold = advancingWave
               ? current.mode === MODES.TFT_SHOP
                 ? baseWaveClearGold + tftWaveBonus
                 : Math.max(0, Math.round(applyBlessingWaveGold(baseWaveClearGold, nextBlessings) * worldEffectsForClear.waveGoldMultiplier))
+              : 0;
+            const waveClearGold = advancingWave
+              ? applyRiskRewardGold(modeAdjustedWaveClearGold, current.mode, options.riskRewardTier ?? 'safe')
               : 0;
             const nextMaxHp = getBlessingAdjustedMaxHp(RUN_DEFAULTS.coreHp, nextBlessings);
             const maxHpGain = Math.max(0, nextMaxHp - current.coreMaxHp);

@@ -2864,6 +2864,65 @@ body { background:#1c3f61; }
   line-height: 1.1;
 }
 
+.risk-reward-panel {
+  margin: 0 0 .8rem;
+  padding: .72rem;
+  border: 1px solid rgba(232, 173, 84, .22);
+  background: rgba(70, 42, 18, .12);
+}
+
+.risk-reward-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .5rem;
+  color: #d9e1e8;
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.risk-reward-panel__header strong {
+  color: #f0d58a;
+}
+
+.risk-reward-panel__choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .45rem;
+}
+
+.risk-reward-panel__choices button {
+  min-height: 56px;
+  padding: .45rem;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.025);
+  color: #d8e0e7;
+  font-size: .62rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.risk-reward-panel__choices button.is-active {
+  border-color: rgba(245, 207, 113, .68);
+  background: rgba(161, 120, 35, .16);
+  color: #f5dfa1;
+}
+
+.risk-reward-panel__choices button:disabled {
+  opacity: .7;
+  cursor: default;
+}
+
+.risk-reward-panel__choices small {
+  display: block;
+  margin-top: .2rem;
+  color: #8f9ca7;
+  font-size: .48rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
 .tower-synergy strong {
   margin: .12rem 0;
   color: #efd68f;
