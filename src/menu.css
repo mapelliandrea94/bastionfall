@@ -5514,3 +5514,67 @@ button:focus-visible,
     gap: .45rem;
   }
 }
+
+
+/* MB25-27 — wave affixes, quests, rare events */
+.wave-affix-panel,
+.rare-wave-event-panel {
+  display: grid;
+  gap: .18rem;
+  margin: .55rem 0;
+  padding: .62rem .68rem;
+  border: 1px solid rgba(255,255,255,.1);
+  background: rgba(255,255,255,.025);
+}
+
+.wave-affix-panel {
+  border-color: rgba(113, 196, 255, .28);
+  background: rgba(33, 94, 129, .1);
+}
+
+.rare-wave-event-panel {
+  border-color: rgba(255, 187, 75, .52);
+  background:
+    radial-gradient(circle at 10% 20%, rgba(255, 193, 73, .12), transparent 42%),
+    rgba(105, 62, 13, .11);
+  box-shadow: 0 0 18px rgba(255, 167, 51, .08);
+}
+
+.wave-affix-panel span,
+.rare-wave-event-panel span {
+  font-size: .5rem;
+  font-weight: 950;
+  letter-spacing: .1em;
+  color: #9fb9c9;
+}
+
+.wave-affix-panel strong {
+  color: #bde9ff;
+  font-size: .72rem;
+}
+
+.rare-wave-event-panel strong {
+  color: #ffe09a;
+  font-size: .76rem;
+}
+
+.wave-affix-panel small,
+.rare-wave-event-panel small {
+  color: #b3bec6;
+  font-size: .54rem;
+  line-height: 1.3;
+}
+
+.run-wave-preview__special {
+  border-color: rgba(105, 191, 255, .22) !important;
+  background: rgba(37, 91, 125, .1) !important;
+}
+
+.run-wave-preview__special--rare {
+  border-color: rgba(255, 191, 79, .38) !important;
+  background: rgba(117, 70, 17, .14) !important;
+}
+
+.run-wave-preview__special--rare strong {
+  color: #ffe09a;
+}
