@@ -19,7 +19,7 @@ const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || '';
 const matchTokenSecret = process.env.MATCH_TOKEN_SECRET || '';
 
 app.disable('x-powered-by');
-app.use(express.json({ limit: '32kb', strict: true }));
+app.use(express.json({ limit: '1mb', strict: true }));
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
