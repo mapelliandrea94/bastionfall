@@ -1176,6 +1176,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
+  const lastMovementRenderAtRef = useRef(0);
   const restoredWaveNumber = Math.max(1, Number(run?.wave ?? 0) + 1);
   const queuedWaveRef = useRef(
     matchingOnlineSnapshot?.queuedWaveNumber ??
@@ -1833,6 +1834,14 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     const durationMs = waveScaling.travelDurationMs * wallTravelMultiplier;
 
     const tick = () => {
+      const realNow = performance.now();
+      const targetFrameMs = activeEnemiesRef.current.length >= 40 ? 33 : 16;
+      if (realNow - Number(lastMovementRenderAtRef.current || 0) < targetFrameMs) {
+        animationFrameRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      lastMovementRenderAtRef.current = realNow;
+
       const now = getWaveNow();
       setActiveEnemies((current) => current
         .map((enemy) => {
