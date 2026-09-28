@@ -90,6 +90,7 @@ import { FLYING_ENEMY, createFlyingEnemyState, getFlyingEnemyBudget } from './ga
 import { ELITE_MODIFIER_SYSTEM, applyEliteModifiers, attachEliteModifierFoundation, getEliteModifierFoundationFixtures } from './game/elites/eliteModifiers.js';
 import { WORLD_MODIFIER_SYSTEM, getActiveWorldModifiers, getWorldModifierEffects, getWorldModifierFoundationFixtures } from './game/world/worldModifiers.js';
 import { GAME_FEEDBACK_EVENTS, emitGameFeedback, getGameFeedbackFixtures } from './game/feedback/gameFeedback.js';
+import { SUPPORTED_LANGUAGES, gameText, getLanguage, setLanguage, t } from './i18n/localization.js';
 import './menu.css';
 
 const SCREENS = Object.freeze({
@@ -659,7 +660,7 @@ function Shell({ title, kicker, subtitle, onBack, children }) {
   return (
     <main className="main-menu main-menu--inner">
       <section className="mode-screen" aria-labelledby="screen-title">
-        <button className="mode-screen__back" onClick={onBack} aria-label={`Back from ${title}`}>← BACK</button>
+        <button className="mode-screen__back" onClick={onBack} aria-label={`${t('back')} · ${title}`}>← {t('back')}</button>
         <p className="main-menu__kicker">{kicker}</p>
         <h2 id="screen-title">{title}</h2>
         {subtitle && <p className="mode-screen__subtitle">{subtitle}</p>}
@@ -673,45 +674,45 @@ function ModeSelect({ onBack, onSelect }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="CHOOSE YOUR DEFENSE"
-      title="SELECT MODE"
-      subtitle="Choose a survival format. Each mode has its own pre-run contract."
+      kicker={t('chooseDefense')}
+      title={t('selectMode')}
+      subtitle={t('selectModeSubtitle')}
     >
       <div className="mode-grid" role="group" aria-label="Game modes">
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.SINGLE_GATE)}>
-          <span className="mode-card__players">ONE FRONT</span>
+          <span className="mode-card__players">{t('oneFront')}</span>
           <strong>SINGLE GATE</strong>
-          <small>One front. One Bastion. Survive.</small>
-          <em>SELECT MODE</em>
+          <small>{t('singleGateDesc')}</small>
+          <em>{t('selectMode')}</em>
         </button>
 
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.TRI_GATE)}>
-          <span className="mode-card__players">THREE FRONTS</span>
+          <span className="mode-card__players">{t('threeFronts')}</span>
           <strong>TRI-GATE</strong>
-          <small>Three fronts. Total siege.</small>
-          <em>SELECT MODE</em>
+          <small>{t('triGateDesc')}</small>
+          <em>{t('selectMode')}</em>
         </button>
 
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.TFT_SHOP)}>
-          <span className="mode-card__players">SHOP SURVIVAL</span>
+          <span className="mode-card__players">{t('shopSurvival')}</span>
           <strong>TFT SHOP</strong>
-          <small>Roll tower copies, build from a bench, survive.</small>
-          <em>SELECT MODE</em>
+          <small>{t('tftShopDesc')}</small>
+          <em>{t('selectMode')}</em>
         </button>
 
         <button className="mode-card mode-card--ready mode-card--sudden" onClick={() => onSelect(MODES.SUDDEN_SIEGE)}>
-          <span className="mode-card__players">FAST SHOP SURVIVAL</span>
+          <span className="mode-card__players">{t('fastShopSurvival')}</span>
           <strong>SUDDEN SIEGE</strong>
-          <small>TFT rules. Faster waves. Harder scaling. Less time to breathe.</small>
-          <b className="mode-card__danger-badge">ESCALATING THREAT</b>
-          <em>SELECT MODE</em>
+          <small>{t('suddenSiegeDesc')}</small>
+          <b className="mode-card__danger-badge">{t('escalatingThreat')}</b>
+          <em>{t('selectMode')}</em>
         </button>
 
         <button className="mode-card mode-card--ready" onClick={() => onSelect(MODES.LAST_BASTION)}>
-          <span className="mode-card__players">COMPETITIVE SURVIVAL</span>
+          <span className="mode-card__players">{t('competitiveSurvival')}</span>
           <strong>LAST BASTION</strong>
-          <small>Same siege. Last survivor wins.</small>
-          <em>SELECT MODE</em>
+          <small>{t('lastBastionDesc')}</small>
+          <em>{t('selectMode')}</em>
         </button>
       </div>
     </Shell>
@@ -728,7 +729,7 @@ function TriGateBattlefieldPreview() {
       data-tri-gate-rendered-entrances={TRI_GATE_MAP.anchors.entrances.length}
     >
       <div className="tri-gate-preview__header">
-        <span>THREE FRONTS</span>
+        <span>{t('threeFronts')}</span>
         <strong>{TRI_GATE_MAP.name}</strong>
         <small>Three entrances, one Nexus, 19 tower pads.</small>
       </div>
@@ -827,27 +828,27 @@ function LastBastionLobby({ session, onBack, onStart }) {
       }}
       kicker="LAST BASTION"
       title="LAST SURVIVOR WINS."
-      subtitle="Join the shared queue, ready up, and wait for a synchronized match."
+      subtitle={t('lastBastionSubtitle')}
     >
       <div className="pre-run-grid">
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">QUEUE</span>
+          <span className="pre-run-card__eyebrow">{t('queue')}</span>
           <strong>{state.queued ? `#${state.ticket?.position ?? '-'}` : 'NOT QUEUED'}</strong>
           <small>{state.queuedPlayers} defender{state.queuedPlayers === 1 ? '' : 's'} queued</small>
         </section>
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">STATUS</span>
-          <strong>{state.ticket?.ready ? 'READY' : state.queued ? 'WAITING' : 'IDLE'}</strong>
+          <span className="pre-run-card__eyebrow">{t('status').toUpperCase()}</span>
+          <strong>{state.ticket?.ready ? t('ready') : state.queued ? t('waiting') : t('idle')}</strong>
           <small>{state.ticket?.ready ? 'Ready for matchmaking.' : 'Ready status can be changed any time before match start.'}</small>
         </section>
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">MATCH</span>
+          <span className="pre-run-card__eyebrow">{t('match')}</span>
           <strong>
             {state.matched
-              ? 'MATCH FOUND'
+              ? t('matchFound')
               : state.readyPlayers >= 2 && Number.isFinite(Number(state.fillWindowRemainingMs))
                 ? `FILLING ${Math.max(0, Math.ceil(Number(state.fillWindowRemainingMs) / 1000))}s`
-                : 'SHARED SIEGE'}
+                : t('sharedSiege')}
           </strong>
           <small>
             {state.matched
@@ -862,14 +863,14 @@ function LastBastionLobby({ session, onBack, onStart }) {
       <div className="pre-run-footer">
         <p>Status: <strong>{state.error || (state.loading ? 'SYNCING...' : state.ticket?.status?.toUpperCase() || 'READY TO QUEUE')}</strong></p>
         {!state.queued ? (
-          <button className="pre-run-start" onClick={join} disabled={state.loading}>JOIN QUEUE<small>Enter Last Bastion matchmaking</small></button>
+          <button className="pre-run-start" onClick={join} disabled={state.loading}>{t('joinQueue')}<small>{t('enterMatchmaking')}</small></button>
         ) : (
           <div className="last-bastion-lobby-actions">
             <button className="pre-run-start" onClick={() => setReady(!state.ticket?.ready)}>
-              {state.ticket?.ready ? 'NOT READY' : 'READY'}
-              <small>{state.ticket?.ready ? 'Return to waiting' : 'Lock in for the match'}</small>
+              {state.ticket?.ready ? t('notReady') : t('ready')}
+              <small>{state.ticket?.ready ? t('returnWaiting') : t('lockMatch')}</small>
             </button>
-            <button className="mode-screen__back" onClick={leave}>LEAVE QUEUE</button>
+            <button className="mode-screen__back" onClick={leave}>{t('leaveQueue')}</button>
           </div>
         )}
       </div>
@@ -887,40 +888,40 @@ function ModePreRun({ mode, onBack, onStart, session }) {
     <Shell
       onBack={onBack}
       kicker={contract.kicker}
-      title={contract.title}
-      subtitle={contract.description}
+      title={gameText(contract.title)}
+      subtitle={gameText(contract.description)}
     >
       <div className="pre-run-grid">
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">FORMAT</span>
-          <strong>{contract.fronts}</strong>
+          <span className="pre-run-card__eyebrow">{t('format')}</span>
+          <strong>{gameText(contract.fronts)}</strong>
           <small>{mode === MODES.TRI_GATE ? 'Three rendered fronts converge on one central Bastion.' : 'Single-front battlefield.'}</small>
         </section>
 
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">OBJECTIVE</span>
-          <strong>{contract.objective}</strong>
-          <small>Every defender begins from equal combat power.</small>
+          <span className="pre-run-card__eyebrow">{t('objective')}</span>
+          <strong>{gameText(contract.objective)}</strong>
+          <small>{t('equalCombatPower')}</small>
         </section>
 
         <section className="pre-run-card">
-          <span className="pre-run-card__eyebrow">RECORD</span>
-          <strong>{contract.record}</strong>
-          <small>Mode-specific persistence and validation arrive in later roadmap batches.</small>
+          <span className="pre-run-card__eyebrow">{t('record')}</span>
+          <strong>{gameText(contract.record)}</strong>
+          <small>{t('modePersistence')}</small>
         </section>
       </div>
 
       {mode === MODES.TRI_GATE && <TriGateBattlefieldPreview />}
 
       <div className="pre-run-footer">
-        <p>Status: <strong>{contract.status}</strong></p>
+        <p>{t('status')}: <strong>{getLanguage() === SUPPORTED_LANGUAGES.IT_IT ? t('readyToInitialize') : contract.status}</strong></p>
         <button
           className="pre-run-start"
           disabled={mode === MODES.LAST_BASTION}
           onClick={() => mode !== MODES.LAST_BASTION && onStart(mode)}
         >
-          START RUN
-          <small>{mode !== MODES.LAST_BASTION ? 'Initialize run' : contract.status}</small>
+          {t('startRun')}
+          <small>{mode !== MODES.LAST_BASTION ? t('initializeRun') : contract.status}</small>
         </button>
       </div>
     </Shell>
@@ -2222,7 +2223,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         <div className="battlefield">
           <header className="run-hud" aria-label="Run status">
             <div>
-              <span className="run-hud__label">MODE</span>
+              <span className="run-hud__label">{t('mode')}</span>
               <strong>{
                 run?.mode === MODES.SINGLE_GATE
                   ? 'SINGLE GATE'
@@ -2238,27 +2239,27 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               }</strong>
             </div>
             <div>
-              <span className="run-hud__label">WAVE</span>
+              <span className="run-hud__label">{t('wave')}</span>
               <strong>{run?.wave ?? 0}</strong>
             </div>
             <div>
-              <span className="run-hud__label">GOLD</span>
+              <span className="run-hud__label">{t('gold')}</span>
               <strong>{run?.gold ?? RUN_DEFAULTS.startingGold}</strong>
             </div>
             <div className={`run-hud__nexus ${bastionStateClass}`} aria-label={`Nexus health ${run?.coreHp ?? RUN_DEFAULTS.coreHp} of ${run?.coreMaxHp ?? RUN_DEFAULTS.coreHp}`}>
-              <span className="run-hud__label">NEXUS</span>
+              <span className="run-hud__label">{t('nexus')}</span>
               <strong>{run?.coreHp ?? RUN_DEFAULTS.coreHp}<small> / {run?.coreMaxHp ?? RUN_DEFAULTS.coreHp}</small></strong>
               <span className="run-hud__nexus-track" aria-hidden="true"><span style={{ width: `${coreRatio * 100}%` }} /></span>
             </div>
             <div>
-              <span className="run-hud__label">SURVIVAL</span>
+              <span className="run-hud__label">{t('survival')}</span>
               <strong>{formatSurvivalTime(run?.elapsedMs ?? 0)}</strong>
             </div>
             <div>
-              <span className="run-hud__label">SCORE</span>
+              <span className="run-hud__label">{t('score')}</span>
               <strong>{runScore.totalScore.toLocaleString()}</strong>
             </div>
-            <button className="run-exit" onClick={onExit} aria-label="Exit current run">EXIT RUN</button>
+            <button className="run-exit" onClick={onExit} aria-label="Exit current run">{t('exitRun')}</button>
           </header>
 
           {run?.mode === MODES.LAST_BASTION && (
@@ -2364,7 +2365,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <g className="sudden-stage-overlay__badge" transform="translate(800 126)">
                   <rect x="-154" y="-24" width="308" height="48" rx="18" />
                   <text x="0" y="6" textAnchor="middle">
-                    {suddenBattlefieldVisual.label}
+                    {gameText(suddenBattlefieldVisual.label)}
                   </text>
                 </g>
               </g>
@@ -2378,10 +2379,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <g className="mini-objective-battlefield__card" transform="translate(250 824)">
                   <rect x="-205" y="-34" width="410" height="68" rx="18" />
                   <text className="mini-objective-battlefield__title" x="0" y="-7" textAnchor="middle">
-                    WAVE QUEST · +{miniObjectiveReward}G
+                    {t('waveQuest')} · +{miniObjectiveReward}G
                   </text>
                   <text className="mini-objective-battlefield__status" x="0" y="16" textAnchor="middle">
-                    {miniObjective.name} · {miniObjectiveLive.label} · {miniObjectiveLive.progress}
+                    {gameText(miniObjective.name)} · {gameText(miniObjectiveLive.label)} · {miniObjectiveLive.progress}
                   </text>
                 </g>
               </g>
@@ -2484,9 +2485,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       : `Build ${previewDefense.name} on ${slot.id}`}
                     aria-disabled={!placed && !affordable ? 'true' : 'false'}
                     data-slot-id={slot.id}
+                    data-bench-match={matchingBenchCopy ? 'true' : 'false'}
                     data-occupied={Boolean(placed)}
                     data-defense-id={placed?.defenseId ?? ''}
-                    data-bench-match={matchingBenchCopy ? 'true' : 'false'}
                     onMouseEnter={() => setHoveredSlotId(slot.id)}
                     onMouseLeave={() => setHoveredSlotId((current) => current === slot.id ? null : current)}
                     onDragOver={(event) => {
@@ -2779,9 +2780,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     <text className="enemy-status__name" x="0" y="-56" textAnchor="middle">
                       {enemy.archetype.toUpperCase()}
                     </text>
-                    {enemy.armor > 0 && <text className="enemy-status__badge enemy-status__badge--armor" x="-24" y="39">ARM</text>}
-                    {enemy.airborne && <text className="enemy-status__badge enemy-status__badge--air" x="0" y="39" textAnchor="middle">AIR</text>}
-                    {slowActive && <text className="enemy-status__badge enemy-status__badge--slow" x="24" y="39" textAnchor="end">SLOW</text>}
+                    {enemy.armor > 0 && <text className="enemy-status__badge enemy-status__badge--armor" x="-24" y="39">{t('arm')}</text>}
+                    {enemy.airborne && <text className="enemy-status__badge enemy-status__badge--air" x="0" y="39" textAnchor="middle">{t('air')}</text>}
+                    {slowActive && <text className="enemy-status__badge enemy-status__badge--slow" x="24" y="39" textAnchor="end">{t('slow')}</text>}
                   </g>
                 </g>
               );
@@ -2808,7 +2809,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 <path className="battlefield-map__nexus-frame" d="M -106 -180 H 92 L 106 -168 V -126 H -92 L -106 -138 Z" />
                 <path className="battlefield-map__nexus-rim" d="M -103 -177 H 90 L 103 -167 M -103 -139 V -129 H 92 L 103 -139" />
                 <path className="battlefield-map__nexus-gem" d="M -92 -169 L -86 -163 L -92 -157 L -98 -163 Z" />
-                <text className="battlefield-map__nexus-label" x="-78" y="-158">NEXUS</text>
+                <text className="battlefield-map__nexus-label" x="-78" y="-158">{t('nexus')}</text>
                 <text className="battlefield-map__bastion-hp-text" x="90" y="-158" textAnchor="end">
                   {run?.coreHp ?? 0} <tspan className="battlefield-map__nexus-max">/ {run?.coreMaxHp ?? 0}</tspan>
                 </text>
@@ -2847,7 +2848,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           <button type="button" className={`wave-speed-toggle${waveSpeed === 2 ? ' is-active' : ''}`}
             aria-label={`Wave speed: ${waveSpeed}x. Switch to ${waveSpeed === 2 ? 'normal' : 'double'} speed`}
             aria-pressed={waveSpeed === 2} onClick={toggleWaveSpeed}>
-            <strong>{waveSpeed}×</strong><span>WAVE</span>
+            <strong>{waveSpeed}×</strong><span>{t('wave')}</span>
           </button>
           <aside
             className={`run-sidebar ${isShopMode(run?.mode) ? 'run-sidebar--tft' : ''}${run?.mode === MODES.SUDDEN_SIEGE ? ' run-sidebar--sudden' : ''}`}
@@ -3037,18 +3038,18 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   <strong>{suddenTelemetry.stage}</strong>
                 </div>
                 <div className="sudden-siege-hud__grid">
-                  <div><span>THREAT</span><strong>×{suddenTelemetry.threatMultiplier.toFixed(2)}</strong></div>
-                  <div><span>ENEMY HP</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
-                  <div><span>SPAWN</span><strong>{(suddenTelemetry.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
-                  <div><span>PREP</span><strong>{suddenTelemetry.preparationSeconds}s</strong></div>
-                  <div><span>CLEAR GOLD</span><strong>{suddenTelemetry.waveReward}G</strong></div>
-                  <div><span>ECONOMY</span><strong>TFT PARITY</strong></div>
+                  <div><span>{t('threat')}</span><strong>×{suddenTelemetry.threatMultiplier.toFixed(2)}</strong></div>
+                  <div><span>{t('enemyHp')}</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
+                  <div><span>{t('spawn')}</span><strong>{(suddenTelemetry.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
+                  <div><span>{t('prep')}</span><strong>{suddenTelemetry.preparationSeconds}s</strong></div>
+                  <div><span>{t('clearGold')}</span><strong>{suddenTelemetry.waveReward}G</strong></div>
+                  <div><span>{t('economy')}</span><strong>{t('tftParity')}</strong></div>
                 </div>
                 <small>Difficulty escalates by wave bracket. Base clear economy stays aligned with TFT Shop; PRESSURE adds a smaller Sudden-specific risk premium.</small>
               </section>
             )}
             <div className="tft-shop-layout">
-            <p className="main-menu__kicker">SHOP</p>
+            <p className="main-menu__kicker">{t('shop')}</p>
             <h3>TFT SHOP</h3>
             <div className="tft-shop-grid" data-shop-slots={tftShopOffers.length}>
               {tftShopOffers.map((offer) => (
@@ -3081,7 +3082,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
             <div className="tft-shop-economy">
               <div className="tft-shop-gold" aria-label={`${run?.gold ?? 0} gold available`}>
-                <span>GOLD</span>
+                <span>{t('gold')}</span>
                 <strong>{run?.gold ?? 0}</strong>
               </div>
               <div className="tft-shop-actions">
@@ -3117,7 +3118,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     setTftFeedback('');
                   }}
                 >
-                  <span>BUY</span>
+                  <span>{t('buy')}</span>
                   <small>{selectedTftShopOffer ? `${selectedTftShopOffer.cost}G` : 'SELECT'}</small>
                 </button>
               <button
@@ -3132,7 +3133,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   setTftRollIndex((value) => value + 1);
                 }}
               >
-                <span>ROLL</span>
+                <span>{t('roll')}</span>
                 <small>{TFT_SHOP.rerollCost}G</small>
               </button>
               </div>
@@ -3147,7 +3148,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </button>
             <div className="tft-bench">
               <div className="tft-bench__header">
-                <span>BENCH</span>
+                <span>{t('bench')}</span>
                 <strong>{tftBench.filter(Boolean).length}/{TFT_BENCH.slotCount}</strong>
               </div>
               <div className="tft-bench__grid" data-bench-slots={TFT_BENCH.slotCount}>
@@ -3207,7 +3208,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                         </button>
                       </>
                     ) : (
-                      <span>EMPTY</span>
+                      <span>{t('empty')}</span>
                     )}
                   </div>
                 ))}
@@ -3229,7 +3230,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   disabled={!run || run.phase !== RUN_PHASES.PREPARATION || !tftSetupConfirmed}
                   onClick={() => onPhaseChange(RUN_PHASES.ACTIVE)}
                 >
-                  <span>START WAVE</span>
+                  <span>{t('startWave')}</span>
                   <small>{tftSetupConfirmed ? 'Launch immediately' : 'Confirm setup first'}</small>
                 </button>
                 <button
@@ -3259,8 +3260,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </>
         ) : (
           <>
-            <p className="main-menu__kicker">DEFENSES</p>
-          <h3>BUILD</h3>
+            <p className="main-menu__kicker">{t('defenses')}</p>
+          <h3>{t('build')}</h3>
           <div className="normal-build-roster" data-normal-build-count={NORMAL_MODE_TOWERS.length}>
             {['human', 'insect', 'alien', 'neutral'].map((faction) => (
               <section className={`normal-build-group normal-build-group--${faction}`} key={faction}>
@@ -3302,20 +3303,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <strong>{inspectedDefense.name}</strong>
             </div>
             <div className="defense-inspector__grid">
-              <div><span>ROLE</span><strong>{inspectedDefense.role}</strong></div>
-              <div><span>COST</span><strong>{inspectedDefense.cost}g</strong></div>
-              {'damage' in inspectedDefense && <div><span>DAMAGE</span><strong>{inspectedDefense.damage}</strong></div>}
-              {'range' in inspectedDefense && <div><span>RANGE</span><strong>{inspectedDefense.range}</strong></div>}
-              {'attackIntervalMs' in inspectedDefense && <div><span>RATE</span><strong>{(1000 / inspectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
-              {'damageType' in inspectedDefense && <div><span>TYPE</span><strong>{inspectedDefense.damageType}</strong></div>}
-              {'splashRadius' in inspectedDefense && <div><span>SPLASH</span><strong>{inspectedDefense.splashRadius}</strong></div>}
-              {'slowPercent' in inspectedDefense && <div><span>SLOW</span><strong>{inspectedDefense.slowPercent}%</strong></div>}
-              {'squadSize' in inspectedDefense && <div><span>SQUAD</span><strong>{inspectedDefense.squadSize}</strong></div>}
-              {'unitHp' in inspectedDefense && <div><span>UNIT HP</span><strong>{inspectedDefense.unitHp}</strong></div>}
+              <div><span>{t('role')}</span><strong>{inspectedDefense.role}</strong></div>
+              <div><span>{t('cost')}</span><strong>{inspectedDefense.cost}g</strong></div>
+              {'damage' in inspectedDefense && <div><span>{t('damage')}</span><strong>{inspectedDefense.damage}</strong></div>}
+              {'range' in inspectedDefense && <div><span>{t('range')}</span><strong>{inspectedDefense.range}</strong></div>}
+              {'attackIntervalMs' in inspectedDefense && <div><span>{t('rate')}</span><strong>{(1000 / inspectedDefense.attackIntervalMs).toFixed(1)}/s</strong></div>}
+              {'damageType' in inspectedDefense && <div><span>{t('type')}</span><strong>{inspectedDefense.damageType}</strong></div>}
+              {'splashRadius' in inspectedDefense && <div><span>{t('splash')}</span><strong>{inspectedDefense.splashRadius}</strong></div>}
+              {'slowPercent' in inspectedDefense && <div><span>{t('slow')}</span><strong>{inspectedDefense.slowPercent}%</strong></div>}
+              {'squadSize' in inspectedDefense && <div><span>{t('squad')}</span><strong>{inspectedDefense.squadSize}</strong></div>}
+              {'unitHp' in inspectedDefense && <div><span>{t('unitHp')}</span><strong>{inspectedDefense.unitHp}</strong></div>}
             </div>
             <p>{inspectedDefense.description}</p>
             <div className="defense-inspector__sell">
-              <span>SELL REFUND</span>
+              <span>{t('sellRefund')}</span>
               <strong>{selectedSellPreview.refund}g</strong>
               <small>{Math.round(SELL_ECONOMY.baseRefundRate * 100)}% of total invested gold</small>
               {selectedPlacedDefense && (
@@ -3357,7 +3358,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               )}
               {selectedPlacedDefense && selectedPlacedDefense.level >= 4 && (!run || !isShopMode(run.mode) || Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.evolutionCopies) && !selectedPlacedDefense.evolution && (
                 <div className="tower-evolution-choice">
-                  <div className="tower-evolution-choice__title">CHOOSE EVOLUTION</div>
+                  <div className="tower-evolution-choice__title">{t('chooseEvolution')}</div>
                   {selectedEvolutionChoices.map((choice) => (
                     <button
                       key={choice.id}
@@ -3390,12 +3391,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <small>{isShopMode(run?.mode) ? 'TFT progression: 1/7 Lv.1 · 2–3/7 Lv.2 · 4–6/7 Lv.3 · 7/7 Lv.4 + evolution' : `Max level ${UPGRADE_CURVE.maxLevel} · evolution at Lv.4`}</small>
             </div>
             <div className="defense-inspector__targeting">
-              <span>TARGETING</span>
+              <span>{t('targeting')}</span>
               <strong>{selectedTargetingValue.rule}</strong>
               <small>Targeting value ×{selectedTargetingValue.multiplier.toFixed(2)}</small>
             </div>
             <div className="defense-inspector__instrumentation">
-              <span>ATTACK TELEMETRY</span>
+              <span>{t('attackTelemetry')}</span>
               <strong>{selectedAttackInstrumentation.sustainedDps} DPS</strong>
               <small>
                 {selectedAttackInstrumentation.attacksPerSecond}/s · {selectedAttackInstrumentation.projectileTravelMs}ms travel @ {selectedAttackInstrumentation.sampleDistance} range
@@ -3405,7 +3406,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {(run?.blessings ?? []).some((blessingId) => ['human-doctrine', 'brood-frenzy', 'alien-overmind', 'neutral-covenant'].includes(blessingId)) && (
             <div className="identity-blessing-panel" aria-label="Identity blessings">
-              <div className="identity-blessing-panel__title">IDENTITY BLESSINGS</div>
+              <div className="identity-blessing-panel__title">{t('identityBlessings')}</div>
               <div className="identity-blessing-panel__list">
                 {['human-doctrine', 'brood-frenzy', 'alien-overmind', 'neutral-covenant']
                   .filter((blessingId) => (run?.blessings ?? []).includes(blessingId))
@@ -3436,9 +3437,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   key={entry.faction}
                   className={entry.active ? 'tower-synergy tower-synergy--active' : 'tower-synergy'}
                 >
-                  <span>{entry.name}</span>
+                  <span>{gameText(entry.name)}</span>
                   <strong>{entry.count}/{entry.threshold}</strong>
-                  <small>{entry.description}</small>
+                  <small>{gameText(entry.description)}</small>
                 </div>
               ))}
             </div>
@@ -3452,7 +3453,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {bossWaveIncoming && bossTuning && (
             <div className="boss-milestone" aria-label="Boss milestone">
-              <span>BOSS MILESTONE</span>
+              <span>{t('bossMilestone')}</span>
               <strong>{bossTuning.name}</strong>
               <small>HP {bossTuning.maxHp} · ARMOR {bossTuning.armor} · CORE DMG {bossTuning.bastionDamage} · REWARD +{bossTuning.goldReward}G</small>
             </div>
@@ -3460,23 +3461,23 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           {rareWaveEvent && (
             <div className="rare-wave-event-panel" aria-label="Rare wave event">
-              <span>RARE EVENT</span>
-              <strong>{rareWaveEvent.name}</strong>
-              <small>{rareWaveEvent.description}</small>
+              <span>{t('rareEvent')}</span>
+              <strong>{gameText(rareWaveEvent.name)}</strong>
+              <small>{gameText(rareWaveEvent.description)}</small>
             </div>
           )}
 
           {waveAffix && (
             <div className="wave-affix-panel" aria-label="Wave affix">
-              <span>WAVE AFFIX</span>
-              <strong>{waveAffix.name}</strong>
-              <small>{waveAffix.description}</small>
+              <span>{t('waveAffix')}</span>
+              <strong>{gameText(waveAffix.name)}</strong>
+              <small>{gameText(waveAffix.description)}</small>
             </div>
           )}
 
           {activeWorldModifiers.length > 0 && (
             <div className="world-modifier" aria-label="World modifier">
-              <span>WORLD MODIFIER</span>
+              <span>{t('worldModifier')}</span>
               <strong>{activeWorldModifiers[0].name}</strong>
               <small>{activeWorldModifiers[0].description} · Threat ×{worldModifierEffects.threatMultiplier.toFixed(2)} · Gold ×{worldModifierEffects.waveGoldMultiplier.toFixed(2)} · Speed ×{worldModifierEffects.enemyMoveSpeedMultiplier.toFixed(2)}</small>
             </div>
@@ -3484,7 +3485,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           <div className="risk-reward-panel" aria-label="Risk reward choice">
             <div className="risk-reward-panel__header">
-              <span>RISK / REWARD</span>
+              <span>{t('riskReward')}</span>
               <strong>{riskRewardTier === 'pressure' ? 'PRESSURE ACTIVE' : 'SAFE'}</strong>
             </div>
             <div className="risk-reward-panel__choices">
@@ -3524,11 +3525,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             data-objective-status={run?.phase === RUN_PHASES.ACTIVE ? miniObjectiveLive.status : ''}
           >
             <div>
-              <span>WAVE QUEST</span>
-              <strong>{miniObjective.name}</strong>
+              <span>{t('waveQuest')}</span>
+              <strong>{gameText(miniObjective.name)}</strong>
             </div>
             <b>+{miniObjectiveReward}G</b>
-            <small>{miniObjective.description}</small>
+            <small>{gameText(miniObjective.description)}</small>
             {miniObjectiveFeedback && <em>{miniObjectiveFeedback}</em>}
           </div>
 
@@ -3543,16 +3544,16 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </div>
           <div className="run-wave-preview" aria-label="Next wave preview">
             <div className="run-wave-preview__title">
-              <span>NEXT WAVE</span>
+              <span>{t('nextWave')}</span>
               <strong>WAVE {waveScaling.waveNumber}</strong>
             </div>
             <div className="run-wave-preview__grid">
-              <div><span>ENEMIES</span><strong>{threatWave.enemyCount}</strong></div>
-              <div><span>DIFFICULTY</span><strong>{waveScaling.bandId.toUpperCase()}</strong></div>
-              <div><span>TRAVEL</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
-              <div><span>SPAWN</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
-              <div><span>CORE DMG</span><strong>{waveScaling.bastionDamage}</strong></div>
-              <div><span>CLEAR GOLD</span><strong>+{
+              <div><span>{t('enemies')}</span><strong>{threatWave.enemyCount}</strong></div>
+              <div><span>{t('difficulty')}</span><strong>{waveScaling.bandId.toUpperCase()}</strong></div>
+              <div><span>{t('travel')}</span><strong>{(waveScaling.travelDurationMs / 1000).toFixed(1)}s</strong></div>
+              <div><span>{t('spawn')}</span><strong>{(waveScaling.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
+              <div><span>{t('coreDamage')}</span><strong>{waveScaling.bastionDamage}</strong></div>
+              <div><span>{t('clearGold')}</span><strong>+{
                 run?.mode === MODES.TRI_GATE
                   ? getTriGateWaveClearReward(waveScaling.waveNumber)
                   : run?.mode === MODES.SUDDEN_SIEGE
@@ -3562,22 +3563,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       : getWaveClearReward(waveScaling.waveNumber)
               }</strong></div>
               {isShopMode(run?.mode) && (
-                <div><span>BONUSES</span><strong>+1 PERFECT · +3 BOSS · +2 / 5 WAVES</strong></div>
+                <div><span>{t('bonuses')}</span><strong>+1 PERFECT · +3 BOSS · +2 / 5 WAVES</strong></div>
               )}
               {waveAffix && (
                 <div className="run-wave-preview__special">
-                  <span>AFFIX</span><strong>{waveAffix.name}</strong>
+                  <span>{t('affix')}</span><strong>{gameText(waveAffix.name)}</strong>
                 </div>
               )}
               {rareWaveEvent && (
                 <div className="run-wave-preview__special run-wave-preview__special--rare">
-                  <span>RARE EVENT</span><strong>{rareWaveEvent.name} · +{rareWaveEvent.bonusGold}G</strong>
+                  <span>{t('rareEvent')}</span><strong>{rareWaveEvent.name} · +{rareWaveEvent.bonusGold}G</strong>
                 </div>
               )}
               {run?.mode === MODES.SUDDEN_SIEGE && suddenTelemetry && (
                 <>
-                  <div><span>SUDDEN STAGE</span><strong>{suddenTelemetry.stage}</strong></div>
-                  <div><span>HP PRESSURE</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
+                  <div><span>{t('suddenStage')}</span><strong>{suddenTelemetry.stage}</strong></div>
+                  <div><span>{t('hpPressure')}</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
                 </>
               )}
             </div>
@@ -3593,8 +3594,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               data-blessing-choice-selected={selectedBlessingPreviewId ?? ''}
             >
               <div className="blessing-choice__header">
-                <span>BOSS DEFEATED</span>
-                <strong>CHOOSE A BLESSING</strong>
+                <span>{t('bossDefeated')}</span>
+                <strong>{t('chooseBlessing')}</strong>
                 <small>Pick one reward for the next stage of the run. The selected effect applies immediately.</small>
               </div>
               <div className="blessing-choice__actions">
@@ -3665,24 +3666,24 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
   return (
     <Shell
       onBack={onBack}
-      kicker={isLastBastion ? 'LAST BASTION RESULT' : 'RUN COMPLETE'}
-      title={lastBastionWon ? 'LAST BASTION STANDING' : isLastBastion ? 'ELIMINATED' : 'BASTION FALLEN'}
+      kicker={isLastBastion ? 'LAST BASTION' : t('runComplete')}
+      title={lastBastionWon ? t('lastBastionStanding') : isLastBastion ? t('eliminated') : t('bastionFallen')}
       subtitle={isLastBastion
         ? lastBastionWon
-          ? 'You outlasted every other defender.'
-          : 'Your final competitive result is locked.'
-        : 'Your run has ended. Review the final snapshot before trying again.'}
+          ? t('lastBastionWinSubtitle')
+          : t('lastBastionLossSubtitle')
+        : t('runEndedSubtitle')}
     >
       <div className="results-hero">
-        <span>{personalBestResult?.isPersonalBest ? 'NEW PERSONAL BEST' : 'FINAL SCORE'}</span>
+        <span>{personalBestResult?.isPersonalBest ? t('newPersonalBest') : t('finalScore')}</span>
         <strong>{snapshot.score.toLocaleString()}</strong>
         <small>
           {personalBestResult?.isPersonalBest
             ? `Improved by ${personalBestResult.reason}`
             : snapshot.reason === 'last-bastion-win'
-              ? 'Last defender standing'
+              ? t('lastDefenderStanding')
               : snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED
-                ? 'Bastion destroyed'
+                ? t('bastionDestroyed')
                 : snapshot.reason}
         </small>
       </div>
@@ -3690,22 +3691,22 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
       <div className="results-grid">
         {isLastBastion && (
           <div className="stat-card">
-            <span>PLACEMENT</span>
+            <span>{t('placement')}</span>
             <strong>#{snapshot.placement}</strong>
-            <small>{snapshot.won ? 'Winner' : `of ${snapshot.participantCount || '?'} defenders`}</small>
+            <small>{snapshot.won ? t('winner') : `of ${snapshot.participantCount || '?'} defenders`}</small>
           </div>
         )}
-        <div className="stat-card"><span>WAVE</span><strong>{snapshot.wave}</strong><small>Completed progression</small></div>
-        <div className="stat-card"><span>SURVIVAL</span><strong>{formatSurvivalTime(snapshot.elapsedMs)}</strong><small>Official survival time</small></div>
-        <div className="stat-card"><span>KILLS</span><strong>{snapshot.kills}</strong><small>Enemies defeated</small></div>
-        <div className="stat-card"><span>GOLD</span><strong>{snapshot.gold}</strong><small>Gold remaining</small></div>
-        <div className="stat-card"><span>BASTION</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>Final core state</small></div>
-        <div className="stat-card"><span>MODE</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>Run format</small></div>
+        <div className="stat-card"><span>{t('wave')}</span><strong>{snapshot.wave}</strong><small>{t('completedProgression')}</small></div>
+        <div className="stat-card"><span>{t('survival')}</span><strong>{formatSurvivalTime(snapshot.elapsedMs)}</strong><small>{t('officialSurvival')}</small></div>
+        <div className="stat-card"><span>{t('kills')}</span><strong>{snapshot.kills}</strong><small>{t('enemiesDefeated')}</small></div>
+        <div className="stat-card"><span>{t('gold')}</span><strong>{snapshot.gold}</strong><small>{t('goldRemaining')}</small></div>
+        <div className="stat-card"><span>{t('bastion')}</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>{t('finalCoreState')}</small></div>
+        <div className="stat-card"><span>{t('mode')}</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>{t('runFormat')}</small></div>
       </div>
 
       <div className="results-actions">
-        <button className="pre-run-start" onClick={onRetry}>RETRY RUN</button>
-        <button className="run-exit" onClick={onBack}>BACK TO MODE</button>
+        <button className="pre-run-start" onClick={onRetry}>{t('retryRun')}</button>
+        <button className="run-exit" onClick={onBack}>{t('backToMode')}</button>
       </div>
     </Shell>
   );
@@ -3745,9 +3746,9 @@ function Leaderboard({ session, onBack }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="GLOBAL RECORDS"
-      title="TOP 10"
-      subtitle="Verified mode records only. Ranked by wave, survival, score, kills, then oldest verified record."
+      kicker={t('globalRecords')}
+      title={t('top10')}
+      subtitle={t('leaderboardSubtitle')}
     >
       <div className="leaderboard-tabs">
         <button
@@ -3773,7 +3774,7 @@ function Leaderboard({ session, onBack }) {
             >
               <span className="leaderboard-podium__rank">#{entry.rank}</span>
               <strong>{entry.displayName}</strong>
-              {entry.isSelf && <em>YOU</em>}
+              {entry.isSelf && <em>{t('you')}</em>}
               <small>WAVE {entry.bestWave} · {formatSurvivalTime(entry.bestSurvivalMs)}</small>
               <b>{Number(entry.bestScore || 0).toLocaleString()} SCORE</b>
             </div>
@@ -3784,11 +3785,11 @@ function Leaderboard({ session, onBack }) {
       {leaderboardStatus === 'ready' && leaderboardView.personal && (
         <div className="leaderboard-personal-record" aria-label="Your verified record">
           <div>
-            <span>YOUR VERIFIED RECORD</span>
+            <span>{t('yourVerifiedRecord')}</span>
             <strong>
               {leaderboardView.personal.isTopTen
-                ? `GLOBAL #${leaderboardView.personal.rank}`
-                : 'OUTSIDE TOP 10'}
+                ? `${t('global')} #${leaderboardView.personal.rank}`
+                : t('outsideTop10')}
             </strong>
           </div>
           <div>
@@ -3801,23 +3802,23 @@ function Leaderboard({ session, onBack }) {
       <div className="table-card leaderboard-table">
         <div className="table-row table-row--head leaderboard-row">
           <span>#</span>
-          <span>DEFENDER</span>
-          <span>WAVE</span>
-          <span>SURVIVAL</span>
-          <span>SCORE</span>
-          <span>KILLS</span>
+          <span>{t('defender')}</span>
+          <span>{t('wave')}</span>
+          <span>{t('survival')}</span>
+          <span>{t('score')}</span>
+          <span>{t('kills')}</span>
         </div>
 
         {leaderboardStatus === 'loading' && (
-          <div className="empty-state">Loading verified records…</div>
+          <div className="empty-state">{t('loadingRecords')}</div>
         )}
 
         {leaderboardStatus !== 'loading' && leaderboardStatus !== 'ready' && (
-          <div className="empty-state">Leaderboard unavailable: {leaderboardStatus}</div>
+          <div className="empty-state">{t('leaderboardUnavailable')}: {leaderboardStatus}</div>
         )}
 
         {leaderboardStatus === 'ready' && entries.length === 0 && (
-          <div className="empty-state">No verified runs recorded for this mode yet.</div>
+          <div className="empty-state">{t('noVerifiedRuns')}</div>
         )}
 
         {leaderboardStatus === 'ready' && leaderboardView.rows.map((entry) => {
@@ -3829,7 +3830,7 @@ function Leaderboard({ session, onBack }) {
               <span className="leaderboard-rank">{entry.podium ? `#${entry.rank} ★` : `#${entry.rank}`}</span>
               <span className="leaderboard-defender">
                 {entry.displayName}
-                {entry.isSelf && <em>YOU</em>}
+                {entry.isSelf && <em>{t('you')}</em>}
               </span>
               <span>{entry.bestWave}</span>
               <span>{formatSurvivalTime(entry.bestSurvivalMs)}</span>
@@ -3878,21 +3879,21 @@ function Profile({ session, onBack }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="DEFENDER RECORD"
-      title={profileData?.profile?.display_name || 'PROFILE'}
-      subtitle="Verified account and mode statistics from the live Bastionfall database."
+      kicker={t('defenderRecord')}
+      title={profileData?.profile?.display_name || t('profile')}
+      subtitle={t('profileSubtitle')}
     >
       {profileStatus !== 'ready' ? (
         <div className="profile-state">
-          <strong>{profileStatus === 'loading' ? 'LOADING PROFILE…' : 'PROFILE UNAVAILABLE'}</strong>
-          <small>{profileStatus === 'loading' ? 'Fetching verified stats.' : profileStatus}</small>
+          <strong>{profileStatus === 'loading' ? t('loadingProfile') : t('profileUnavailable')}</strong>
+          <small>{profileStatus === 'loading' ? t('fetchingStats') : profileStatus}</small>
         </div>
       ) : (
         <>
           <section className="profile-level-card" aria-label="Account level progression">
             <div className="profile-level-card__header">
               <div>
-                <span>ACCOUNT LEVEL</span>
+                <span>{t('accountLevel')}</span>
                 <strong>LV. {accountProgress.level}</strong>
               </div>
               <small>{accountProgress.currentXp.toLocaleString()} / {accountProgress.requiredXp.toLocaleString()} XP</small>
@@ -3900,42 +3901,42 @@ function Profile({ session, onBack }) {
             <div className="profile-xp-track" role="progressbar" aria-valuemin="0" aria-valuemax={accountProgress.requiredXp} aria-valuenow={accountProgress.currentXp}>
               <div className="profile-xp-fill" style={{ width: `${Math.round(accountProgress.progress * 100)}%` }} />
             </div>
-            <p>Run XP: +{ACCOUNT_PROGRESSION.runBaseXp} base · +{ACCOUNT_PROGRESSION.xpPerWave}/wave · +{ACCOUNT_PROGRESSION.towerSevenBonusXp} at 7/7 · +{ACCOUNT_PROGRESSION.towerFourteenBonusXp} at 14/14.</p>
+            <p>{t('runXp')}: +{ACCOUNT_PROGRESSION.runBaseXp} {t('base')} · +{ACCOUNT_PROGRESSION.xpPerWave}/{t('perWave')} · +{ACCOUNT_PROGRESSION.towerSevenBonusXp} @ 7/7 · +{ACCOUNT_PROGRESSION.towerFourteenBonusXp} @ 14/14.</p>
           </section>
 
           <div className="profile-grid">
-            <div className="stat-card"><span>ACCOUNT XP</span><strong>{Number(profileData.profile.account_xp || 0).toLocaleString()}</strong><small>Permanent profile progression</small></div>
-            <div className="stat-card"><span>TOTAL RUNS</span><strong>{totalRuns}</strong><small>Verified completed runs</small></div>
-            <div className="stat-card"><span>LIFETIME KILLS</span><strong>{Number(profileData.profile.lifetime_kills || 0).toLocaleString()}</strong><small>Across verified runs</small></div>
-            <div className="stat-card"><span>SHARDS</span><strong>{profileData.profile.shards}</strong><small>Account progression currency</small></div>
+            <div className="stat-card"><span>{t('accountXp')}</span><strong>{Number(profileData.profile.account_xp || 0).toLocaleString()}</strong><small>{t('profilePermanent')}</small></div>
+            <div className="stat-card"><span>{t('totalRuns')}</span><strong>{totalRuns}</strong><small>{t('verifiedRuns')}</small></div>
+            <div className="stat-card"><span>{t('lifetimeKillsUpper')}</span><strong>{Number(profileData.profile.lifetime_kills || 0).toLocaleString()}</strong><small>{t('acrossVerifiedRuns')}</small></div>
+            <div className="stat-card"><span>{t('shards')}</span><strong>{profileData.profile.shards}</strong><small>{t('progressionCurrency')}</small></div>
           </div>
 
           <div className="profile-mode-grid">
             <section className="profile-mode-card">
               <span>SINGLE GATE</span>
-              <strong>Wave {single?.best_wave ?? 0}</strong>
+              <strong>{t('wave')} {single?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(single?.best_survival_ms ?? 0)} · Score {(single?.best_score ?? 0).toLocaleString()} · Kills {(single?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>TRI-GATE</span>
-              <strong>Wave {tri?.best_wave ?? 0}</strong>
+              <strong>{t('wave')} {tri?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(tri?.best_survival_ms ?? 0)} · Score {(tri?.best_score ?? 0).toLocaleString()} · Kills {(tri?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>TFT SHOP</span>
-              <strong>Wave {tft?.best_wave ?? 0}</strong>
+              <strong>{t('wave')} {tft?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(tft?.best_survival_ms ?? 0)} · Score {(tft?.best_score ?? 0).toLocaleString()} · Kills {(tft?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>SUDDEN SIEGE</span>
-              <strong>Wave {sudden?.best_wave ?? 0}</strong>
+              <strong>{t('wave')} {sudden?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(sudden?.best_survival_ms ?? 0)} · Score {(sudden?.best_score ?? 0).toLocaleString()} · Kills {(sudden?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>LAST BASTION</span>
-              <strong>{last?.runs ?? 0} Runs</strong>
+              <strong>{last?.runs ?? 0} {t('runs')}</strong>
               <small>Best Wave {last?.best_wave ?? 0} · Best Survival {formatSurvivalTime(last?.best_survival_ms ?? 0)} · Best Score {(last?.best_score ?? 0).toLocaleString()}</small>
-              <small>Lifetime Kills {(last?.lifetime_kills ?? 0).toLocaleString()} · Total Survival {formatSurvivalTime(totalSurvivalMs)}</small>
+              <small>{t('lifetimeKills')} {(last?.lifetime_kills ?? 0).toLocaleString()} · {t('totalSurvival')} {formatSurvivalTime(totalSurvivalMs)}</small>
             </section>
           </div>
         </>
@@ -3944,19 +3945,37 @@ function Profile({ session, onBack }) {
   );
 }
 
-function Settings({ onBack }) {
+function Settings({ onBack, language, onLanguageChange }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="GAME OPTIONS"
-      title="SETTINGS"
-      subtitle="Basic client preferences."
+      kicker={t('gameOptions')}
+      title={t('settings')}
+      subtitle={t('settingsSubtitle')}
     >
       <div className="settings-card">
-        <label><span>Master Volume</span><input type="range" min="0" max="100" defaultValue="80" /></label>
-        <label><span>Music Volume</span><input type="range" min="0" max="100" defaultValue="65" /></label>
-        <label><span>Effects Volume</span><input type="range" min="0" max="100" defaultValue="90" /></label>
-        <div className="setting-line"><span>Language</span><strong>English</strong></div>
+        <label><span>{t('masterVolume')}</span><input type="range" min="0" max="100" defaultValue="80" /></label>
+        <label><span>{t('musicVolume')}</span><input type="range" min="0" max="100" defaultValue="65" /></label>
+        <label><span>{t('effectsVolume')}</span><input type="range" min="0" max="100" defaultValue="90" /></label>
+        <div className="setting-line setting-line--language">
+          <span>{t('language')}</span>
+          <div className="language-selector" role="group" aria-label={t('language')}>
+            <button
+              type="button"
+              className={language === SUPPORTED_LANGUAGES.IT_IT ? 'language-selector__option language-selector__option--active' : 'language-selector__option'}
+              onClick={() => onLanguageChange(SUPPORTED_LANGUAGES.IT_IT)}
+            >
+              🇮🇹 {t('languageItalian')}
+            </button>
+            <button
+              type="button"
+              className={language === SUPPORTED_LANGUAGES.EN_US ? 'language-selector__option language-selector__option--active' : 'language-selector__option'}
+              onClick={() => onLanguageChange(SUPPORTED_LANGUAGES.EN_US)}
+            >
+              🇺🇸 {t('languageEnglish')}
+            </button>
+          </div>
+        </div>
       </div>
     </Shell>
   );
@@ -3966,41 +3985,17 @@ function HowToPlay({ onBack }) {
   return (
     <Shell
       onBack={onBack}
-      kicker="FIELD MANUAL"
-      title="HOW TO PLAY"
-      subtitle="Build a defense, survive endless waves, and push your record as far as possible."
+      kicker={t('fieldManual')}
+      title={t('howToPlay')}
+      subtitle={t('howToSubtitle')}
     >
       <div className="how-to-grid">
-        <section className="how-to-card">
-          <span>1</span>
-          <strong>CHOOSE A MODE</strong>
-          <small>Single Gate, Tri-Gate, and Last Bastion each test survival in a different format.</small>
-        </section>
-        <section className="how-to-card">
-          <span>2</span>
-          <strong>BUILD YOUR DEFENSE</strong>
-          <small>Spend run gold on towers and support structures. Every run starts from equal combat power.</small>
-        </section>
-        <section className="how-to-card">
-          <span>3</span>
-          <strong>HOLD THE BASTION</strong>
-          <small>Enemies follow their lanes toward your bastion. Survive wave after wave without losing the core.</small>
-        </section>
-        <section className="how-to-card">
-          <span>4</span>
-          <strong>ADAPT AS WAVES SCALE</strong>
-          <small>Enemy types, elites, bosses, blessings, and later modifiers increase the pressure over time.</small>
-        </section>
-        <section className="how-to-card">
-          <span>5</span>
-          <strong>CHASE RECORDS</strong>
-          <small>Single Gate and Tri-Gate keep separate records. Last Bastion also contributes to the matching survival record.</small>
-        </section>
-        <section className="how-to-card">
-          <span>6</span>
-          <strong>NO PAY-TO-WIN POWER</strong>
-          <small>Permanent account progress is prestige, cosmetic, and statistical only. Combat power resets every run.</small>
-        </section>
+        <section className="how-to-card"><span>1</span><strong>{t('chooseMode')}</strong><small>{t('chooseModeHelp')}</small></section>
+        <section className="how-to-card"><span>2</span><strong>{t('buildDefense')}</strong><small>{t('buildDefenseHelp')}</small></section>
+        <section className="how-to-card"><span>3</span><strong>{t('holdBastion')}</strong><small>{t('holdBastionHelp')}</small></section>
+        <section className="how-to-card"><span>4</span><strong>{t('adaptWaves')}</strong><small>{t('adaptWavesHelp')}</small></section>
+        <section className="how-to-card"><span>5</span><strong>{t('chaseRecords')}</strong><small>{t('chaseRecordsHelp')}</small></section>
+        <section className="how-to-card"><span>6</span><strong>{t('noP2w')}</strong><small>{t('noP2wHelp')}</small></section>
       </div>
     </Shell>
   );
@@ -4018,7 +4013,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
   async function submit(e) {
     e.preventDefault();
     if (!supabase) {
-      setError('Online authentication is not configured.');
+      setError(t('authNotConfigured'));
       return;
     }
 
@@ -4032,14 +4027,14 @@ function AuthModal({ mode, onClose, onSuccess }) {
           redirectTo: window.location.origin
         });
         if (resetError) throw resetError;
-        setNotice('If an account exists for this email, a password reset link has been sent.');
+        setNotice(t('authResetSent'));
         return;
       }
 
       if (authMode === 'reset-password') {
         const { error: updateError } = await supabase.auth.updateUser({ password });
         if (updateError) throw updateError;
-        setNotice('Password updated. You can continue with your account.');
+        setNotice(t('authPasswordUpdated'));
         window.history.replaceState({}, document.title, window.location.pathname);
         setTimeout(() => {
           onSuccess();
@@ -4078,43 +4073,43 @@ function AuthModal({ mode, onClose, onSuccess }) {
   }
 
   const title =
-    authMode === 'register' ? 'CREATE DEFENDER' :
-    authMode === 'forgot' ? 'RESET PASSWORD' :
-    authMode === 'reset-password' ? 'CHOOSE NEW PASSWORD' :
-    'SIGN IN';
+    authMode === 'register' ? t('createDefender') :
+    authMode === 'forgot' ? t('resetPassword') :
+    authMode === 'reset-password' ? t('chooseNewPassword') :
+    t('signIn');
 
   return (
     <div className="auth-backdrop" onMouseDown={() => !busy && onClose()} role="presentation">
       <form className="auth-modal" onSubmit={submit} onMouseDown={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="auth-title">
-        <p className="main-menu__kicker">BASTIONFALL ACCOUNT</p>
+        <p className="main-menu__kicker">{t('account')}</p>
         <h3 id="auth-title">{title}</h3>
         <p className="auth-modal__copy">
           {authMode === 'register'
-            ? 'Your account is active immediately. No email confirmation.'
+            ? t('authRegisterCopy')
             : authMode === 'forgot'
-              ? 'Enter your account email and we will send a secure reset link.'
+              ? t('authForgotCopy')
               : authMode === 'reset-password'
-                ? 'Set a new password for your Bastionfall account.'
-                : 'Continue your records from any device.'}
+                ? t('authResetCopy')
+                : t('authLoginCopy')}
         </p>
 
         {authMode === 'register' && (
           <label>
-            <span>Defender name</span>
+            <span>{t('defenderName')}</span>
             <input value={name} onChange={e => setName(e.target.value)} maxLength="40" required placeholder="Joker" />
           </label>
         )}
 
         {authMode !== 'reset-password' && (
           <label>
-            <span>Email</span>
+            <span>{t('email')}</span>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} required autoComplete="email" />
           </label>
         )}
 
         {authMode !== 'forgot' && (
           <label>
-            <span>{authMode === 'reset-password' ? 'New password' : 'Password'}</span>
+            <span>{authMode === 'reset-password' ? t('newPassword') : t('password')}</span>
             <input
               type="password"
               value={password}
@@ -4132,14 +4127,14 @@ function AuthModal({ mode, onClose, onSuccess }) {
 
         <button className="auth-submit" type="submit" disabled={busy}>
           {busy
-            ? 'CONNECTING...'
+            ? t('connecting')
             : authMode === 'register'
-              ? 'CREATE ACCOUNT'
+              ? t('authRegister')
               : authMode === 'forgot'
-                ? 'SEND RESET LINK'
+                ? t('sendResetLink')
                 : authMode === 'reset-password'
-                  ? 'SAVE NEW PASSWORD'
-                  : 'SIGN IN'}
+                  ? t('saveNewPassword')
+                  : t('authLogin')}
         </button>
 
         {authMode === 'login' && (
@@ -4152,7 +4147,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
               setNotice('');
             }}
           >
-            Forgot password?
+            {t('forgotPassword')}
           </button>
         )}
 
@@ -4166,7 +4161,7 @@ function AuthModal({ mode, onClose, onSuccess }) {
               setNotice('');
             }}
           >
-            {authMode === 'register' ? 'Already registered? Sign in' : authMode === 'login' ? 'New here? Create account' : 'Back to sign in'}
+            {authMode === 'register' ? t('alreadyRegistered') : authMode === 'login' ? t('newHere') : t('backToSignIn')}
           </button>
         )}
       </form>
@@ -4189,8 +4184,13 @@ function App() {
   const [completedMatchId, setCompletedMatchId] = useState(null);
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
+  const [language, setLanguageState] = useState(() => getLanguage());
   const lastStandardProgressRef = useRef(null);
   const hiddenAtRef = useRef(null);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -4719,26 +4719,32 @@ function App() {
   }
   if (screen === SCREENS.LEADERBOARD) return <Leaderboard session={session} onBack={() => setScreen(SCREENS.MENU)} />;
   if (screen === SCREENS.PROFILE) return <Profile session={session} onBack={() => setScreen(SCREENS.MENU)} />;
-  if (screen === SCREENS.SETTINGS) return <Settings onBack={() => setScreen(SCREENS.MENU)} />;
+  if (screen === SCREENS.SETTINGS) return (
+    <Settings
+      language={language}
+      onLanguageChange={(nextLanguage) => setLanguageState(setLanguage(nextLanguage))}
+      onBack={() => setScreen(SCREENS.MENU)}
+    />
+  );
   if (screen === SCREENS.HOW_TO_PLAY) return <HowToPlay onBack={() => setScreen(SCREENS.MENU)} />;
 
   return (
     <main className="main-menu">
       <section className="main-menu__content" aria-label="Bastionfall main menu">
-        <p className="main-menu__kicker">ENDLESS TOWER DEFENSE</p>
+        <p className="main-menu__kicker">{t('endlessTowerDefense')}</p>
         <h1>BASTIONFALL</h1>
-        <p className="main-menu__tagline">Build. Hold. Survive.</p>
+        <p className="main-menu__tagline">{t('tagline')}</p>
 
         <div className="account-strip">
           {session ? (
             <>
               <span>ONLINE · {session.user.email}</span>
-              <button onClick={logout}>SIGN OUT</button>
+              <button onClick={logout}>{t('signOut')}</button>
             </>
           ) : (
             <>
-              <button onClick={() => setAuthMode('login')}>SIGN IN</button>
-              <button onClick={() => setAuthMode('register')}>CREATE ACCOUNT</button>
+              <button onClick={() => setAuthMode('login')}>{t('signIn')}</button>
+              <button onClick={() => setAuthMode('register')}>{t('createAccount')}</button>
             </>
           )}
         </div>
@@ -4747,13 +4753,11 @@ function App() {
           <button
             className="main-menu__button main-menu__button--primary"
             onClick={() => setScreen(SCREENS.PLAY)}
-          >
-            PLAY
-          </button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.PROFILE)}>PROFILE</button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.LEADERBOARD)}>LEADERBOARDS</button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.HOW_TO_PLAY)}>HOW TO PLAY</button>
-          <button className="main-menu__button" onClick={() => setScreen(SCREENS.SETTINGS)}>SETTINGS</button>
+          >{t('play')}</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.PROFILE)}>{t('profile')}</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.LEADERBOARD)}>{t('leaderboards')}</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.HOW_TO_PLAY)}>{t('howToPlay')}</button>
+          <button className="main-menu__button" onClick={() => setScreen(SCREENS.SETTINGS)}>{t('settings')}</button>
         </nav>
 
         <p className="main-menu__version">Prototype v0.1.0</p>
