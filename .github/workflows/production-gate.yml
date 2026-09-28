@@ -77,6 +77,8 @@ jobs:
         run: node tests/last-bastion-spectate.mjs
       - name: Gameplay Feedback QA
         run: node tests/game-feedback.mjs
+      - name: Italian Localization QA
+        run: node tests/localization-it.mjs
       - name: Install Playwright QA runtime
         run: |
           npm install --no-save playwright@1.55.0
