@@ -10,7 +10,7 @@ const SUDDEN_BANDS = Object.freeze([
 export const SUDDEN_SIEGE = Object.freeze({
   version: 2,
   preparationSeconds: 9,
-  baseWaveClearGold: 5,
+  baseWaveClearGold: 7,
   perfectWaveBonus: 1,
   bossWaveBonus: 3,
   milestoneWaveBonus: 2,
