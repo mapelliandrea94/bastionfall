@@ -1591,7 +1591,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           position: getPathPosition(getEnemyPath(enemy), enemy.progress)
         }));
 
-        for (const placed of placedDefenses) {
+        const combatPlacedDefenses = placedDefenses.map((tower) => {
+          const slot = buildSlots.find((entry) => entry.id === tower.slotId);
+          return slot ? { ...tower, x: slot.x, y: slot.y } : tower;
+        });
+
+        for (const placed of combatPlacedDefenses) {
           const baseDefinition = defenseDefinitions[placed.defenseId];
           if (!baseDefinition) continue;
           const definition = applyBlessingTowerIdentity(
@@ -1602,7 +1607,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             run?.blessings ?? []
           );
 
-          const attackInterval = getEffectiveTowerAttackInterval(definition, placed, placedDefenses, defenseDefinitions);
+          const attackInterval = getEffectiveTowerAttackInterval(definition, placed, combatPlacedDefenses, defenseDefinitions);
           const lastAttackAt = Number(towerAttackTimesRef.current[placed.id] ?? 0);
           if (now - lastAttackAt < attackInterval) continue;
 
@@ -1648,7 +1653,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             }
 
             const comboMultiplier = getTowerComboDamageMultiplier(placed.defenseId, target);
-            const damage = getTowerHitDamage(definition, placed, target, placedDefenses, defenseDefinitions) * damageScale * comboMultiplier;
+            const damage = getTowerHitDamage(definition, placed, target, combatPlacedDefenses, defenseDefinitions) * damageScale * comboMultiplier;
             let damaged = applyEnemyDamage(target, damage, definition.damageType);
 
             let statusEffects = { ...(damaged.statusEffects ?? {}) };
@@ -2138,9 +2143,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       }
       const sourceSlotId = sourceTower.slotId;
       const targetTowerId = occupied.id;
+      const targetSlot = buildSlots.find((entry) => entry.id === slotId) ?? null;
+      const sourceSlot = buildSlots.find((entry) => entry.id === sourceSlotId) ?? null;
       setPlacedDefenses((current) => current.map((tower) => {
-        if (tower.id === swappingPlacedDefenseId) return { ...tower, slotId };
-        if (tower.id === targetTowerId) return { ...tower, slotId: sourceSlotId };
+        if (tower.id === swappingPlacedDefenseId) {
+          return targetSlot ? { ...tower, slotId, x: targetSlot.x, y: targetSlot.y } : { ...tower, slotId };
+        }
+        if (tower.id === targetTowerId) {
+          return sourceSlot ? { ...tower, slotId: sourceSlotId, x: sourceSlot.x, y: sourceSlot.y } : { ...tower, slotId: sourceSlotId };
+        }
         return tower;
       }));
       setSelectedPlacedDefenseId(swappingPlacedDefenseId);
@@ -2162,8 +2173,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         setSelectedPlacedDefenseId(occupied.id);
         return;
       }
+      const destinationSlot = buildSlots.find((entry) => entry.id === slotId) ?? null;
       setPlacedDefenses((current) => current.map((tower) =>
-        tower.id === movingPlacedDefenseId ? { ...tower, slotId } : tower
+        tower.id === movingPlacedDefenseId
+          ? (destinationSlot ? { ...tower, slotId, x: destinationSlot.x, y: destinationSlot.y } : { ...tower, slotId })
+          : tower
       ));
       setSelectedPlacedDefenseId(movingPlacedDefenseId);
       setMovingPlacedDefenseId(null);
