@@ -2248,6 +2248,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   movingTower && !placed ? 'battlefield-map__tower-slot--move-target' : '',
                   isShopMode(run?.mode) && placed && benchCopy && canMergeTftCopy(placed, benchCopy).ok
                     ? 'battlefield-map__tower-slot--merge-target'
+                    : '',
+                  mergingPlacedDefenseId && placed && placed.id !== mergingPlacedDefenseId && (() => {
+                    const source = placedDefenses.find((tower) => tower.id === mergingPlacedDefenseId);
+                    return source && source.defenseId === placed.defenseId &&
+                      Number(source.copyProgress ?? 1) + Number(placed.copyProgress ?? 1) <= TFT_COPY_PROGRESSION.maxCopies;
+                  })()
+                    ? 'battlefield-map__tower-slot--merge-target'
                     : ''
                 ].filter(Boolean).join(' ');
 
@@ -2971,6 +2978,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   >
                     {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
                   </button>
+                  {isShopMode(run?.mode) && (
+                    <button
+                      type="button"
+                      className={mergingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
+                      onClick={handleStartFieldMerge}
+                    >
+                      {mergingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MERGE' : 'MERGE · 0G'}
+                    </button>
+                  )}
                   <button type="button" onClick={handleSellSelectedTower}>
                     SELL · +{selectedSellPreview.refund}G
                   </button>
@@ -2978,6 +2994,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               )}
               {movingPlacedDefenseId === selectedPlacedDefense?.id && (
                 <small>Choose any empty tower pad to move this tower.</small>
+              )}
+              {mergingPlacedDefenseId === selectedPlacedDefense?.id && (
+                <small>Choose a highlighted matching tower. Existing copy progress is combined.</small>
               )}
             </div>
             <div className="defense-inspector__upgrade">
