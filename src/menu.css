@@ -3144,6 +3144,46 @@ body { background:#1c3f61; }
   font-weight: 700;
 }
 
+.mini-objective-battlefield {
+  pointer-events: none;
+}
+
+.mini-objective-battlefield__card rect {
+  fill: rgba(7, 23, 20, .9);
+  stroke: rgba(121, 222, 159, .9);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 9px rgba(84, 196, 124, .3));
+}
+
+.mini-objective-battlefield__title {
+  fill: #9be3b4;
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: 2px;
+}
+
+.mini-objective-battlefield__status {
+  fill: #e9f7ed;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.mini-objective-battlefield--failed .mini-objective-battlefield__card rect,
+.mini-objective-battlefield--over-limit .mini-objective-battlefield__card rect {
+  fill: rgba(50, 13, 12, .92);
+  stroke: rgba(255, 105, 89, .95);
+  filter: drop-shadow(0 0 10px rgba(255, 75, 59, .38));
+}
+
+.mini-objective-battlefield--failed .mini-objective-battlefield__title,
+.mini-objective-battlefield--failed .mini-objective-battlefield__status,
+.mini-objective-battlefield--over-limit .mini-objective-battlefield__title,
+.mini-objective-battlefield--over-limit .mini-objective-battlefield__status {
+  fill: #ffc0b7;
+}
+
 .mini-objective-panel {
   margin: 0 0 .8rem;
   padding: .68rem .72rem;
@@ -3178,6 +3218,21 @@ body { background:#1c3f61; }
   color: #91e0a9;
   font-size: .74rem;
 }
+
+.mini-objective-panel--complete {
+  border-color: rgba(111, 220, 151, .7);
+  background: rgba(20, 90, 48, .22);
+  box-shadow: 0 0 18px rgba(73, 198, 116, .14);
+}
+
+.mini-objective-panel--missed {
+  border-color: rgba(255, 105, 89, .65);
+  background: rgba(92, 25, 22, .2);
+  box-shadow: 0 0 18px rgba(255, 78, 62, .1);
+}
+
+.mini-objective-panel--complete em { color: #a6efbc; }
+.mini-objective-panel--missed em { color: #ffb2a8; }
 
 .mini-objective-panel small {
   grid-column: 1 / -1;
