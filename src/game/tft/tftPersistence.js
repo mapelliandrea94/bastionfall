@@ -3,7 +3,8 @@ import { TFT_SHOP } from './tftShop.js';
 
 export const TFT_PERSISTENCE = Object.freeze({
   version: 2,
-  storageKey: 'bastionfall:tft-run:v2'
+  storageKey: 'bastionfall:tft-run:v2',
+  supportedModes: Object.freeze(['tft-shop', 'sudden-siege'])
 });
 
 function clampInt(value, min, max, fallback = min) {
@@ -21,9 +22,19 @@ export function createTftRunSnapshot({
   selectedTftBenchIndex = null,
   tftRollIndex = 0,
   tftShopLocked = false,
-  tftPurchasedSlotIds = []
+  tftPurchasedSlotIds = [],
+  spawnQueue = [],
+  activeEnemies = [],
+  preparationRemaining = null,
+  waveSpeed = 1,
+  riskRewardTier = 'safe',
+  tftAutoStartEnabled = false,
+  waveClockNow = null,
+  queuedWaveNumber = null,
+  spawnedWaveNumber = null,
+  bossSummonFiredKeys = []
 } = {}) {
-  if (!run || run.mode !== 'tft-shop') return null;
+  if (!run || !TFT_PERSISTENCE.supportedModes.includes(run.mode)) return null;
 
   return Object.freeze({
     version: TFT_PERSISTENCE.version,
@@ -47,12 +58,25 @@ export function createTftRunSnapshot({
       Array.isArray(tftPurchasedSlotIds)
         ? [...new Set(tftPurchasedSlotIds.map((id) => String(id)).filter(Boolean))].slice(0, TFT_SHOP.slotCount)
         : []
-    )
+    ),
+    spawnQueue: Object.freeze(Array.isArray(spawnQueue) ? spawnQueue.map((enemy) => Object.freeze({ ...enemy })) : []),
+    activeEnemies: Object.freeze(Array.isArray(activeEnemies) ? activeEnemies.map((enemy) => Object.freeze({
+      ...enemy,
+      statusEffects: enemy?.statusEffects ? Object.freeze({ ...enemy.statusEffects }) : enemy?.statusEffects
+    })) : []),
+    preparationRemaining: preparationRemaining == null ? null : Math.max(0, Number(preparationRemaining) || 0),
+    waveSpeed: Number(waveSpeed) === 2 ? 2 : 1,
+    riskRewardTier: String(riskRewardTier ?? 'safe'),
+    tftAutoStartEnabled: Boolean(tftAutoStartEnabled),
+    waveClockNow: Number.isFinite(Number(waveClockNow)) ? Number(waveClockNow) : null,
+    queuedWaveNumber: queuedWaveNumber == null ? null : clampInt(queuedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
+    spawnedWaveNumber: spawnedWaveNumber == null ? null : clampInt(spawnedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
+    bossSummonFiredKeys: Object.freeze(Array.isArray(bossSummonFiredKeys) ? [...new Set(bossSummonFiredKeys.map(String))] : [])
   });
 }
 
 export function normalizeTftRunSnapshot(snapshot) {
-  if (!snapshot || snapshot.version !== TFT_PERSISTENCE.version || snapshot.run?.mode !== 'tft-shop') return null;
+  if (!snapshot || snapshot.version !== TFT_PERSISTENCE.version || !TFT_PERSISTENCE.supportedModes.includes(snapshot.run?.mode)) return null;
 
   const placedDefenses = Array.isArray(snapshot.placedDefenses)
     ? snapshot.placedDefenses.map((tower) => ({
@@ -90,7 +114,20 @@ export function normalizeTftRunSnapshot(snapshot) {
     tftShopLocked: Boolean(snapshot.tftShopLocked),
     tftPurchasedSlotIds: Array.isArray(snapshot.tftPurchasedSlotIds)
       ? [...new Set(snapshot.tftPurchasedSlotIds.map((id) => String(id)).filter(Boolean))].slice(0, TFT_SHOP.slotCount)
-      : []
+      : [],
+    spawnQueue: Array.isArray(snapshot.spawnQueue) ? snapshot.spawnQueue.map((enemy) => ({ ...enemy })) : [],
+    activeEnemies: Array.isArray(snapshot.activeEnemies) ? snapshot.activeEnemies.map((enemy) => ({
+      ...enemy,
+      statusEffects: enemy?.statusEffects ? { ...enemy.statusEffects } : enemy?.statusEffects
+    })) : [],
+    preparationRemaining: snapshot.preparationRemaining == null ? null : Math.max(0, Number(snapshot.preparationRemaining) || 0),
+    waveSpeed: Number(snapshot.waveSpeed) === 2 ? 2 : 1,
+    riskRewardTier: String(snapshot.riskRewardTier ?? 'safe'),
+    tftAutoStartEnabled: Boolean(snapshot.tftAutoStartEnabled),
+    waveClockNow: Number.isFinite(Number(snapshot.waveClockNow)) ? Number(snapshot.waveClockNow) : null,
+    queuedWaveNumber: snapshot.queuedWaveNumber == null ? null : clampInt(snapshot.queuedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
+    spawnedWaveNumber: snapshot.spawnedWaveNumber == null ? null : clampInt(snapshot.spawnedWaveNumber, 1, Number.MAX_SAFE_INTEGER, null),
+    bossSummonFiredKeys: Array.isArray(snapshot.bossSummonFiredKeys) ? [...new Set(snapshot.bossSummonFiredKeys.map(String))] : []
   };
 }
 
@@ -140,10 +177,21 @@ export function getTftPersistenceFixtures() {
     selectedTftBenchIndex: 0,
     tftRollIndex: 4,
     tftShopLocked: true,
-    tftPurchasedSlotIds: ['human-1', 'human-2', 'insect-1', 'insect-2', 'alien-1', 'alien-2', 'neutral-1', 'neutral-2']
+    tftPurchasedSlotIds: ['human-1', 'human-2', 'insect-1', 'insect-2', 'alien-1', 'alien-2', 'neutral-1', 'neutral-2'],
+    spawnQueue: [{ id: 'queued-a', scheduledSpawnAt: 1234 }],
+    activeEnemies: [{ id: 'enemy-a', hp: 50, maxHp: 100, progress: 0.42, statusEffects: { slowUntilMs: 2000 } }],
+    preparationRemaining: 12,
+    waveSpeed: 2,
+    riskRewardTier: 'pressure',
+    tftAutoStartEnabled: true,
+    waveClockNow: 1500,
+    queuedWaveNumber: 9,
+    spawnedWaveNumber: 9,
+    bossSummonFiredKeys: ['10:0']
   });
   const restored = normalizeTftRunSnapshot(JSON.parse(JSON.stringify(source)));
   const corrupt = normalizeTftRunSnapshot({ version: 999, run: { mode: 'tft-shop' } });
+  const sudden = createTftRunSnapshot({ run: { mode: 'sudden-siege', wave: 3, gold: 5, phase: 'preparation' } });
 
   return Object.freeze({
     validSnapshotCreated: source?.run?.mode === 'tft-shop',
@@ -162,6 +210,15 @@ export function getTftPersistenceFixtures() {
     purchasedSlotsPersist:
       restored?.tftPurchasedSlotIds?.length === TFT_SHOP.slotCount &&
       restored?.tftPurchasedSlotIds?.includes('neutral-2'),
+    activeWavePersists:
+      restored?.spawnQueue?.[0]?.id === 'queued-a' &&
+      restored?.activeEnemies?.[0]?.id === 'enemy-a' &&
+      restored?.activeEnemies?.[0]?.progress === 0.42 &&
+      restored?.waveSpeed === 2 &&
+      restored?.riskRewardTier === 'pressure' &&
+      restored?.queuedWaveNumber === 9 &&
+      restored?.spawnedWaveNumber === 9,
+    suddenSiegeSupported: sudden?.run?.mode === 'sudden-siege',
     invalidVersionRejected: corrupt === null
   });
 }
