@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { createPortal } from 'react-dom';
 import { supabase } from './lib/supabase.js';
 import { normalizeRunSeed } from './lib/runSeed.js';
 import { SINGLE_GATE_MAP, getSingleGatePathForWalls } from './game/maps/singleGate.js';
@@ -1067,12 +1068,22 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [activeEnemies, setActiveEnemies] = useState([]);
   const [preparationRemaining, setPreparationRemaining] = useState(run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
   const [selectedDefenseId, setSelectedDefenseId] = useState('human-aa');
-  const [placedDefenses, setPlacedDefenses] = useState(() => matchingTftSnapshot?.placedDefenses ?? []);
+  const [placedDefenses, setPlacedDefenses] = useState(() => {
+    const restored = matchingTftSnapshot?.placedDefenses ?? [];
+    if (!isShopMode(run?.mode)) return restored;
+    return restored.map((tower, index) => ({
+      ...tower,
+      id: tower.sourceCopyId
+        ? `field:${tower.sourceCopyId}`
+        : `field-restored:${tower.id ?? tower.defenseId ?? 'tower'}:${index}`
+    }));
+  });
   const [activeWallIds, setActiveWallIds] = useState(() => matchingTftSnapshot?.activeWallIds ?? []);
   const [wallHpById, setWallHpById] = useState(() => matchingTftSnapshot?.wallHpById ?? {});
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [movingPlacedDefenseId, setMovingPlacedDefenseId] = useState(null);
+  const [swappingPlacedDefenseId, setSwappingPlacedDefenseId] = useState(null);
   const [mergingPlacedDefenseId, setMergingPlacedDefenseId] = useState(null);
   const [riskRewardTier, setRiskRewardTier] = useState('safe');
   const [miniObjectiveFeedback, setMiniObjectiveFeedback] = useState('');
@@ -1325,16 +1336,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }, [run, placedDefenses, activeWallIds, wallHpById, tftBench, selectedTftBenchIndex, tftRollIndex, tftShopLocked, tftPurchasedSlotIds]);
 
   useEffect(() => {
-    if (!run || run.phase === RUN_PHASES.ENDED) return undefined;
+    if (!run || run.phase !== RUN_PHASES.ACTIVE) return undefined;
+
+    const activeStartedAtMs = Date.now();
+    const elapsedBeforeAttackMs = Math.max(0, Number(run.elapsedMs) || 0);
 
     const tick = () => {
-      onTimerTick(getElapsedRunMs(run.startedAtMs, Date.now()));
+      onTimerTick(elapsedBeforeAttackMs + (Date.now() - activeStartedAtMs));
     };
 
     tick();
     const intervalId = window.setInterval(tick, RUN_TIMER.tickIntervalMs);
     return () => window.clearInterval(intervalId);
-  }, [run?.startedAtMs, run?.phase]);
+  }, [run?.phase]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
@@ -1898,6 +1912,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       return;
     }
     setMovingPlacedDefenseId(null);
+    setSwappingPlacedDefenseId(null);
     setMergingPlacedDefenseId((current) => current === selectedPlacedDefense.id ? null : selectedPlacedDefense.id);
     setTftFeedback((current) => current === 'SELECT A MATCHING FIELD TOWER' ? '' : 'SELECT A MATCHING FIELD TOWER');
   };
@@ -1949,6 +1964,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setPlacedDefenses((current) => current.filter((tower) => tower.id !== selectedPlacedDefense.id));
     setSelectedPlacedDefenseId(null);
     setMovingPlacedDefenseId(null);
+    setSwappingPlacedDefenseId(null);
     setMergingPlacedDefenseId(null);
     towerAttackTimesRef.current[selectedPlacedDefense.id] = 0;
     if (refund > 0) onGainGold(refund);
@@ -1957,7 +1973,17 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const handleToggleMoveSelectedTower = () => {
     if (!selectedPlacedDefense || !run || run.phase === RUN_PHASES.ENDED) return;
+    setMergingPlacedDefenseId(null);
+    setSwappingPlacedDefenseId(null);
     setMovingPlacedDefenseId((current) => current === selectedPlacedDefense.id ? null : selectedPlacedDefense.id);
+  };
+
+  const handleToggleSwapSelectedTower = () => {
+    if (!selectedPlacedDefense || !run || run.phase === RUN_PHASES.ENDED) return;
+    setMovingPlacedDefenseId(null);
+    setMergingPlacedDefenseId(null);
+    setSwappingPlacedDefenseId((current) => current === selectedPlacedDefense.id ? null : selectedPlacedDefense.id);
+    if (isShopMode(run.mode)) setTftFeedback('SELECT A TOWER TO SWAP');
   };
 
   const placeTftBenchCopyOnSlot = (benchIndex, slotId) => {
@@ -1979,6 +2005,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     const placedTower = {
       ...attempt.structure,
+      id: `field:${copy.copyId}`,
       defenseId: copy.towerId,
       level: 1,
       copyProgress: 1,
@@ -2017,14 +2044,49 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       return;
     }
 
+    if (swappingPlacedDefenseId) {
+      if (!run || run.phase === RUN_PHASES.ENDED) {
+        setSwappingPlacedDefenseId(null);
+        return;
+      }
+      if (!occupied) {
+        if (isShopMode(run.mode)) setTftFeedback('SELECT AN OCCUPIED TOWER TO SWAP');
+        return;
+      }
+      if (occupied.id === swappingPlacedDefenseId) {
+        setSwappingPlacedDefenseId(null);
+        if (isShopMode(run.mode)) setTftFeedback('');
+        return;
+      }
+      const sourceTower = placedDefenses.find((tower) => tower.id === swappingPlacedDefenseId);
+      if (!sourceTower) {
+        setSwappingPlacedDefenseId(null);
+        return;
+      }
+      const sourceSlotId = sourceTower.slotId;
+      const targetTowerId = occupied.id;
+      setPlacedDefenses((current) => current.map((tower) => {
+        if (tower.id === swappingPlacedDefenseId) return { ...tower, slotId };
+        if (tower.id === targetTowerId) return { ...tower, slotId: sourceSlotId };
+        return tower;
+      }));
+      setSelectedPlacedDefenseId(swappingPlacedDefenseId);
+      setSwappingPlacedDefenseId(null);
+      if (isShopMode(run.mode)) setTftFeedback('TOWERS SWAPPED · 0G');
+      return;
+    }
+
     if (movingPlacedDefenseId) {
       if (!run || run.phase === RUN_PHASES.ENDED) {
         setMovingPlacedDefenseId(null);
         return;
       }
       if (occupied) {
+        if (occupied.id === movingPlacedDefenseId) {
+          setMovingPlacedDefenseId(null);
+          return;
+        }
         setSelectedPlacedDefenseId(occupied.id);
-        setMovingPlacedDefenseId(occupied.id);
         return;
       }
       setPlacedDefenses((current) => current.map((tower) =>
@@ -2191,6 +2253,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               >
                 {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
               </button>
+              <button
+                type="button"
+                className={swappingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
+                onClick={handleToggleSwapSelectedTower}
+              >
+                {swappingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL INVERTI' : 'INVERTI · 0G'}
+              </button>
               {isShopMode(run?.mode) && (
                 <button
                   type="button"
@@ -2204,6 +2273,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 SELL · +{selectedSellPreview.refund}G
               </button>
               {movingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK AN EMPTY PAD</span>}
+              {swappingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK ANY OTHER TOWER</span>}
               {mergingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK A MATCHING TOWER</span>}
             </div>
           )}
@@ -2829,7 +2899,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     if (!selectedTftShopOffer) return;
                     if ((run?.gold ?? 0) < selectedTftShopOffer.cost) return;
                     const result = addCopyToBench(tftBench, {
-                      copyId: `${run?.seed ?? 'run'}:${tftRollIndex}:${selectedTftShopOffer.slotId}:${Date.now()}`,
+                      copyId: typeof crypto !== 'undefined' && crypto.randomUUID
+                        ? crypto.randomUUID()
+                        : `${run?.seed ?? 'run'}:${tftRollIndex}:${selectedTftShopOffer.slotId}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
                       towerId: selectedTftShopOffer.towerId,
                       name: selectedTftShopOffer.name,
                       faction: selectedTftShopOffer.faction,
@@ -3061,6 +3133,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   >
                     {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
                   </button>
+                  <button
+                    type="button"
+                    className={swappingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
+                    onClick={handleToggleSwapSelectedTower}
+                  >
+                    {swappingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL INVERTI' : 'INVERTI · 0G'}
+                  </button>
                   {isShopMode(run?.mode) && (
                     <button
                       type="button"
@@ -3077,6 +3156,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               )}
               {movingPlacedDefenseId === selectedPlacedDefense?.id && (
                 <small>Choose any empty tower pad to move this tower.</small>
+              )}
+              {swappingPlacedDefenseId === selectedPlacedDefense?.id && (
+                <small>Choose any other occupied tower to invert their positions.</small>
               )}
               {mergingPlacedDefenseId === selectedPlacedDefense?.id && (
                 <small>Choose a highlighted matching tower. Existing copy progress is combined.</small>
@@ -3257,8 +3339,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           </div>
 
 
-          {blessingChoiceVisible && (
-            <section
+          {blessingChoiceVisible && createPortal(
+            <div className="blessing-overlay" role="presentation">
+              <section
               className="blessing-choice"
               aria-label="Choose a blessing"
               data-blessing-choice-ui="ready"
@@ -3306,7 +3389,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   );
                 })}
               </div>
-            </section>
+              </section>
+            </div>,
+            document.body
           )}
 
           {!isShopMode(run?.mode) && (
