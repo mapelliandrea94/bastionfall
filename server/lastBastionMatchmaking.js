@@ -286,6 +286,94 @@ export function hydrateLastBastionActiveMatches(matchRows = [], participantRows 
   return Object.freeze({ hydratedMatches, hydratedParticipants });
 }
 
+export function hydrateLastBastionMatch(matchRow, participantRows = []) {
+  const row = matchRow || {};
+  const id = String(row?.id || '').trim();
+  const seed = String(row?.seed || '').trim();
+  const createdAt = String(row?.createdAt || row?.created_at || '');
+  const startedAt = String(row?.startedAt || row?.started_at || '');
+  const waveStartsAt = String(row?.waveStartsAt || row?.wave_starts_at || '');
+  const status = String(row?.status || 'active');
+
+  if (!id || !seed || !createdAt || !startedAt || !waveStartsAt || !['active', 'finished'].includes(status)) {
+    return Object.freeze({ hydrated: false, reason: 'invalid_match_row' });
+  }
+
+  const normalizedParticipants = participantRows
+    .map((entry) => {
+      const matchId = String(entry?.matchId || entry?.match_id || '').trim();
+      const userId = String(entry?.userId || entry?.user_id || '').trim();
+      const slot = Number(entry?.slot);
+      if (matchId !== id || !userId || !Number.isInteger(slot) || slot < 1 || slot > LAST_BASTION_MATCHMAKING.maxPlayers) {
+        return null;
+      }
+      return { ...entry, matchId, userId, slot };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.slot - b.slot);
+
+  if (
+    normalizedParticipants.length < LAST_BASTION_MATCHMAKING.minPlayers ||
+    normalizedParticipants.length > LAST_BASTION_MATCHMAKING.maxPlayers
+  ) {
+    return Object.freeze({ hydrated: false, reason: 'invalid_participant_count' });
+  }
+
+  const previous = matchesById.get(id);
+  if (previous) {
+    for (const participantId of previous.participantIds) {
+      if (activeMatchByUserId.get(participantId)?.id === id) {
+        activeMatchByUserId.delete(participantId);
+      }
+    }
+  }
+
+  const participantIds = Object.freeze(normalizedParticipants.map((entry) => entry.userId));
+  const participants = new Map();
+
+  for (const entry of normalizedParticipants) {
+    const lastSeenAt = String(entry.lastSeenAt || entry.last_seen_at || createdAt);
+    const eliminatedAt = entry.eliminatedAt || entry.eliminated_at || null;
+    participants.set(entry.userId, {
+      alive: entry.alive !== false,
+      lastSeenAtMs: Number.isFinite(Date.parse(lastSeenAt)) ? Date.parse(lastSeenAt) : Date.parse(createdAt),
+      wave: Math.max(0, Math.floor(Number(entry.wave) || 0)),
+      coreHp: Math.max(0, Math.floor(Number(entry.coreHp ?? entry.core_hp) || 0)),
+      lastHeartbeatAcceptedAtMs: 0,
+      rejectedHeartbeatCount: 0,
+      placement: Number.isInteger(Number(entry.placement)) ? Number(entry.placement) : null,
+      eliminatedAtMs: eliminatedAt && Number.isFinite(Date.parse(String(eliminatedAt)))
+        ? Date.parse(String(eliminatedAt))
+        : null
+    });
+  }
+
+  const match = {
+    id,
+    seed,
+    createdAt,
+    startedAt,
+    waveStartsAt,
+    participantIds,
+    participants,
+    status,
+    winnerUserId: row?.winnerUserId || row?.winner_user_id || null,
+    endedAt: row?.endedAt || row?.ended_at || null
+  };
+
+  matchesById.set(id, match);
+  for (const participantId of participantIds) {
+    activeMatchByUserId.set(participantId, match);
+  }
+
+  return Object.freeze({
+    hydrated: true,
+    matchId: id,
+    participantCount: participantIds.length,
+    status
+  });
+}
+
 export function hydrateLastBastionQueue(entries = []) {
   queue.length = 0;
   byUserId.clear();
