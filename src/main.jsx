@@ -1188,6 +1188,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const projectileQueueRef = useRef([]);
   const projectileIdRef = useRef(0);
   const defeatedEnemyIdsRef = useRef(new Set());
+  const localSnapshotSourceRef = useRef(null);
+  const localSaveTimerRef = useRef(null);
+  const lastLocalSaveAtRef = useRef(0);
   const [projectiles, setProjectiles] = useState([]);
 
   const removeAndCountDefeatedEnemies = (enemies) => {
@@ -1522,7 +1525,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
   useEffect(() => {
     if (!isShopMode(run?.mode) || run?.phase === RUN_PHASES.ENDED) return;
-    const snapshot = createTftRunSnapshot({
+
+    localSnapshotSourceRef.current = {
       run,
       placedDefenses,
       activeWallIds,
@@ -1538,12 +1542,26 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       waveSpeed,
       riskRewardTier,
       tftAutoStartEnabled,
-      waveClockNow: getWaveNow(),
       queuedWaveNumber: queuedWaveRef.current,
       spawnedWaveNumber: spawnedWaveRef.current,
       bossSummonFiredKeys: Array.from(bossSummonFiredRef.current)
-    });
-    saveTftRunSnapshot(snapshot);
+    };
+
+    if (localSaveTimerRef.current != null) return;
+
+    const elapsedSinceSave = Date.now() - Number(lastLocalSaveAtRef.current || 0);
+    const delay = Math.max(0, 1000 - elapsedSinceSave);
+    localSaveTimerRef.current = window.setTimeout(() => {
+      localSaveTimerRef.current = null;
+      const source = localSnapshotSourceRef.current;
+      if (!source?.run || source.run.phase === RUN_PHASES.ENDED) return;
+      const snapshot = createTftRunSnapshot({
+        ...source,
+        waveClockNow: getWaveNow()
+      });
+      saveTftRunSnapshot(snapshot);
+      lastLocalSaveAtRef.current = Date.now();
+    }, delay);
   }, [
     run,
     placedDefenses,
@@ -1561,6 +1579,20 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     riskRewardTier,
     tftAutoStartEnabled
   ]);
+
+  useEffect(() => () => {
+    if (localSaveTimerRef.current != null) {
+      window.clearTimeout(localSaveTimerRef.current);
+      localSaveTimerRef.current = null;
+    }
+    const source = localSnapshotSourceRef.current;
+    if (!source?.run || source.run.phase === RUN_PHASES.ENDED) return;
+    const snapshot = createTftRunSnapshot({
+      ...source,
+      waveClockNow: getWaveNow()
+    });
+    saveTftRunSnapshot(snapshot);
+  }, []);
 
   useEffect(() => {
     if (!run || run.phase !== RUN_PHASES.ACTIVE) return undefined;
