@@ -3769,7 +3769,7 @@ function App() {
         session={session}
         onBack={() => setScreen(SCREENS.PLAY)}
         onStart={async (mode, preparedMatch = null) => {
-          if (mode !== MODES.SINGLE_GATE && !isShopMode(mode) && mode !== MODES.LAST_BASTION) return;
+          if (mode !== MODES.SINGLE_GATE && mode !== MODES.TRI_GATE && !isShopMode(mode) && mode !== MODES.LAST_BASTION) return;
           const started = preparedMatch
             ? { ok: true, match: preparedMatch }
             : isShopMode(mode)
