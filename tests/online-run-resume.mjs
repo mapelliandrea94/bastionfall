@@ -28,6 +28,8 @@ const engine = getOfflineRunEngineFixtures();
 assert.equal(engine.supportedModeAdvances, true, 'offline server engine must advance supported runs');
 assert.equal(engine.preparationCanStartWave, true, 'offline server engine must transition preparation into combat');
 assert.equal(engine.generatedWaveQueue, true, 'offline server engine must preserve or generate wave work');
+assert.equal(engine.offlineWallsTakeDamage, true, 'offline walls must take damage from blocked enemies');
+assert.equal(engine.offlineWallsCanBeDestroyed, true, 'offline walls must be destructible during catch-up');
 
 assert(migration.includes('not exists ('), 'stale cleanup must exempt active online snapshots');
 assert(migration.includes("o.status='active'"), 'stale cleanup must only preserve active snapshots');
