@@ -796,10 +796,12 @@ app.get('/api/profile', requireUser, async (req, res) => {
     req.db
       .from('mode_records')
       .select('mode,best_wave,best_survival_ms,best_score,best_kills,updated_at')
+      .eq('user_id', req.user.id)
       .order('mode', { ascending: true }),
     req.db
       .from('last_bastion_stats')
       .select('runs,wins,top3,best_placement,best_wave,best_survival_ms,best_score,lifetime_kills,total_survival_ms,updated_at')
+      .eq('user_id', req.user.id)
       .maybeSingle()
   ]);
 
