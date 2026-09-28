@@ -4102,6 +4102,32 @@ function App() {
   const [session, setSession] = useState(null);
   const [authMode, setAuthMode] = useState(null);
   const lastStandardProgressRef = useRef(null);
+  const hiddenAtRef = useRef(null);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hiddenAtRef.current = Date.now();
+        return;
+      }
+
+      const hiddenAt = hiddenAtRef.current;
+      hiddenAtRef.current = null;
+      if (
+        hiddenAt &&
+        Date.now() - hiddenAt > TFT_PERSISTENCE.maxResumeAgeMs &&
+        screen === SCREENS.SINGLE_GATE_RUN &&
+        isShopMode(runState?.mode)
+      ) {
+        clearTftRunSnapshot();
+        setRunState(null);
+        setScreen(SCREENS.MODE_PREP);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [screen, runState?.mode]);
 
   useEffect(() => {
     if (!supabase) return;
