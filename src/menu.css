@@ -5995,3 +5995,38 @@ button:focus-visible,
     font-size: .46rem;
   }
 }
+
+
+/* Neutral support feedback */
+.tower-buff-received-aura {
+  pointer-events: none;
+  filter: drop-shadow(0 0 10px rgba(67, 176, 255, .9));
+}
+.tower-buff-received-aura__outer,
+.tower-buff-received-aura__inner {
+  fill: none;
+  stroke: rgba(74, 184, 255, .95);
+}
+.tower-buff-received-aura__outer {
+  stroke-width: 4;
+  opacity: .92;
+}
+.tower-buff-received-aura__inner {
+  stroke-width: 2;
+  opacity: .55;
+  stroke-dasharray: 8 6;
+  animation: tower-buff-received-pulse 1.2s ease-in-out infinite;
+}
+@keyframes tower-buff-received-pulse {
+  50% { opacity: 1; stroke-width: 4; }
+}
+
+.battlefield-map__enemy[data-debuffed="true"] .battlefield-map__enemy-art {
+  filter: brightness(.78) drop-shadow(0 0 10px rgba(0, 0, 0, .95)) drop-shadow(0 0 18px rgba(18, 18, 28, .9));
+}
+.battlefield-map__enemy-debuff-aura {
+  fill: rgba(7, 7, 12, .18);
+  stroke: rgba(12, 12, 18, .95);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 12px rgba(0, 0, 0, .95));
+}
