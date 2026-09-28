@@ -2264,25 +2264,6 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           )}
 
-          {selectedPlacedDefense && (
-            <div className="battlefield-tower-actions">
-              <strong>{inspectedDefense.name}</strong>
-              <button
-                type="button"
-                className={movingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
-                onClick={handleToggleMoveSelectedTower}
-              >
-                {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
-              </button>
-              <button type="button" onClick={handleSellSelectedTower}>
-                SELL · +{selectedSellPreview.refund}G
-              </button>
-              {movingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK AN EMPTY PAD</span>}
-              {swappingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK ANY OTHER TOWER</span>}
-              {mergingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK A MATCHING TOWER</span>}
-            </div>
-          )}
-
           <svg
             className={riskRewardVisual.active ? 'battlefield-map battlefield-map--pressure' : 'battlefield-map'}
             data-risk-reward-tier={riskRewardTier}
@@ -2381,7 +2362,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   : null;
                 const towerLevel = Math.max(1, Math.min(4, Number(placed?.level ?? 1)));
                 const copyProgress = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(placed?.copyProgress ?? 1)));
-                const towerActionOffsetX = slot.x > SINGLE_GATE_MAP.size.width - 220 ? -170 : 54;
+                const towerActionOffsetX = slot.x > SINGLE_GATE_MAP.size.width - 190 ? -160 : 54;
                 const slotClass = [
                   'battlefield-map__tower-slot',
                   placed ? 'battlefield-map__tower-slot--occupied' : 'battlefield-map__tower-slot--available',
@@ -2533,59 +2514,30 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                         </g>
 
                         {selectedPlaced && (
-                          <g
-                            className="tower-context-actions"
+                          <g className="tower-context-actions"
                             transform={`translate(${towerActionOffsetX} -44)`}
                             onClick={(event) => event.stopPropagation()}
                             onMouseDown={(event) => event.stopPropagation()}
-                            role="group"
-                            aria-label="Tower quick actions"
-                          >
-                            {isShopMode(run?.mode) && (
-                              <g
-                                className={`tower-context-action${mergingPlacedDefenseId === placed.id ? ' is-active' : ''}`}
-                                role="button"
-                                tabIndex="0"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleStartFieldMerge();
-                                }}
+                            role="group" aria-label="Tower quick actions">
+                            {[
+                              ...(isShopMode(run?.mode) ? [{ label: mergingPlacedDefenseId === placed.id ? 'ANNULLA' : 'MERGE', action: handleStartFieldMerge, active: mergingPlacedDefenseId === placed.id }] : []),
+                              { label: swappingPlacedDefenseId === placed.id ? 'ANNULLA' : 'INVERTI', action: handleToggleSwapSelectedTower, active: swappingPlacedDefenseId === placed.id },
+                              { label: movingPlacedDefenseId === placed.id ? 'ANNULLA' : 'SPOSTA', action: handleToggleMoveSelectedTower, active: movingPlacedDefenseId === placed.id },
+                              { label: `VENDI +${selectedSellPreview.refund}G`, action: handleSellSelectedTower, active: false }
+                            ].map((action, index) => (
+                              <g key={index} className={`tower-context-action${action.active ? ' is-active' : ''}`}
+                                transform={`translate(${(index % 2) * 74} ${Math.floor(index / 2) * 36})`}
+                                role="button" tabIndex="0" aria-label={action.label}
+                                onClick={(event) => { event.stopPropagation(); action.action(); }}
                                 onKeyDown={(event) => {
                                   if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    handleStartFieldMerge();
+                                    event.preventDefault(); event.stopPropagation(); action.action();
                                   }
-                                }}
-                              >
-                                <rect x="0" y="0" width="104" height="34" rx="8" />
-                                <text x="52" y="22" textAnchor="middle">
-                                  {mergingPlacedDefenseId === placed.id ? 'CANCEL MERGE' : 'MERGE'}
-                                </text>
+                                }}>
+                                <rect x="0" y="0" width="68" height="30" rx="7" />
+                                <text x="34" y="19" textAnchor="middle">{action.label}</text>
                               </g>
-                            )}
-                            <g
-                              className={`tower-context-action tower-context-action--invert${swappingPlacedDefenseId === placed.id ? ' is-active' : ''}`}
-                              transform={`translate(0 ${isShopMode(run?.mode) ? 42 : 0})`}
-                              role="button"
-                              tabIndex="0"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                handleToggleSwapSelectedTower();
-                              }}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  handleToggleSwapSelectedTower();
-                                }
-                              }}
-                            >
-                              <rect x="0" y="0" width="104" height="34" rx="8" />
-                              <text x="52" y="22" textAnchor="middle">
-                                {swappingPlacedDefenseId === placed.id ? 'CANCEL INVERTI' : 'INVERTI'}
-                              </text>
-                            </g>
+                            ))}
                           </g>
                         )}
                       </>
