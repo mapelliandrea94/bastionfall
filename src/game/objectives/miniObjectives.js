@@ -1,5 +1,6 @@
 export const MINI_OBJECTIVES = Object.freeze({
   version: 1,
+  wavesPerObjective: 5,
   rewardsByMode: Object.freeze({
     'single-gate': 8,
     'tri-gate': 10,
@@ -23,7 +24,8 @@ export const MINI_OBJECTIVES = Object.freeze({
 
 export function getMiniObjectiveForWave(waveNumber) {
   const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
-  return MINI_OBJECTIVES.definitions[(wave - 1) % MINI_OBJECTIVES.definitions.length];
+  const objectiveIndex = Math.floor((wave - 1) / MINI_OBJECTIVES.wavesPerObjective);
+  return MINI_OBJECTIVES.definitions[objectiveIndex % MINI_OBJECTIVES.definitions.length];
 }
 export function evaluateMiniObjective(objective, context = {}) {
   if (!objective) return false;
@@ -80,7 +82,10 @@ export function getMiniObjectiveFixtures() {
 
   return Object.freeze({
     wave1Flawless: getMiniObjectiveForWave(1).id === 'flawless',
-    wave2Lean: getMiniObjectiveForWave(2).id === 'lean-defense',
+    wave5Flawless: getMiniObjectiveForWave(5).id === 'flawless',
+    wave6Lean: getMiniObjectiveForWave(6).id === 'lean-defense',
+    wave10Lean: getMiniObjectiveForWave(10).id === 'lean-defense',
+    wave11Flawless: getMiniObjectiveForWave(11).id === 'flawless',
     tftReward: getMiniObjectiveReward('tft-shop') === 1,
     triReward: getMiniObjectiveReward('tri-gate') === 10,
     flawlessLiveOnTrack: flawlessOk.status === 'on-track',
