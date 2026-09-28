@@ -2691,9 +2691,9 @@ body { background:#1c3f61; }
 .tower-context-action text {
   pointer-events: none;
   fill: #17130a;
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 950;
-  letter-spacing: .5px;
+  letter-spacing: .1px;
 }
 
 .tower-context-action:hover rect,
