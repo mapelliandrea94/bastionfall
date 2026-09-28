@@ -20,7 +20,7 @@ import { getTowerEvolutionIntegrityPass, getTowerEvolutionIntegrityQa } from './
 import { getNormalModeEvolutionFlowPass, getNormalModeEvolutionFlowQa } from './game/towers/normalModeEvolutionFlowQa.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
 import { TFT_BENCH, addCopyToBench, createEmptyBench, getTftBenchFixtures, removeCopyFromBench } from './game/tft/tftBench.js';
-import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftCopyProgressionFixtures, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
+import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftCopyProgressionFixtures, getTftLevelForCopyProgress, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
 import { TFT_PERSISTENCE, clearTftRunSnapshot, createTftRunSnapshot, getTftPersistenceFixtures, loadTftRunSnapshot, saveTftRunSnapshot } from './game/tft/tftPersistence.js';
 import { getTftEvolutionFlowPass, getTftEvolutionFlowQa } from './game/tft/tftEvolutionFlowQa.js';
 import { getEvolutionPersistenceSellReconnectPass, getEvolutionPersistenceSellReconnectQa } from './game/tft/evolutionPersistenceSellReconnectQa.js';
@@ -1072,6 +1072,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [hoveredSlotId, setHoveredSlotId] = useState(null);
   const [selectedPlacedDefenseId, setSelectedPlacedDefenseId] = useState(null);
   const [movingPlacedDefenseId, setMovingPlacedDefenseId] = useState(null);
+  const [mergingPlacedDefenseId, setMergingPlacedDefenseId] = useState(null);
   const [riskRewardTier, setRiskRewardTier] = useState('safe');
   const [miniObjectiveFeedback, setMiniObjectiveFeedback] = useState('');
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
@@ -1086,7 +1087,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedTftShopSlotId, setSelectedTftShopSlotId] = useState(null);
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
-  const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(false);
+  const [tftAutoStartEnabled] = useState(true);
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
@@ -1322,7 +1323,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     if (run?.phase !== RUN_PHASES.PREPARATION) return undefined;
 
     if (isShopMode(run?.mode) && tftAutoStartEnabled) {
-      setPreparationRemaining(15);
+      setPreparationRemaining(20);
       const autoIntervalId = window.setInterval(() => {
         setPreparationRemaining((current) => {
           if (current <= 1) {
@@ -1877,12 +1878,65 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setTftFeedback(nextProgress === TFT_COPY_PROGRESSION.maxCopies ? '7/7 — CHOOSE EVOLUTION A OR B' : `MERGED — ${nextProgress}/7`);
   };
 
+  const handleStartFieldMerge = () => {
+    if (!isShopMode(run?.mode) || !selectedPlacedDefense || run?.phase === RUN_PHASES.ENDED) return;
+    if (Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) {
+      setTftFeedback('TOWER ALREADY 7/7');
+      return;
+    }
+    setMovingPlacedDefenseId(null);
+    setMergingPlacedDefenseId((current) => current === selectedPlacedDefense.id ? null : selectedPlacedDefense.id);
+    setTftFeedback((current) => current === 'SELECT A MATCHING FIELD TOWER' ? '' : 'SELECT A MATCHING FIELD TOWER');
+  };
+
+  const handleMergePlacedTowers = (sourceTowerId, targetTowerId) => {
+    if (!isShopMode(run?.mode) || !sourceTowerId || !targetTowerId || sourceTowerId === targetTowerId) return false;
+    const sourceTower = placedDefenses.find((tower) => tower.id === sourceTowerId);
+    const targetTower = placedDefenses.find((tower) => tower.id === targetTowerId);
+    if (!sourceTower || !targetTower) return false;
+    if (sourceTower.defenseId !== targetTower.defenseId) {
+      setTftFeedback('WRONG TOWER TYPE');
+      return false;
+    }
+
+    const sourceProgress = Number(sourceTower.copyProgress ?? 1);
+    const targetProgress = Number(targetTower.copyProgress ?? 1);
+    const mergedProgress = sourceProgress + targetProgress;
+    if (mergedProgress > TFT_COPY_PROGRESSION.maxCopies) {
+      setTftFeedback(`MERGE BLOCKED · ${targetProgress}/7 + ${sourceProgress}/7 EXCEEDS 7/7`);
+      return false;
+    }
+
+    const towerName = defenseDefinitions[targetTower.defenseId]?.name ?? targetTower.defenseId;
+    const confirmed = window.confirm(
+      `Merge these two ${towerName} towers? ${targetProgress}/7 + ${sourceProgress}/7 → ${mergedProgress}/7. The selected source tower will be consumed. Cost: 0 Gold.`
+    );
+    if (!confirmed) return false;
+
+    setPlacedDefenses((current) => current
+      .filter((tower) => tower.id !== sourceTower.id)
+      .map((tower) => tower.id === targetTower.id
+        ? {
+            ...tower,
+            copyProgress: mergedProgress,
+            level: getTftLevelForCopyProgress(mergedProgress),
+            investedGold: Number(tower.investedGold ?? 0) + Number(sourceTower.investedGold ?? 0)
+          }
+        : tower));
+    towerAttackTimesRef.current[sourceTower.id] = 0;
+    setSelectedPlacedDefenseId(targetTower.id);
+    setMergingPlacedDefenseId(null);
+    setTftFeedback(mergedProgress === TFT_COPY_PROGRESSION.maxCopies ? '7/7 — CHOOSE EVOLUTION A OR B' : `FIELD MERGE — ${mergedProgress}/7`);
+    return true;
+  };
+
   const handleSellSelectedTower = () => {
     if (!selectedPlacedDefense || !run || run.phase === RUN_PHASES.ENDED) return;
     const refund = selectedSellPreview.refund;
     setPlacedDefenses((current) => current.filter((tower) => tower.id !== selectedPlacedDefense.id));
     setSelectedPlacedDefenseId(null);
     setMovingPlacedDefenseId(null);
+    setMergingPlacedDefenseId(null);
     towerAttackTimesRef.current[selectedPlacedDefense.id] = 0;
     if (refund > 0) onGainGold(refund);
     if (isShopMode(run.mode)) setTftFeedback(`TOWER SOLD · +${refund}G`);
@@ -1895,6 +1949,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const handleBuildSlot = (slotId) => {
     const occupied = placedDefenses.find((entry) => entry.slotId === slotId);
+
+    if (mergingPlacedDefenseId) {
+      if (!occupied) {
+        setTftFeedback('SELECT A MATCHING FIELD TOWER');
+        return;
+      }
+      if (occupied.id === mergingPlacedDefenseId) {
+        setMergingPlacedDefenseId(null);
+        setTftFeedback('');
+        return;
+      }
+      handleMergePlacedTowers(mergingPlacedDefenseId, occupied.id);
+      return;
+    }
 
     if (movingPlacedDefenseId) {
       if (!run || run.phase === RUN_PHASES.ENDED) {
@@ -2094,10 +2162,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               >
                 {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
               </button>
+              {isShopMode(run?.mode) && (
+                <button
+                  type="button"
+                  className={mergingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
+                  onClick={handleStartFieldMerge}
+                >
+                  {mergingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MERGE' : 'MERGE · 0G'}
+                </button>
+              )}
               <button type="button" onClick={handleSellSelectedTower}>
                 SELL · +{selectedSellPreview.refund}G
               </button>
               {movingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK AN EMPTY PAD</span>}
+              {mergingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK A MATCHING TOWER</span>}
             </div>
           )}
 
@@ -2808,15 +2886,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 </button>
                 <button
                   type="button"
-                  className={`tft-auto-start ${tftAutoStartEnabled ? 'tft-auto-start--active' : ''}`}
-                  disabled={!run || run.phase === RUN_PHASES.ENDED}
-                  onClick={() => setTftAutoStartEnabled((enabled) => !enabled)}
+                  className="tft-auto-start tft-auto-start--active"
+                  disabled
+                  aria-label="Auto start is always active"
                 >
-                  <span>{tftAutoStartEnabled ? 'STOP AUTO START' : 'AUTO START'}</span>
+                  <span>AUTO START · ON</span>
                   <small>
-                    {tftAutoStartEnabled
-                      ? (run?.phase === RUN_PHASES.PREPARATION ? `Next wave in ${preparationRemaining}s` : '15s between waves · running')
-                      : '15s build time · loops every wave'}
+                    {run?.phase === RUN_PHASES.PREPARATION
+                      ? `Next wave in ${preparationRemaining}s`
+                      : '20s between waves · loops automatically'}
                   </small>
                 </button>
               </div>
