@@ -52,18 +52,18 @@ export const BASE_TOWER_GAMEPLAY = Object.freeze([
     description: 'Plasma burst with wide area damage.'
   }),
   profile('slow', {
-    cost: 82, damage: 4, range: 220, attackIntervalMs: 1100, projectileSpeed: 650,
+    cost: 82, damage: 4, range: 253, attackIntervalMs: 1100, projectileSpeed: 650,
     slowPercent: 25, slowDurationMs: 1800, damageType: 'frost', targetRule: 'lane-control',
     description: 'Low damage control tower that slows enemies.'
   }),
   profile('debuff', {
-    cost: 86, damage: 3, range: 215, attackIntervalMs: 1200, projectileSpeed: 700,
+    cost: 86, damage: 3, range: 247.25, attackIntervalMs: 1200, projectileSpeed: 700,
     vulnerabilityPercent: 18, vulnerabilityDurationMs: 2200, damageType: 'arcane', targetRule: 'highest-hp',
     description: 'Marks enemies to take increased damage.'
   }),
   profile('buff', {
-    cost: 90, damage: 1, range: 180, attackIntervalMs: 1500, projectileSpeed: 620,
-    buffRadius: 210, buffDamageMultiplier: 1.12, buffAttackSpeedMultiplier: 1.1,
+    cost: 90, damage: 1, range: 207, attackIntervalMs: 1500, projectileSpeed: 620,
+    buffRadius: 241.5, buffDamageMultiplier: 1.12, buffAttackSpeedMultiplier: 1.1,
     damageType: 'physical', targetRule: 'first',
     description: 'Support relay that boosts nearby towers.'
   })
