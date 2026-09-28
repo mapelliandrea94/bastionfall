@@ -13,7 +13,17 @@ export const BLESSING_ENGINE = Object.freeze({
     waveClearGoldMultiplier: 1,
     bastionMaxHpBonus: 0,
     slowStrengthBonus: 0,
-    enemyMoveSpeedMultiplier: 1
+    enemyMoveSpeedMultiplier: 1,
+    humanDamageMultiplier: 1,
+    nonHumanDamageMultiplier: 1,
+    insectAttackSpeedMultiplier: 1,
+    insectPoisonMultiplier: 1,
+    insectRangeMultiplier: 1,
+    neutralSupportMultiplier: 1,
+    neutralDamageMultiplier: 1,
+    alienRangeMultiplier: 1,
+    alienChainBonus: 0,
+    alienDamageMultiplier: 1
   })
 });
 
@@ -36,11 +46,60 @@ export function getBlessingModifiers(ownedBlessings = []) {
     if (effect.bastionMaxHpBonus) result.bastionMaxHpBonus += effect.bastionMaxHpBonus;
     if (effect.slowStrengthBonus) result.slowStrengthBonus += effect.slowStrengthBonus;
     if (effect.enemyMoveSpeedMultiplier) result.enemyMoveSpeedMultiplier *= effect.enemyMoveSpeedMultiplier;
+    if (effect.humanDamageMultiplier) result.humanDamageMultiplier *= effect.humanDamageMultiplier;
+    if (effect.nonHumanDamageMultiplier) result.nonHumanDamageMultiplier *= effect.nonHumanDamageMultiplier;
+    if (effect.insectAttackSpeedMultiplier) result.insectAttackSpeedMultiplier *= effect.insectAttackSpeedMultiplier;
+    if (effect.insectPoisonMultiplier) result.insectPoisonMultiplier *= effect.insectPoisonMultiplier;
+    if (effect.insectRangeMultiplier) result.insectRangeMultiplier *= effect.insectRangeMultiplier;
+    if (effect.neutralSupportMultiplier) result.neutralSupportMultiplier *= effect.neutralSupportMultiplier;
+    if (effect.neutralDamageMultiplier) result.neutralDamageMultiplier *= effect.neutralDamageMultiplier;
+    if (effect.alienRangeMultiplier) result.alienRangeMultiplier *= effect.alienRangeMultiplier;
+    if (effect.alienChainBonus) result.alienChainBonus += effect.alienChainBonus;
+    if (effect.alienDamageMultiplier) result.alienDamageMultiplier *= effect.alienDamageMultiplier;
   }
 
   return Object.freeze(result);
 }
 
+
+export function applyBlessingTowerIdentity(definition, ownedBlessings = []) {
+  if (!definition) return definition;
+  const modifiers = applyBlessingModifierCaps(getBlessingModifiers(ownedBlessings));
+  const faction = definition.faction;
+  let next = { ...definition };
+
+  if (faction === 'human') {
+    next.damage = Number((Number(next.damage ?? 0) * modifiers.humanDamageMultiplier).toFixed(2));
+  } else {
+    next.damage = Number((Number(next.damage ?? 0) * modifiers.nonHumanDamageMultiplier).toFixed(2));
+  }
+
+  if (faction === 'insect') {
+    next.attackIntervalMs = Math.max(120, Math.round(Number(next.attackIntervalMs ?? 1000) / modifiers.insectAttackSpeedMultiplier));
+    next.range = Number((Number(next.range ?? 0) * modifiers.insectRangeMultiplier).toFixed(2));
+    if (next.poisonDamagePerSecond) {
+      next.poisonDamagePerSecond = Number((next.poisonDamagePerSecond * modifiers.insectPoisonMultiplier).toFixed(2));
+    }
+  }
+
+  if (faction === 'alien') {
+    next.range = Number((Number(next.range ?? 0) * modifiers.alienRangeMultiplier).toFixed(2));
+    next.damage = Number((Number(next.damage ?? 0) * modifiers.alienDamageMultiplier).toFixed(2));
+    if (modifiers.alienChainBonus > 0) {
+      next.chainTargets = Math.max(2, Number(next.chainTargets ?? 1) + modifiers.alienChainBonus);
+    }
+  }
+
+  if (faction === 'neutral') {
+    next.damage = Number((Number(next.damage ?? 0) * modifiers.neutralDamageMultiplier).toFixed(2));
+    if (next.slowPercent) next.slowPercent = Number((next.slowPercent * modifiers.neutralSupportMultiplier).toFixed(2));
+    if (next.vulnerabilityPercent) next.vulnerabilityPercent = Number((next.vulnerabilityPercent * modifiers.neutralSupportMultiplier).toFixed(2));
+    if (next.buffDamageMultiplier) next.buffDamageMultiplier = Number((1 + (next.buffDamageMultiplier - 1) * modifiers.neutralSupportMultiplier).toFixed(3));
+    if (next.buffAttackSpeedMultiplier) next.buffAttackSpeedMultiplier = Number((1 + (next.buffAttackSpeedMultiplier - 1) * modifiers.neutralSupportMultiplier).toFixed(3));
+  }
+
+  return Object.freeze(next);
+}
 
 export function applyBlessingModifierCaps(modifiers) {
   return Object.freeze({
@@ -79,20 +138,21 @@ export function getBlessingAdjustedMaxHp(baseMaxHp, ownedBlessings = []) {
 }
 
 export function getBlessingEngineFixtures() {
-  const stackedDamage = getBlessingModifiers(['keen-edge', 'keen-edge']);
   const mixedGold = applyBlessingWaveGold(10, ['war-chest', 'prosperity']);
   const emergencyDamage = applyBlessingBastionDamage(10, 6, 20, ['last-light']);
   const boostedHp = getBlessingAdjustedMaxHp(20, ['unyielding-core']);
+  const humanIdentity = applyBlessingTowerIdentity({ faction: 'human', damage: 100, range: 200, attackIntervalMs: 1000 }, ['human-doctrine']);
+  const alienIdentity = applyBlessingTowerIdentity({ faction: 'alien', damage: 100, range: 200, attackIntervalMs: 1000 }, ['alien-overmind']);
 
   return Object.freeze({
-    stackedDamageAboveBase: stackedDamage.towerDamageMultiplier > 1.16,
+    stackedDamageAboveBase: getBlessingModifiers(['golden-tempest']).towerDamageMultiplier > 1.16,
     mixedGoldExpected: 14,
     mixedGoldActual: mixedGold,
     emergencyDamageExpected: 7.5,
     emergencyDamageActual: emergencyDamage,
     boostedHpExpected: 24,
     boostedHpActual: boostedHp,
-    timeLockSlows: getBlessingModifiers(['time-lock']).enemyMoveSpeedMultiplier === 0.9,
-    frostboundAddsControl: getBlessingModifiers(['frostbound']).slowStrengthBonus === 0.12
+    humanDoctrineBoostsHuman: humanIdentity.damage === 118,
+    alienOvermindAddsRangeAndChain: alienIdentity.range === 224 && alienIdentity.chainTargets === 2
   });
 }

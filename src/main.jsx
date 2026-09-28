@@ -56,7 +56,7 @@ import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave
 import { BOSS_ARMOR_ENRAGE, applyBossEnrageStats, getBossArmorEnrageFixtures, getBossArmorForIndex } from './game/boss/bossArmorEnrage.js';
 import { BOSS_TUNING, getBossTuningFixtures, getBossTuningForWave } from './game/boss/bossTuning.js';
 import { BLESSING_SYSTEM, addBlessingToLoadout, getBlessingOffer, getBlessingSystemFixtures } from './game/blessings/blessings.js';
-import { BLESSING_ENGINE, applyBlessingBastionDamage, applyBlessingWaveGold, getBlessingAdjustedMaxHp, getBlessingEngineFixtures, getBlessingModifiers } from './game/blessings/blessingEngine.js';
+import { BLESSING_ENGINE, applyBlessingBastionDamage, applyBlessingTowerIdentity, applyBlessingWaveGold, getBlessingAdjustedMaxHp, getBlessingEngineFixtures, getBlessingModifiers } from './game/blessings/blessingEngine.js';
 import { BLESSING_REROLL, canRerollBlessings, getBlessingRerollCost, getBlessingRerollFixtures, getRerolledBlessingOffer } from './game/blessings/blessingReroll.js';
 import { BLESSING_POWER_BUDGET, getBlessingExploitChecks } from './game/blessings/blessingPowerBudget.js';
 import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } from './game/boss/bossSummonAdds.js';
@@ -1086,11 +1086,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const inspectedDefenseBase = selectedPlacedDefense
     ? defenseDefinitions[selectedPlacedDefense.defenseId] ?? selectedDefense
     : selectedDefense;
-  const inspectedDefense = applyTowerSynergy(
-    selectedPlacedDefense
-      ? getRuntimeTowerDefinition(inspectedDefenseBase, selectedPlacedDefense)
-      : inspectedDefenseBase,
-    towerSynergyState
+  const inspectedDefense = applyBlessingTowerIdentity(
+    applyTowerSynergy(
+      selectedPlacedDefense
+        ? getRuntimeTowerDefinition(inspectedDefenseBase, selectedPlacedDefense)
+        : inspectedDefenseBase,
+      towerSynergyState
+    ),
+    run?.blessings ?? []
   );
   const selectedSellPreview = getSellPreview(
     selectedPlacedDefense
@@ -1424,9 +1427,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         for (const placed of placedDefenses) {
           const baseDefinition = defenseDefinitions[placed.defenseId];
           if (!baseDefinition) continue;
-          const definition = applyTowerSynergy(
-            getRuntimeTowerDefinition(baseDefinition, placed),
-            towerSynergyState
+          const definition = applyBlessingTowerIdentity(
+            applyTowerSynergy(
+              getRuntimeTowerDefinition(baseDefinition, placed),
+              towerSynergyState
+            ),
+            run?.blessings ?? []
           );
 
           const attackInterval = getEffectiveTowerAttackInterval(definition, placed, placedDefenses, defenseDefinitions);

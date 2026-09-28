@@ -13,14 +13,14 @@ export const BLESSING_CATEGORIES = Object.freeze({
 
 export const BLESSINGS = Object.freeze([
   Object.freeze({
-    id: 'keen-edge',
-    name: 'Keen Edge',
-    description: 'All towers deal 8% more damage.',
-    rarity: BLESSING_RARITIES.COMMON,
+    id: 'human-doctrine',
+    name: 'Human Doctrine',
+    description: 'Human towers deal 18% more damage, but all non-Human towers deal 8% less.',
+    rarity: BLESSING_RARITIES.RARE,
     category: BLESSING_CATEGORIES.OFFENSE,
-    tags: Object.freeze(['tower-damage']),
-    maxStacks: 3,
-    effect: Object.freeze({ towerDamageMultiplier: 1.08 })
+    tags: Object.freeze(['human', 'identity', 'tradeoff']),
+    maxStacks: 1,
+    effect: Object.freeze({ humanDamageMultiplier: 1.18, nonHumanDamageMultiplier: 0.92 })
   }),
   Object.freeze({
     id: 'iron-bastion',
@@ -43,24 +43,24 @@ export const BLESSINGS = Object.freeze([
     effect: Object.freeze({ waveClearGoldBonus: 2 })
   }),
   Object.freeze({
-    id: 'rapid-volley',
-    name: 'Rapid Volley',
-    description: 'All towers attack 7% faster.',
-    rarity: BLESSING_RARITIES.COMMON,
+    id: 'brood-frenzy',
+    name: 'Brood Frenzy',
+    description: 'Insect towers attack 20% faster and poison 30% harder, but lose 8% range.',
+    rarity: BLESSING_RARITIES.RARE,
     category: BLESSING_CATEGORIES.OFFENSE,
-    tags: Object.freeze(['attack-speed']),
-    maxStacks: 3,
-    effect: Object.freeze({ attackSpeedMultiplier: 1.07 })
+    tags: Object.freeze(['insect', 'identity', 'tradeoff']),
+    maxStacks: 1,
+    effect: Object.freeze({ insectAttackSpeedMultiplier: 1.2, insectPoisonMultiplier: 1.3, insectRangeMultiplier: 0.92 })
   }),
   Object.freeze({
-    id: 'frostbound',
-    name: 'Frostbound',
-    description: 'Slow effects gain 12% additional strength.',
-    rarity: BLESSING_RARITIES.RARE,
+    id: 'neutral-covenant',
+    name: 'Neutral Covenant',
+    description: 'Neutral support effects become 35% stronger, but Neutral tower damage is reduced to almost nothing.',
+    rarity: BLESSING_RARITIES.EPIC,
     category: BLESSING_CATEGORIES.CONTROL,
-    tags: Object.freeze(['slow']),
-    maxStacks: 2,
-    effect: Object.freeze({ slowStrengthBonus: 0.12 })
+    tags: Object.freeze(['neutral', 'identity', 'tradeoff']),
+    maxStacks: 1,
+    effect: Object.freeze({ neutralSupportMultiplier: 1.35, neutralDamageMultiplier: 0.15 })
   }),
   Object.freeze({
     id: 'siegebreaker',
@@ -113,14 +113,14 @@ export const BLESSINGS = Object.freeze([
     effect: Object.freeze({ towerDamageMultiplier: 1.2, waveClearGoldMultiplier: 0.8 })
   }),
   Object.freeze({
-    id: 'time-lock',
-    name: 'Time Lock',
-    description: 'Enemies move 10% slower.',
+    id: 'alien-overmind',
+    name: 'Alien Overmind',
+    description: 'Alien towers gain 12% range and +1 chain target; their attacks deal 10% less direct damage.',
     rarity: BLESSING_RARITIES.EPIC,
     category: BLESSING_CATEGORIES.CONTROL,
-    tags: Object.freeze(['enemy-speed']),
+    tags: Object.freeze(['alien', 'identity', 'tradeoff']),
     maxStacks: 1,
-    effect: Object.freeze({ enemyMoveSpeedMultiplier: 0.9 })
+    effect: Object.freeze({ alienRangeMultiplier: 1.12, alienChainBonus: 1, alienDamageMultiplier: 0.9 })
   })
 ]);
 
