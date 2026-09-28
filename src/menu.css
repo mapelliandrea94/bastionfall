@@ -4760,6 +4760,69 @@ button:focus-visible,
 }
 @media (max-width: 380px) { .profile-grid { grid-template-columns: 1fr; } }
 
+/* Readable text throughout the expandable in-game sidebar. The older 7–9px
+   labels and descriptions were illegible at normal game scale. */
+.run-sidebar .defense-inspector__header span,
+.run-sidebar .defense-inspector__grid span,
+.run-sidebar .defense-inspector__sell span,
+.run-sidebar .defense-inspector__upgrade span,
+.run-sidebar .defense-inspector__targeting span,
+.run-sidebar .defense-inspector__instrumentation span { font-size: 16px; }
+.run-sidebar .defense-inspector__header strong,
+.run-sidebar .defense-inspector__upgrade strong,
+.run-sidebar .defense-inspector__instrumentation strong { font-size: 24px; }
+.run-sidebar .defense-inspector__grid strong,
+.run-sidebar .defense-inspector__targeting strong { font-size: 20px; }
+.run-sidebar .defense-inspector__sell strong { font-size: 26px; }
+.run-sidebar .defense-inspector p { font-size: 18px; }
+.run-sidebar .defense-inspector__sell small,
+.run-sidebar .defense-inspector__upgrade small,
+.run-sidebar .defense-inspector__targeting small,
+.run-sidebar .defense-inspector__instrumentation small { font-size: 16px; color: #bbc7d0; }
+.run-sidebar .defense-inspector__grid div { min-height: 58px; padding: 9px 10px; }
+.run-sidebar .defense-inspector__header,
+.run-sidebar .defense-inspector__sell,
+.run-sidebar .defense-inspector__upgrade,
+.run-sidebar .defense-inspector__targeting,
+.run-sidebar .defense-inspector__instrumentation { flex-wrap: wrap; }
+.run-sidebar .defense-inspector__tower-actions button { min-height: 48px; font-size: 16px; }
+.run-sidebar .tower-evolution-choice__title { font-size: 18px; }
+.run-sidebar .tower-evolution-card { min-height: 166px; grid-template-rows: 72px auto; overflow: visible; }
+.run-sidebar .tower-evolution-card__copy strong { font-size: 18px; }
+.run-sidebar .tower-evolution-card__copy small { font-size: 14px; color: #d0d9e1; }
+.run-sidebar .tower-synergy-panel__title { font-size: 1.36rem; }
+.run-sidebar .tower-synergy-panel__title strong { font-size: 1.14rem; }
+.run-sidebar .tower-synergy span { font-size: 1.12rem; }
+.run-sidebar .tower-synergy strong { font-size: 1.44rem; }
+.run-sidebar .tower-synergy small { font-size: .94rem; color: #c0cdd7; }
+.run-sidebar .risk-reward-panel__header { font-size: 1.24rem; flex-wrap: wrap; }
+.run-sidebar .risk-reward-panel__choices button { min-height: 88px; font-size: 1.24rem; }
+.run-sidebar .risk-reward-panel__choices small { font-size: .96rem; color: #c0cdd7; }
+.run-sidebar .mini-objective-panel span { font-size: 1rem; }
+.run-sidebar .mini-objective-panel strong { font-size: 1.32rem; }
+.run-sidebar .mini-objective-panel b { font-size: 1.48rem; }
+.run-sidebar .mini-objective-panel small { font-size: .98rem; color: #c0d5c7; }
+.run-sidebar .mini-objective-panel em { font-size: 1.08rem; }
+.run-sidebar .boss-schedule { flex-wrap: wrap; }
+.run-sidebar .boss-schedule span { font-size: 1.44rem; }
+.run-sidebar .boss-schedule strong { font-size: 2rem; }
+.run-sidebar .boss-schedule small,
+.run-sidebar .boss-milestone small,
+.run-sidebar .world-modifier small { font-size: 1rem; line-height: 1.4; }
+.run-sidebar .boss-milestone,
+.run-sidebar .world-modifier { flex-wrap: wrap; line-height: 1.4; }
+.run-sidebar .run-sidebar__status span { font-size: 18px; }
+.run-sidebar .run-sidebar__status strong { font-size: 22px; }
+.run-sidebar .defense-inspector,
+.run-sidebar .tower-synergy,
+.run-sidebar .risk-reward-panel { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .run-sidebar .tower-evolution-choice,
+  .run-sidebar .tower-synergy-panel__grid,
+  .run-sidebar .risk-reward-panel__choices { grid-template-columns: 1fr; }
+  .run-sidebar .defense-inspector__tower-actions { grid-template-columns: 1fr; }
+}
+
 /* Nexus integrity: a readable jeweled meter on the battlefield and in the HUD. */
 .battlefield-map__bastion, .battlefield-map__nexus-meter, .run-hud__nexus {
   --nexus-color: #39d9c3;
