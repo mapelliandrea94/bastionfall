@@ -443,10 +443,16 @@ async function reportStandardRunProgress(session, run) {
   return { ok: true, payload };
 }
 
-async function saveOnlineRunSnapshot(session, snapshot) {
+async function saveOnlineRunSnapshot(session, snapshot, options = {}) {
   if (!session?.access_token || !snapshot?.run?.matchToken || !snapshot?.run?.matchId) {
     return { ok: false, error: 'snapshot_not_ready' };
   }
+
+  const body = JSON.stringify({
+    matchToken: snapshot.run.matchToken,
+    snapshot
+  });
+  const keepalive = Boolean(options.keepalive) && body.length <= 60000;
 
   const response = await fetch('/api/run/snapshot', {
     method: 'POST',
@@ -454,10 +460,8 @@ async function saveOnlineRunSnapshot(session, snapshot) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session.access_token}`
     },
-    body: JSON.stringify({
-      matchToken: snapshot.run.matchToken,
-      snapshot
-    })
+    body,
+    keepalive
   });
 
   const payload = await response.json().catch(() => ({}));
@@ -4465,6 +4469,7 @@ function App() {
   const lastOnlineSnapshotAtRef = useRef(0);
   const onlineSnapshotInFlightRef = useRef(false);
   const pendingOnlineSnapshotRef = useRef(null);
+  const latestOnlineSnapshotRef = useRef(null);
   const hiddenAtRef = useRef(null);
 
   useEffect(() => {
@@ -4533,6 +4538,7 @@ function App() {
 
   const persistOnlineSnapshot = (snapshot) => {
     if (!snapshot) return;
+    latestOnlineSnapshotRef.current = snapshot;
 
     if (onlineSnapshotInFlightRef.current) {
       pendingOnlineSnapshotRef.current = snapshot;
@@ -4543,6 +4549,17 @@ function App() {
     if (now - lastOnlineSnapshotAtRef.current < 3000) return;
     sendOnlineSnapshot(snapshot);
   };
+
+  useEffect(() => {
+    const flushLatestOnlineSnapshot = () => {
+      const snapshot = latestOnlineSnapshotRef.current;
+      if (!snapshot || !session?.access_token) return;
+      saveOnlineRunSnapshot(session, snapshot, { keepalive: true }).catch(() => {});
+    };
+
+    window.addEventListener('pagehide', flushLatestOnlineSnapshot);
+    return () => window.removeEventListener('pagehide', flushLatestOnlineSnapshot);
+  }, [session?.access_token]);
 
   useEffect(() => {
     if (
