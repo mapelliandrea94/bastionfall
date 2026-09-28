@@ -5940,3 +5940,52 @@ button:focus-visible,
     min-height: 68px;
   }
 }
+
+
+/* Definitive TFT wave-control layout: short labels, no overlap */
+.run-sidebar--tft .tft-wave-controls {
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem;
+}
+
+.run-sidebar--tft .tft-confirm-setup,
+.run-sidebar--tft .tft-start-wave {
+  min-width: 0;
+  min-height: 70px;
+  padding: .65rem .55rem;
+  overflow: hidden;
+}
+
+.run-sidebar--tft .tft-wave-control__title {
+  display: block;
+  width: 100%;
+  font-size: clamp(.78rem, 1.05vw, 1rem);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  text-align: center;
+  letter-spacing: .035em;
+}
+
+.run-sidebar--tft .tft-wave-control__subtitle {
+  display: block;
+  width: 100%;
+  margin-top: .28rem;
+  font-size: .5rem;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+@media (max-width: 1180px) {
+  .run-sidebar--tft .tft-wave-control__title {
+    font-size: .72rem;
+  }
+
+  .run-sidebar--tft .tft-wave-control__subtitle {
+    font-size: .46rem;
+  }
+}
