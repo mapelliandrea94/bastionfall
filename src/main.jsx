@@ -1733,7 +1733,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
           const previousProgress = Math.max(0, Math.min(1, Number(enemy.progress ?? 0)));
           const previousMovementAt = Number(enemy.lastMovementAt);
           const rawDeltaMs = Number.isFinite(previousMovementAt) ? Math.max(0, now - previousMovementAt) : 0;
-          const deltaMs = Math.min(rawDeltaMs, 80);
+          const deltaMs = rawDeltaMs;
           const progressDelta = durationMs > 0
             ? (deltaMs / durationMs) * effectiveSpeed
             : 0;
@@ -1800,7 +1800,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       const now = getWaveNow();
       const previousCombatAt = Number(combatClockRef.current);
       const combatDeltaMs = Number.isFinite(previousCombatAt)
-        ? Math.min(150, Math.max(0, now - previousCombatAt))
+        ? Math.max(0, now - previousCombatAt)
         : 100;
       combatClockRef.current = now;
 
@@ -1828,11 +1828,11 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
           const attackInterval = getEffectiveTowerAttackInterval(definition, placed, combatPlacedDefenses, defenseDefinitions);
           const previousCharge = Math.max(0, Number(towerAttackChargeRef.current[placed.id] ?? attackInterval));
-          const attackCharge = Math.min(attackInterval * 2, previousCharge + combatDeltaMs);
+          const attackCharge = Math.min(attackInterval * 48, previousCharge + combatDeltaMs);
           towerAttackChargeRef.current[placed.id] = attackCharge;
           if (attackCharge < attackInterval) continue;
 
-          const attacksDue = Math.max(1, Math.min(2, Math.floor(attackCharge / attackInterval)));
+          const attacksDue = Math.max(1, Math.min(48, Math.floor(attackCharge / attackInterval)));
           const candidates = getTowerTargets(definition, placed, working.filter((enemy) => enemy.hp > 0));
           const primary = candidates[0];
           if (!primary) {
