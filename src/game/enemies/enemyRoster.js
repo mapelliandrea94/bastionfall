@@ -50,7 +50,7 @@ function defineEnemy({
     threatValue: spawnCost,
     minWave,
     traits: Object.freeze([...traits]),
-    maxHp: Number(maxHp) * 3,
+    maxHp: Number(maxHp) * 2.5,
     moveSpeed: Number(moveSpeed) * (unitType === ENEMY_UNIT_TYPES.AIR ? 0.5 : 0.7),
     armor: Number(armor) * 2,
     shield: Number(shield) * 2,
