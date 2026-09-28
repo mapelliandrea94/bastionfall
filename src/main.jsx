@@ -50,7 +50,7 @@ import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/b
 import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balance/endToEndRegressionQa.js';
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
-import { SUDDEN_SIEGE, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
+import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
 import { applyRiskRewardGold, getRiskRewardConfig } from './game/balance/riskReward.js';
 import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
@@ -1084,7 +1084,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       (run?.mode === MODES.TRI_GATE
         ? TRI_GATE_PACING.threatMultiplier
         : run?.mode === MODES.SUDDEN_SIEGE
-          ? SUDDEN_SIEGE.threatMultiplier
+          ? (waveScaling.suddenThreatMultiplier ?? 1)
           : 1) *
       worldModifierEffects.threatMultiplier *
       riskRewardConfig.threatMultiplier
@@ -1370,8 +1370,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
                     : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() });
 
+        const modeScaledEnemy = run?.mode === MODES.SUDDEN_SIEGE
+          ? applySuddenSiegeEnemyScaling(baseEnemyState, waveScaling.waveNumber)
+          : baseEnemyState;
         spawnedWaveRef.current = waveScaling.waveNumber;
-        setActiveEnemies((active) => [...active, applyEliteModifiers(baseEnemyState)]);
+        setActiveEnemies((active) => [...active, applyEliteModifiers(modeScaledEnemy)]);
         return remaining;
       });
     }, activeEnemies.length === 0 ? 150 : waveScaling.spawnIntervalMs * worldModifierEffects.spawnIntervalMultiplier);
@@ -3878,9 +3881,11 @@ function App() {
             const baseWaveClearGold = advancingWave
               ? current.mode === MODES.TRI_GATE
                 ? getTriGateWaveClearReward(completedWaveNumber)
-                : isShopMode(current.mode)
-                  ? TFT_SHOP.waveClearGold
-                  : getWaveClearReward(completedWaveNumber)
+                : current.mode === MODES.SUDDEN_SIEGE
+                  ? getSuddenSiegeWaveReward(completedWaveNumber)
+                  : current.mode === MODES.TFT_SHOP
+                    ? TFT_SHOP.waveClearGold
+                    : getWaveClearReward(completedWaveNumber)
               : 0;
             const tftPerfectWave =
               isShopMode(current.mode) &&
@@ -3890,15 +3895,16 @@ function App() {
               isShopMode(current.mode) &&
               advancingWave &&
               isBossWave(completedWaveNumber);
+            const shopRewardConfig = current.mode === MODES.SUDDEN_SIEGE ? SUDDEN_SIEGE : TFT_SHOP;
             const tftMilestoneWave =
               isShopMode(current.mode) &&
               advancingWave &&
-              completedWaveNumber % TFT_SHOP.milestoneInterval === 0;
+              completedWaveNumber % shopRewardConfig.milestoneInterval === 0;
             const tftWaveBonus =
               isShopMode(current.mode) && advancingWave
-                ? (tftPerfectWave ? TFT_SHOP.perfectWaveBonus : 0) +
-                  (tftBossWave ? TFT_SHOP.bossWaveBonus : 0) +
-                  (tftMilestoneWave ? TFT_SHOP.milestoneWaveBonus : 0)
+                ? (tftPerfectWave ? shopRewardConfig.perfectWaveBonus : 0) +
+                  (tftBossWave ? shopRewardConfig.bossWaveBonus : 0) +
+                  (tftMilestoneWave ? shopRewardConfig.milestoneWaveBonus : 0)
                 : 0;
             const nextBlessings = options.blessingId
               ? addBlessingToLoadout(current.blessings ?? [], options.blessingId)
