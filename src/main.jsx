@@ -1605,28 +1605,52 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
         enemyIndex: index
       }))
     );
-  }, [run?.phase, run?.wave, waveScaling.waveNumber]);
+  }, [
+    run?.phase,
+    run?.wave,
+    run?.mode,
+    run?.seed,
+    waveScaling.waveNumber,
+    waveScaling.spawnIntervalMs,
+    worldModifierEffects.spawnIntervalMultiplier,
+    waveAffix?.spawnIntervalMultiplier,
+    rareWaveEvent?.spawnIntervalMultiplier,
+    threatWave.composition
+  ]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || !bossSummonPlan.active) return undefined;
-    const startedAt = getWaveNow();
-    const intervalId = window.setInterval(() => {
-      const elapsed = getWaveNow() - startedAt;
-      bossSummonPlan.pulses.forEach((pulse) => {
-        const pulseKey = `${bossSummonPlan.waveNumber}:${pulse.pulseIndex}`;
-        if (bossSummonFiredRef.current.has(pulseKey) || elapsed < pulse.offsetMs) return;
-        bossSummonFiredRef.current.add(pulseKey);
-        const adds = run?.mode === MODES.TRI_GATE
-          ? pulse.adds.map((enemy, index) => ({
-              ...enemy,
-              laneId: TRI_GATE_MAP.pathPlan.lanes[index % TRI_GATE_MAP.pathPlan.lanes.length].id
-            }))
-          : pulse.adds;
-        setSpawnQueue((current) => [...current, ...adds]);
+    const timelineStartedAt = Number(waveTimelineStartedAtRef.current ?? getWaveNow());
+
+    const scheduledAdds = [];
+    bossSummonPlan.pulses.forEach((pulse) => {
+      const pulseKey = `${bossSummonPlan.waveNumber}:${pulse.pulseIndex}`;
+      if (bossSummonFiredRef.current.has(pulseKey)) return;
+      bossSummonFiredRef.current.add(pulseKey);
+
+      const adds = run?.mode === MODES.TRI_GATE
+        ? pulse.adds.map((enemy, index) => ({
+            ...enemy,
+            laneId: TRI_GATE_MAP.pathPlan.lanes[index % TRI_GATE_MAP.pathPlan.lanes.length].id
+          }))
+        : pulse.adds;
+
+      adds.forEach((enemy, index) => {
+        scheduledAdds.push({
+          ...enemy,
+          id: enemy.id ?? `boss-${bossSummonPlan.waveNumber}-pulse-${pulse.pulseIndex}-add-${index + 1}`,
+          scheduledSpawnAt: timelineStartedAt + Number(pulse.offsetMs ?? 0),
+          scheduledSpawnOffsetMs: Number(pulse.offsetMs ?? 0)
+        });
       });
-    }, 50);
-    return () => window.clearInterval(intervalId);
-  }, [run?.phase, run?.wave, bossSummonPlan.active, bossSummonPlan.waveNumber]);
+    });
+
+    if (scheduledAdds.length > 0) {
+      setSpawnQueue((current) => [...current, ...scheduledAdds]
+        .sort((a, b) => Number(a.scheduledSpawnAt ?? 0) - Number(b.scheduledSpawnAt ?? 0)));
+    }
+    return undefined;
+  }, [run?.phase, run?.wave, run?.mode, bossSummonPlan.active, bossSummonPlan.waveNumber]);
 
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || spawnQueue.length === 0) return undefined;
