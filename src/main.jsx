@@ -1150,8 +1150,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
-  const queuedWaveRef = useRef(matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE ? waveScaling.waveNumber : null);
-  const spawnedWaveRef = useRef(matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE && (matchingOnlineSnapshot?.activeEnemies?.length ?? 0) > 0 ? waveScaling.waveNumber : null);
+  const restoredWaveNumber = Math.max(1, Number(run?.wave ?? 0) + 1);
+  const queuedWaveRef = useRef(matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE ? restoredWaveNumber : null);
+  const spawnedWaveRef = useRef(matchingOnlineSnapshot?.run?.phase === RUN_PHASES.ACTIVE && (matchingOnlineSnapshot?.activeEnemies?.length ?? 0) > 0 ? restoredWaveNumber : null);
   const towerAttackTimesRef = useRef({});
   const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
   const previousSuddenStageRef = useRef(null);
