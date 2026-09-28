@@ -5342,3 +5342,78 @@ button:focus-visible,
   0%, 100% { opacity: .52; }
   50% { opacity: 1; }
 }
+
+
+/* MB20 — Sudden Siege stage transition announcement */
+.sudden-stage-transition {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  z-index: 24;
+  width: min(520px, 78vw);
+  padding: 16px 20px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 125, 91, .72);
+  background:
+    linear-gradient(180deg, rgba(70, 14, 15, .95), rgba(27, 10, 14, .94));
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 14px 36px rgba(0,0,0,.38), 0 0 28px rgba(255,73,56,.16);
+  animation: sudden-stage-transition-in 2.8s ease both;
+}
+
+.sudden-stage-transition span,
+.sudden-stage-transition strong,
+.sudden-stage-transition small {
+  display: block;
+}
+
+.sudden-stage-transition span {
+  color: #ff9e82;
+  font-size: .6rem;
+  font-weight: 950;
+  letter-spacing: .14em;
+}
+
+.sudden-stage-transition strong {
+  margin-top: .22rem;
+  color: #fff0e7;
+  font-size: 1.1rem;
+  letter-spacing: .08em;
+}
+
+.sudden-stage-transition small {
+  margin-top: .28rem;
+  color: #d9b9b0;
+  font-size: .66rem;
+}
+
+.sudden-stage-transition--onslaught {
+  border-color: rgba(255, 79, 61, .88);
+  box-shadow: 0 14px 36px rgba(0,0,0,.4), 0 0 32px rgba(255,54,42,.24);
+}
+
+.sudden-stage-transition--endless {
+  border-color: rgba(240, 62, 111, .92);
+  background:
+    linear-gradient(180deg, rgba(78, 10, 33, .96), rgba(24, 7, 18, .95));
+  box-shadow: 0 14px 36px rgba(0,0,0,.42), 0 0 36px rgba(235,49,92,.3);
+}
+
+@keyframes sudden-stage-transition-in {
+  0% { opacity: 0; transform: translate(-50%, -18px) scale(.96); }
+  12%, 78% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -6px) scale(.985); }
+}
+
+@media (max-width: 640px) {
+  .sudden-stage-transition {
+    top: 82px;
+    width: min(88vw, 480px);
+    padding: 12px 14px;
+  }
+
+  .sudden-stage-transition strong {
+    font-size: .9rem;
+  }
+}
