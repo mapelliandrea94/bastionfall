@@ -55,7 +55,14 @@ export function getFinalReleaseAudit() {
     humanSynergyThresholdWorks: synergy.humanActivatesAtThree === true,
     neutralSynergyThresholdWorks: synergy.neutralActivatesAtTwo === true,
     identityBlessingsWork: blessing.humanDoctrineBoostsHuman === true && blessing.alienOvermindAddsRangeAndChain === true,
-    miniObjectiveRotationWorks: mini.wave1Flawless === true && mini.wave6Lean === true && mini.wave11Flawless === true,
+    miniObjectiveRotationWorks:
+      mini.wave1Flawless === true &&
+      mini.wave6Lean === true &&
+      mini.wave11FactionFocus === true &&
+      mini.wave16Pressure === true &&
+      mini.wave21WarChest === true &&
+      mini.wave26Evolved === true &&
+      mini.rotatesEveryFive === true,
     shopMiniRewardsStaySmall: mini.tftReward === true && mini.suddenReward === true,
     topTenPresentationWorks: leaderboard.podiumHasThree === true && leaderboard.personalTopTenDetected === true,
     suddenBaseEconomyMatchesTft: suddenParity,
