@@ -564,7 +564,7 @@ async function fetchLeaderboardData(session, mode) {
     return { ok: false, error: 'authentication_required' };
   }
 
-  const response = await fetch(`/api/leaderboards/${encodeURIComponent(mode)}?limit=50`, {
+  const response = await fetch(`/api/leaderboards/${encodeURIComponent(mode)}?limit=10`, {
     headers: {
       Authorization: `Bearer ${session.access_token}`
     }
@@ -3062,8 +3062,8 @@ function Leaderboard({ session, onBack }) {
     <Shell
       onBack={onBack}
       kicker="GLOBAL RECORDS"
-      title="LEADERBOARD"
-      subtitle="Verified records only. Ranked by wave, survival, score, kills, then oldest verified record."
+      title="TOP 10"
+      subtitle="Verified mode records only. Ranked by wave, survival, score, kills, then oldest verified record."
     >
       <div className="leaderboard-tabs">
         <button
@@ -3102,16 +3102,27 @@ function Leaderboard({ session, onBack }) {
           <div className="empty-state">No verified runs recorded for this mode yet.</div>
         )}
 
-        {leaderboardStatus === 'ready' && entries.map((entry, index) => (
-          <div className="table-row leaderboard-row" key={`${entry.displayName}-${entry.updatedAt}-${index}`}>
-            <span>{index + 1}</span>
-            <span>{entry.displayName}</span>
-            <span>{entry.bestWave}</span>
-            <span>{formatSurvivalTime(entry.bestSurvivalMs)}</span>
-            <span>{Number(entry.bestScore || 0).toLocaleString()}</span>
-            <span>{Number(entry.bestKills || 0).toLocaleString()}</span>
-          </div>
-        ))}
+        {leaderboardStatus === 'ready' && entries.slice(0, 10).map((entry, index) => {
+          const rank = index + 1;
+          const rankClass = rank === 1
+            ? ' leaderboard-row--gold'
+            : rank === 2
+              ? ' leaderboard-row--silver'
+              : rank === 3
+                ? ' leaderboard-row--bronze'
+                : '';
+
+          return (
+            <div className={`table-row leaderboard-row${rankClass}`} key={`${entry.displayName}-${entry.updatedAt}-${index}`}>
+              <span className="leaderboard-rank">{rank <= 3 ? `#${rank} ★` : `#${rank}`}</span>
+              <span>{entry.displayName}</span>
+              <span>{entry.bestWave}</span>
+              <span>{formatSurvivalTime(entry.bestSurvivalMs)}</span>
+              <span>{Number(entry.bestScore || 0).toLocaleString()}</span>
+              <span>{Number(entry.bestKills || 0).toLocaleString()}</span>
+            </div>
+          );
+        })}
       </div>
     </Shell>
   );

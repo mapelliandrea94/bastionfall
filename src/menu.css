@@ -2717,6 +2717,38 @@ body { background:#1c3f61; }
   text-align: right;
 }
 
+.leaderboard-rank {
+  font-weight: 950;
+  letter-spacing: .04em;
+}
+
+.leaderboard-row--gold {
+  border-color: rgba(244, 204, 95, .5);
+  background: rgba(147, 107, 26, .13);
+}
+
+.leaderboard-row--silver {
+  border-color: rgba(205, 214, 226, .36);
+  background: rgba(137, 150, 166, .08);
+}
+
+.leaderboard-row--bronze {
+  border-color: rgba(202, 139, 82, .36);
+  background: rgba(126, 76, 37, .08);
+}
+
+.leaderboard-row--gold .leaderboard-rank {
+  color: #f4d06a;
+}
+
+.leaderboard-row--silver .leaderboard-rank {
+  color: #d8e0e8;
+}
+
+.leaderboard-row--bronze .leaderboard-rank {
+  color: #d99b65;
+}
+
 
 /* BATCH 80 — Tri-Gate battlefield rendering */
 .tri-gate-preview {
