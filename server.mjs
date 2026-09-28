@@ -33,7 +33,7 @@ const consumedMatchCompletions = new Map();
 const ABUSE_BUCKET_TTL_MS = 10 * 60 * 1000;
 const COMPLETION_REPLAY_TTL_MS = 25 * 60 * 60 * 1000;
 const LAST_BASTION_ABANDON_TIMEOUT_SECONDS = 60;
-const STANDARD_RUN_STALE_TIMEOUT_SECONDS = 6 * 60 * 60;
+const STANDARD_RUN_STALE_TIMEOUT_SECONDS = 60 * 60;
 
 function getStandardRunValidationBounds(mode, matchId, completedWave) {
   const seed = `${mode}:${matchId}`;
