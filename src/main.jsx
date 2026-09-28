@@ -1006,7 +1006,7 @@ function ModePreRun({ mode, onBack, onStart, session }) {
 }
 
 
-function TowerAttackEffect({ shot }) {
+function TowerAttackEffect({ shot, speed = 1 }) {
   const { x, y, dx, dy, visual, duration, faction } = shot;
   const targetX = x + dx;
   const targetY = y + dy;
@@ -1014,12 +1014,12 @@ function TowerAttackEffect({ shot }) {
   const isBeam = ['beam', 'chain', 'mark'].includes(visual);
   const isAura = visual === 'aura';
   const blast = ['shell', 'flak', 'plasma', 'venom', 'acid', 'frost', 'pulse', 'swarm'].includes(visual);
-  const flightStyle = { '--shot-x': `${dx}px`, '--shot-y': `${dy}px`, animationDuration: `${duration}ms` };
+  const flightStyle = { '--shot-x': `${dx}px`, '--shot-y': `${dy}px`, animationDuration: `${duration / speed}ms` };
 
   return (
     <g className={`tower-attack tower-attack--${visual} tower-attack--${faction}`}>
       {isBeam ? (
-        <g className="tower-attack__beam" style={{ animationDuration: `${Math.min(duration + 100, 320)}ms` }}>
+        <g className="tower-attack__beam" style={{ animationDuration: `${Math.min(duration + 100, 320) / speed}ms` }}>
           <path className="tower-attack__beam-glow" d={visual === 'chain'
             ? `M ${x} ${y} Q ${(x + targetX) / 2 + 12} ${(y + targetY) / 2 - 9} ${targetX} ${targetY}`
             : `M ${x} ${y} L ${targetX} ${targetY}`} />
@@ -1053,7 +1053,7 @@ function TowerAttackEffect({ shot }) {
           </g>
         </g>
       )}
-      {blast && <circle className="tower-attack__impact" cx={targetX} cy={targetY} r={visual === 'shell' || visual === 'plasma' ? 15 : 10} style={{ animationDelay: `${duration}ms` }} />}
+      {blast && <circle className="tower-attack__impact" cx={targetX} cy={targetY} r={visual === 'shell' || visual === 'plasma' ? 15 : 10} style={{ animationDelay: `${duration / speed}ms` }} />}
     </g>
   );
 }
@@ -1108,12 +1108,26 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [selectedTftBenchIndex, setSelectedTftBenchIndex] = useState(() => matchingTftSnapshot?.selectedTftBenchIndex ?? null);
   const [confirmedTftSetupKey, setConfirmedTftSetupKey] = useState(null);
   const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(false);
+  const [waveSpeed, setWaveSpeed] = useState(1);
+  const waveClockRef = useRef({ real: performance.now(), virtual: performance.now(), speed: 1 });
+  const getWaveNow = () => {
+    const clock = waveClockRef.current;
+    const real = performance.now();
+    clock.virtual += Math.max(0, real - clock.real) * clock.speed;
+    clock.real = real;
+    return clock.virtual;
+  };
+  const toggleWaveSpeed = () => {
+    getWaveNow(); // Settle elapsed time at the old speed before switching.
+    const next = waveSpeed === 2 ? 1 : 2;
+    waveClockRef.current.speed = next;
+    setWaveSpeed(next);
+  };
   const availableGoldRef = useRef(run?.gold ?? RUN_DEFAULTS.startingGold);
   const activeEnemiesRef = useRef([]);
   const animationFrameRef = useRef(null);
   const queuedWaveRef = useRef(null);
   const spawnedWaveRef = useRef(null);
-  const bossSummonTimeoutsRef = useRef([]);
   const towerAttackTimesRef = useRef({});
   const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
   const projectileQueueRef = useRef([]);
@@ -1331,10 +1345,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
         return next;
       });
-    }, WALL_SYSTEM.damageTickMs);
+    }, WALL_SYSTEM.damageTickMs / waveSpeed);
 
     return () => window.clearInterval(intervalId);
-  }, [run?.phase, run?.mode, activeWallIds.join('|')]);
+  }, [run?.phase, run?.mode, activeWallIds.join('|'), waveSpeed]);
 
   useEffect(() => {
     if (!isShopMode(run?.mode) || run?.phase === RUN_PHASES.ENDED) return;
@@ -1447,13 +1461,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   }, [run?.phase, run?.wave, waveScaling.waveNumber]);
 
   useEffect(() => {
-    bossSummonTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
-    bossSummonTimeoutsRef.current = [];
-
     if (run?.phase !== RUN_PHASES.ACTIVE || !bossSummonPlan.active) return undefined;
-
-    bossSummonTimeoutsRef.current = bossSummonPlan.pulses.map((pulse) =>
-      window.setTimeout(() => {
+    const startedAt = getWaveNow();
+    const fired = new Set();
+    const intervalId = window.setInterval(() => {
+      const elapsed = getWaveNow() - startedAt;
+      bossSummonPlan.pulses.forEach((pulse) => {
+        if (fired.has(pulse.pulseIndex) || elapsed < pulse.offsetMs) return;
+        fired.add(pulse.pulseIndex);
         const adds = run?.mode === MODES.TRI_GATE
           ? pulse.adds.map((enemy, index) => ({
               ...enemy,
@@ -1461,13 +1476,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             }))
           : pulse.adds;
         setSpawnQueue((current) => [...current, ...adds]);
-      }, pulse.offsetMs)
-    );
-
-    return () => {
-      bossSummonTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
-      bossSummonTimeoutsRef.current = [];
-    };
+      });
+    }, 50);
+    return () => window.clearInterval(intervalId);
   }, [run?.phase, run?.wave, bossSummonPlan.active, bossSummonPlan.waveNumber]);
 
   useEffect(() => {
@@ -1481,19 +1492,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           ? createRosterEnemyState(nextEnemy.rosterId, {
               ...nextEnemy,
               progress: 0,
-              spawnedAt: performance.now()
+              spawnedAt: getWaveNow()
             })
           : nextEnemy.archetype === FLYING_ENEMY.archetype
-            ? createFlyingEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+            ? createFlyingEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
             : nextEnemy.archetype === SHIELDED_ENEMY.archetype
-              ? createShieldedEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+              ? createShieldedEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
               : nextEnemy.archetype === ARMORED_ENEMY.archetype
-                ? createArmoredEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+                ? createArmoredEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
                 : nextEnemy.archetype === TANK_ENEMY.archetype
-                  ? createTankEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
+                  ? createTankEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
                   : nextEnemy.archetype === RUNNER_ENEMY.archetype
-                    ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() })
-                    : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: performance.now() });
+                    ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
+                    : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() });
 
         const modeScaledEnemy = run?.mode === MODES.SUDDEN_SIEGE
           ? applySuddenSiegeEnemyScaling(baseEnemyState, waveScaling.waveNumber)
@@ -1503,18 +1514,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         return remaining;
       });
     }, activeEnemies.length === 0
-      ? 150
-      : waveScaling.spawnIntervalMs * worldModifierEffects.spawnIntervalMultiplier * 0.5);
+      ? 150 / waveSpeed
+      : waveScaling.spawnIntervalMs * worldModifierEffects.spawnIntervalMultiplier * 0.5 / waveSpeed);
 
     return () => window.clearTimeout(timeoutId);
-  }, [run?.phase, spawnQueue.length, activeEnemies.length]);
+  }, [run?.phase, spawnQueue.length, activeEnemies.length, waveSpeed]);
 
   useEffect(() => {
     if (activeEnemies.length === 0 || run?.phase === RUN_PHASES.ENDED) return undefined;
 
     const durationMs = waveScaling.travelDurationMs * wallTravelMultiplier;
 
-    const tick = (now) => {
+    const tick = () => {
+      const now = getWaveNow();
       setActiveEnemies((current) => current
         .map((enemy) => {
           const effectiveSpeed =
@@ -1575,7 +1587,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     if (run?.phase !== RUN_PHASES.ACTIVE || placedDefenses.length === 0 || activeEnemies.length === 0) return undefined;
 
     const intervalId = window.setInterval(() => {
-      const now = performance.now();
+      const now = getWaveNow();
 
       setActiveEnemies((currentEnemies) => {
         let working = currentEnemies.map((enemy) => ({
@@ -1728,7 +1740,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     }
     const intervalId = window.setInterval(() => {
       const queued = projectileQueueRef.current.splice(0);
-      const now = performance.now();
+      const now = getWaveNow();
       setProjectiles((current) => {
         const alive = current.filter((shot) => shot.expiresAt > now);
         return queued.length || alive.length !== current.length ? [...alive, ...queued].slice(-100) : current;
@@ -1741,7 +1753,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     if (run?.phase !== RUN_PHASES.ACTIVE || activeEnemies.length === 0) return undefined;
 
     const intervalId = window.setInterval(() => {
-      const now = performance.now();
+      const now = getWaveNow();
       setActiveEnemies((current) => removeAndCountDefeatedEnemies(current
         .map((enemy) => {
           const status = { ...(enemy.statusEffects ?? {}) };
@@ -1767,10 +1779,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           return { ...next, statusEffects: status };
         })));
-    }, 250);
+    }, 250 / waveSpeed);
 
     return () => window.clearInterval(intervalId);
-  }, [run?.phase, activeEnemies.length]);
+  }, [run?.phase, activeEnemies.length, waveSpeed]);
 
   useEffect(() => {
     const queueInitialized = queuedWaveRef.current === waveScaling.waveNumber;
@@ -2629,7 +2641,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             {positionedEnemies.map((enemy) => {
               const hpRatio = enemy.maxHp > 0 ? Math.max(0, Math.min(1, enemy.hp / enemy.maxHp)) : 0;
               const shieldRatio = enemy.maxShield > 0 ? Math.max(0, Math.min(1, enemy.shield / enemy.maxShield)) : 0;
-              const slowActive = (enemy.statusEffects?.slowUntilMs ?? 0) > performance.now();
+              const slowActive = (enemy.statusEffects?.slowUntilMs ?? 0) > getWaveNow();
               const artId = ENEMY_ROSTER.byId[enemy.archetype]
                 ? enemy.archetype : LEGACY_ENEMY_ART[enemy.archetype];
               const enemyArtHref = artId
@@ -2695,7 +2707,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               );
             })}
             <g className="battlefield-map__projectiles" aria-hidden="true">
-              {projectiles.map((shot) => <TowerAttackEffect key={shot.id} shot={shot} />)}
+              {projectiles.map((shot) => <TowerAttackEffect key={shot.id} shot={shot} speed={waveSpeed} />)}
             </g>
             <g
               className={`battlefield-map__bastion ${bastionStateClass}`}
@@ -2752,6 +2764,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </text>
           </svg>
 
+          <button type="button" className={`wave-speed-toggle${waveSpeed === 2 ? ' is-active' : ''}`}
+            aria-label={`Wave speed: ${waveSpeed}x. Switch to ${waveSpeed === 2 ? 'normal' : 'double'} speed`}
+            aria-pressed={waveSpeed === 2} onClick={toggleWaveSpeed}>
+            <strong>{waveSpeed}×</strong><span>WAVE</span>
+          </button>
           <aside
             className={`run-sidebar ${isShopMode(run?.mode) ? 'run-sidebar--tft' : ''}`}
             aria-label="Tower management"
