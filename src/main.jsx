@@ -13,6 +13,7 @@ import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.
 import { applyTowerSynergy, getTowerSynergyState } from './game/towers/towerSynergies.js';
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
+import { getTowerAttackVisual } from './game/towers/attackVisuals.js';
 import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
 import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyle, getTowerArtStyleForTower } from './game/towers/towerArt.js';
 import { getTowerEvolutionIntegrityPass, getTowerEvolutionIntegrityQa } from './game/towers/towerEvolutionIntegrityQa.js';
@@ -996,6 +997,58 @@ function ModePreRun({ mode, onBack, onStart, session }) {
 }
 
 
+function TowerAttackEffect({ shot }) {
+  const { x, y, dx, dy, visual, duration, faction } = shot;
+  const targetX = x + dx;
+  const targetY = y + dy;
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const isBeam = ['beam', 'chain', 'mark'].includes(visual);
+  const isAura = visual === 'aura';
+  const blast = ['shell', 'flak', 'plasma', 'venom', 'acid', 'frost', 'pulse', 'swarm'].includes(visual);
+  const flightStyle = { '--shot-x': `${dx}px`, '--shot-y': `${dy}px`, animationDuration: `${duration}ms` };
+
+  return (
+    <g className={`tower-attack tower-attack--${visual} tower-attack--${faction}`}>
+      {isBeam ? (
+        <g className="tower-attack__beam" style={{ animationDuration: `${Math.min(duration + 100, 320)}ms` }}>
+          <path className="tower-attack__beam-glow" d={visual === 'chain'
+            ? `M ${x} ${y} Q ${(x + targetX) / 2 + 12} ${(y + targetY) / 2 - 9} ${targetX} ${targetY}`
+            : `M ${x} ${y} L ${targetX} ${targetY}`} />
+          <path className="tower-attack__beam-core" d={visual === 'chain'
+            ? `M ${x} ${y} Q ${(x + targetX) / 2 + 12} ${(y + targetY) / 2 - 9} ${targetX} ${targetY}`
+            : `M ${x} ${y} L ${targetX} ${targetY}`} />
+        </g>
+      ) : isAura ? (
+        <circle className="tower-attack__aura" cx={x} cy={y} r="14" />
+      ) : (
+        <g transform={`translate(${x} ${y})`}>
+          <g className="tower-attack__travel" style={flightStyle}>
+            <g transform={`rotate(${angle})`}>
+              {visual === 'arrow' || visual === 'spike' ? (
+                <>
+                  <path className="tower-attack__trail" d="M -22 0 L -3 0" />
+                  <path className="tower-attack__arrow" d={visual === 'spike' ? 'M 12 0 L -9 -5 L -5 0 L -9 5 Z' : 'M 12 0 L 3 -5 L 5 -1 L -9 -1 L -9 1 L 5 1 L 3 5 Z'} />
+                </>
+              ) : visual === 'bullet' || visual === 'flak' ? (
+                <><path className="tower-attack__trail" d="M -19 0 L -3 0" /><ellipse className="tower-attack__body" cx="4" cy="0" rx={visual === 'flak' ? 5 : 7} ry={visual === 'flak' ? 4 : 2.5} /></>
+              ) : visual === 'shell' ? (
+                <><path className="tower-attack__trail" d="M -22 0 L -5 0" /><path className="tower-attack__body" d="M -7 -5 L 5 -5 Q 13 0 5 5 L -7 5 Z" /></>
+              ) : visual === 'swarm' ? (
+                <><circle className="tower-attack__body" cx="6" cy="0" r="3" /><circle className="tower-attack__body" cx="-2" cy="-5" r="2.5" /><circle className="tower-attack__body" cx="-4" cy="5" r="2.5" /></>
+              ) : visual === 'frost' ? (
+                <><path className="tower-attack__crystal" d="M 10 0 L 0 7 L -8 0 L 0 -7 Z" /><path className="tower-attack__trail" d="M -18 0 L -9 0" /></>
+              ) : (
+                <><path className="tower-attack__trail" d="M -19 0 L -5 0" /><circle className="tower-attack__body" cx="3" cy="0" r={visual === 'plasma' ? 7 : 5} /></>
+              )}
+            </g>
+          </g>
+        </g>
+      )}
+      {blast && <circle className="tower-attack__impact" cx={targetX} cy={targetY} r={visual === 'shell' || visual === 'plasma' ? 15 : 10} style={{ animationDelay: `${duration}ms` }} />}
+    </g>
+  );
+}
+
 function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled }) {
   const [cleanEnemyArt, setCleanEnemyArt] = useState({});
   useEffect(() => {
@@ -1509,15 +1562,19 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
           const slot = SINGLE_GATE_MAP.buildSlots.slots.find((entry) => entry.id === placed.slotId);
           if (slot && primary.position) {
-            const duration = Math.max(140, Math.min(360, Math.hypot(primary.position.x - slot.x, primary.position.y - slot.y) / Math.max(1, definition.projectileSpeed ?? 700) * 1000));
+            const visual = getTowerAttackVisual(definition, placed.evolution);
+            const duration = ['beam', 'chain', 'mark', 'aura'].includes(visual)
+              ? 190
+              : Math.max(160, Math.min(430, Math.hypot(primary.position.x - slot.x, primary.position.y - slot.y) / Math.max(1, definition.projectileSpeed ?? 700) * 1000));
             projectileQueueRef.current.push({
               id: ++projectileIdRef.current,
               x: slot.x, y: slot.y - 24,
               dx: primary.position.x - slot.x,
               dy: primary.position.y - (slot.y - 24),
               faction: definition.faction ?? baseDefinition.faction ?? 'neutral',
+              visual,
               duration,
-              expiresAt: now + duration + 80
+              expiresAt: now + duration + 330
             });
           }
 
@@ -1590,6 +1647,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
             chained.forEach((enemy, chainIndex) => {
               const index = working.findIndex((entry) => entry.id === enemy.id);
+              const previous = chainIndex === 0 ? primary : chained[chainIndex - 1];
+              if (index >= 0 && previous.position && enemy.position) {
+                projectileQueueRef.current.push({
+                  id: ++projectileIdRef.current,
+                  x: previous.position.x,
+                  y: previous.position.y,
+                  dx: enemy.position.x - previous.position.x,
+                  dy: enemy.position.y - previous.position.y,
+                  faction: definition.faction ?? 'alien',
+                  visual: 'chain',
+                  duration: 170,
+                  expiresAt: now + 430
+                });
+              }
               if (index >= 0) hitEnemyAtIndex(index, Math.pow(definition.chainFalloff ?? 0.65, chainIndex + 1));
             });
           }
@@ -2321,16 +2392,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               );
             })}
             <g className="battlefield-map__projectiles" aria-hidden="true">
-              {projectiles.map((shot) => (
-                <circle
-                  key={shot.id}
-                  className={`battlefield-map__projectile battlefield-map__projectile--${shot.faction}`}
-                  cx={shot.x}
-                  cy={shot.y}
-                  r="6"
-                  style={{ '--shot-x': `${shot.dx}px`, '--shot-y': `${shot.dy}px`, animationDuration: `${shot.duration}ms` }}
-                />
-              ))}
+              {projectiles.map((shot) => <TowerAttackEffect key={shot.id} shot={shot} />)}
             </g>
             <g
               className={`battlefield-map__bastion ${bastionStateClass}`}
