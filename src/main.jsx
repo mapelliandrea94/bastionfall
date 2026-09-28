@@ -54,7 +54,7 @@ import { getPerformanceTelemetryPass, getPerformanceTelemetryQa } from './game/b
 import { getEndToEndRegressionPass, getEndToEndRegressionQa } from './game/balance/endToEndRegressionQa.js';
 import { getEvolutionPowerBudgetPass, getEvolutionPowerBudgetQa } from './game/balance/evolutionPowerBudgetQa.js';
 import { getTriGateBalanceSmokeTest } from './game/balance/triGateBalanceSmoke.js';
-import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
+import { SUDDEN_SIEGE, applySuddenSiegeEnemyScaling, getSuddenSiegeTelemetry, getSuddenSiegeWaveReward, getSuddenSiegeWaveScaling } from './game/balance/suddenSiege.js';
 import { applyRiskRewardGold, getRiskRewardConfig, getRiskRewardVisualState } from './game/balance/riskReward.js';
 import { evaluateMiniObjective, getMiniObjectiveForWave, getMiniObjectiveLiveState, getMiniObjectiveReward } from './game/objectives/miniObjectives.js';
 import { BOSS_SCHEDULE, getBossScheduleFixtures, getUpcomingBossWave, isBossWave } from './game/boss/bossSchedule.js';
@@ -698,6 +698,7 @@ function ModeSelect({ onBack, onSelect }) {
           <span className="mode-card__players">FAST SHOP SURVIVAL</span>
           <strong>SUDDEN SIEGE</strong>
           <small>TFT rules. Faster waves. Harder scaling. Less time to breathe.</small>
+          <b className="mode-card__danger-badge">ESCALATING THREAT</b>
           <em>SELECT MODE</em>
         </button>
 
@@ -1153,6 +1154,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     return survivors;
   };
   const waveScaling = getWaveScaling(run?.wave ?? 0, run?.mode);
+  const suddenTelemetry = run?.mode === MODES.SUDDEN_SIEGE
+    ? getSuddenSiegeTelemetry(waveScaling.waveNumber)
+    : null;
   const nextWaveNumber = Math.max(1, (run?.wave ?? 0) + 1);
   const upcomingBossWave = getUpcomingBossWave(nextWaveNumber);
   const bossWaveIncoming = isBossWave(nextWaveNumber);
@@ -2771,7 +2775,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             <strong>{waveSpeed}×</strong><span>WAVE</span>
           </button>
           <aside
-            className={`run-sidebar ${isShopMode(run?.mode) ? 'run-sidebar--tft' : ''}`}
+            className={`run-sidebar ${isShopMode(run?.mode) ? 'run-sidebar--tft' : ''}${run?.mode === MODES.SUDDEN_SIEGE ? ' run-sidebar--sudden' : ''}`}
             aria-label="Tower management"
             data-balance-version={COMBAT_BALANCE_MODEL.version}
             data-performance-telemetry-pass={PERFORMANCE_TELEMETRY_PASS}
@@ -2951,6 +2955,21 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           >
           {isShopMode(run?.mode) ? (
           <>
+            {run?.mode === MODES.SUDDEN_SIEGE && suddenTelemetry && (
+              <section className="sudden-siege-hud" aria-label="Sudden Siege telemetry">
+                <div className="sudden-siege-hud__header">
+                  <span>SUDDEN SIEGE</span>
+                  <strong>{suddenTelemetry.stage}</strong>
+                </div>
+                <div className="sudden-siege-hud__grid">
+                  <div><span>THREAT</span><strong>×{suddenTelemetry.threatMultiplier.toFixed(2)}</strong></div>
+                  <div><span>ENEMY HP</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
+                  <div><span>SPAWN</span><strong>{(suddenTelemetry.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
+                  <div><span>PREP</span><strong>{suddenTelemetry.preparationSeconds}s</strong></div>
+                </div>
+                <small>Difficulty escalates by wave bracket. Economy remains TFT-style.</small>
+              </section>
+            )}
             <div className="tft-shop-layout">
             <p className="main-menu__kicker">SHOP</p>
             <h3>TFT SHOP</h3>
@@ -3443,12 +3462,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <div><span>CLEAR GOLD</span><strong>+{
                 run?.mode === MODES.TRI_GATE
                   ? getTriGateWaveClearReward(waveScaling.waveNumber)
-                  : isShopMode(run?.mode)
-                    ? TFT_SHOP.waveClearGold
-                    : getWaveClearReward(waveScaling.waveNumber)
+                  : run?.mode === MODES.SUDDEN_SIEGE
+                    ? getSuddenSiegeWaveReward(waveScaling.waveNumber)
+                    : run?.mode === MODES.TFT_SHOP
+                      ? TFT_SHOP.waveClearGold
+                      : getWaveClearReward(waveScaling.waveNumber)
               }</strong></div>
               {isShopMode(run?.mode) && (
                 <div><span>BONUSES</span><strong>+1 PERFECT · +3 BOSS · +2 / 5 WAVES</strong></div>
+              )}
+              {run?.mode === MODES.SUDDEN_SIEGE && suddenTelemetry && (
+                <>
+                  <div><span>SUDDEN STAGE</span><strong>{suddenTelemetry.stage}</strong></div>
+                  <div><span>HP PRESSURE</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
+                </>
               )}
             </div>
           </div>
