@@ -697,11 +697,64 @@ export function getOfflineRunEngineFixtures() {
   };
   const wallAdvanced = advanceOfflineRunSnapshot(wallSnapshot, 1000);
 
+  const clockBase = {
+    run: {
+      mode: 'single-gate',
+      seed: 'clock-fixture',
+      phase: 'active',
+      wave: 0,
+      gold: ECONOMY_BASELINE.startingGold,
+      coreHp: BASE_CORE_HP,
+      coreMaxHp: BASE_CORE_HP,
+      waveStartCoreHp: BASE_CORE_HP,
+      kills: 0,
+      blessings: [],
+      startedAtMs: Date.now()
+    },
+    placedDefenses: [],
+    activeWallIds: [],
+    wallHpById: {},
+    spawnQueue: [],
+    activeEnemies: [{
+      id: 'clock-enemy',
+      hp: 1000,
+      maxHp: 1000,
+      shield: 0,
+      maxShield: 0,
+      armor: 0,
+      moveSpeed: 0.2,
+      progress: 0,
+      airborne: false,
+      unitType: 'infantry',
+      faction: 'human',
+      bastionDamage: 1,
+      goldReward: 0,
+      statusEffects: {
+        poisonDamagePerSecond: 10,
+        poisonUntilMs: 10000
+      }
+    }],
+    preparationRemaining: 0,
+    riskRewardTier: 'safe',
+    queuedWaveNumber: 1,
+    spawnedWaveNumber: 1,
+    waveClockNow: 0,
+    offlineEngine: { virtualNowMs: 0, currentWaveElapsedMs: 0, towerCooldownMs: {} }
+  };
+  const normalClock = advanceOfflineRunSnapshot({ ...structuredClone(clockBase), waveSpeed: 1 }, 1000);
+  const doubleClock = advanceOfflineRunSnapshot({ ...structuredClone(clockBase), waveSpeed: 2 }, 1000);
+  const normalEnemy = normalClock.snapshot.activeEnemies.find((enemy) => enemy.id === 'clock-enemy');
+  const doubleEnemy = doubleClock.snapshot.activeEnemies.find((enemy) => enemy.id === 'clock-enemy');
+
   return Object.freeze({
     supportedModeAdvances: advanced.advancedMs > 0,
     preparationCanStartWave: advanced.snapshot.run.phase === 'active' || advanced.snapshot.run.phase === 'resolving' || advanced.snapshot.run.phase === 'ended',
     generatedWaveQueue: advanced.snapshot.spawnQueue.length > 0 || advanced.snapshot.activeEnemies.length > 0 || advanced.snapshot.run.phase !== 'active',
     offlineWallsTakeDamage: Number(wallAdvanced.snapshot.wallHpById?.['wall-01'] ?? 0) < 10,
-    offlineWallsCanBeDestroyed: !wallAdvanced.snapshot.activeWallIds?.includes('wall-01')
+    offlineWallsCanBeDestroyed: !wallAdvanced.snapshot.activeWallIds?.includes('wall-01'),
+    x2AdvancesDoubleVirtualTime:
+      Number(doubleClock.snapshot.waveClockNow ?? 0) === Number(normalClock.snapshot.waveClockNow ?? 0) * 2,
+    x2AppliesMoreTimedDamage:
+      Number(doubleEnemy?.hp ?? 1000) < Number(normalEnemy?.hp ?? 1000)
   });
 }
