@@ -79,7 +79,7 @@ function getFactionOrder(random, wave) {
 export function getWaveQuantityMultiplier(waveNumber) {
   const wave = normalizeWaveNumber(waveNumber);
   const completedFiveWaveBlocks = Math.floor(wave / 5);
-  return Number((1.15 ** completedFiveWaveBlocks).toFixed(6));
+  return Number((1.25 ** completedFiveWaveBlocks).toFixed(6));
 }
 
 function getCandidateWeight(enemy, wave, eliteMilestone) {
@@ -262,9 +262,9 @@ export function getWaveDirectorFixtures() {
     eliteMilestone15: generateWavePlan({ seed: 'elite', waveNumber: 15 }).eliteMilestone === true,
     bossMilestone10: generateWavePlan({ seed: 'boss', waveNumber: 10 }).bossMilestone === true,
     quantityWave4: getWaveQuantityMultiplier(4) === 1,
-    quantityWave5: getWaveQuantityMultiplier(5) === 1.15,
-    quantityWave10: getWaveQuantityMultiplier(10) === 1.3225,
-    quantityWave20: getWaveQuantityMultiplier(20) === 1.74900625,
+    quantityWave5: getWaveQuantityMultiplier(5) === 1.25,
+    quantityWave10: getWaveQuantityMultiplier(10) === 1.5625,
+    quantityWave20: getWaveQuantityMultiplier(20) === 2.44140625,
     budgetRespected: [sameA, early, airIntro, mixed, late, triA].every((plan) => plan.spentThreat <= plan.budget + 0.001),
     triGateDeterministic: fingerprint(triA) === fingerprint(triB),
     triGateHasThreeLanes: triA.laneDistribution?.lanes?.length === 3,
