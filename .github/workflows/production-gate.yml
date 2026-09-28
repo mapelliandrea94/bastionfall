@@ -47,6 +47,8 @@ jobs:
         run: node tests/identity-blessing-visual.mjs
       - name: Extreme Evolution Visual QA
         run: node tests/extreme-evolution-visual.mjs
+      - name: Leaderboard Records Polish QA
+        run: node tests/leaderboard-records-polish.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA
