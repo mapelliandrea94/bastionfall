@@ -5,6 +5,14 @@ function distance(a, b) {
   return Math.hypot(Number(a?.x ?? 0) - Number(b?.x ?? 0), Number(a?.y ?? 0) - Number(b?.y ?? 0));
 }
 
+export const TOWER_BUFF_CONTACT_RADIUS = 36;
+
+export function isTowerInsideBuffAura(attacker, buffTower, buffDefinition) {
+  if (!attacker || !buffTower || !buffDefinition || buffDefinition.id !== 'buff' || attacker.id === buffTower.id) return false;
+  const auraRadius = Math.max(0, Number(buffDefinition.buffRadius ?? 0));
+  return distance(attacker, buffTower) <= auraRadius + TOWER_BUFF_CONTACT_RADIUS;
+}
+
 export function getTowerBuffMultiplier(attacker, placedDefenses = [], definitions = {}) {
   let damageMultiplier = 1;
   let attackSpeedMultiplier = 1;
@@ -12,7 +20,7 @@ export function getTowerBuffMultiplier(attacker, placedDefenses = [], definition
   for (const placed of placedDefenses) {
     const buff = definitions[placed.defenseId];
     if (!buff || buff.id !== 'buff' || placed.id === attacker.id) continue;
-    if (distance(attacker, placed) > Number(buff.buffRadius ?? 0)) continue;
+    if (!isTowerInsideBuffAura(attacker, placed, buff)) continue;
     damageMultiplier = Math.max(damageMultiplier, Number(buff.buffDamageMultiplier ?? 1));
     attackSpeedMultiplier = Math.max(attackSpeedMultiplier, Number(buff.buffAttackSpeedMultiplier ?? 1));
   }
