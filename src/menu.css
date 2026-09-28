@@ -5711,3 +5711,71 @@ button:focus-visible,
     font-size: 12px;
   }
 }
+
+
+/* HOTFIX — move desktop run HUD below the battlefield, clear of the right drawer */
+@media (min-width: 901px) {
+  .run-hud {
+    top: auto !important;
+    bottom: 8px;
+    left: 10px;
+    right: 340px;
+    min-height: 52px;
+    padding: 7px 12px;
+    grid-template-columns: minmax(150px, 1.2fr) repeat(5, minmax(72px, .5fr)) minmax(130px, .9fr);
+    gap: 10px;
+  }
+
+  .run-screen:has(.run-sidebar--tft) .run-hud {
+    right: 465px;
+  }
+
+  .run-hud__label {
+    font-size: 10px;
+    line-height: 1.05;
+    letter-spacing: .12em;
+  }
+
+  .run-hud strong {
+    font-size: 14px;
+    line-height: 1.08;
+  }
+
+  .run-exit {
+    min-height: 36px;
+    padding: 0 13px;
+    font-size: 11px;
+  }
+
+  .battlefield-map {
+    top: 0 !important;
+    bottom: 70px !important;
+    height: calc(100% - 70px) !important;
+  }
+}
+
+@media (min-width: 1501px) {
+  .run-screen:has(.run-sidebar--tft) .run-hud {
+    right: 645px;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1280px) {
+  .run-hud {
+    right: 340px;
+    grid-template-columns: minmax(120px, 1fr) repeat(5, minmax(58px, .45fr)) minmax(105px, .75fr);
+    gap: 7px;
+  }
+
+  .run-screen:has(.run-sidebar--tft) .run-hud {
+    right: 465px;
+  }
+
+  .run-hud__label {
+    font-size: 9px;
+  }
+
+  .run-hud strong {
+    font-size: 12px;
+  }
+}
