@@ -383,9 +383,41 @@ app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windo
   if (!Number.isInteger(kills) || kills < 0 || kills > 1000000) return res.status(400).json({ error: 'invalid_kills' });
   if (!Number.isInteger(gold) || gold < 0 || gold > 10000000) return res.status(400).json({ error: 'invalid_gold' });
 
+  const startedAtMs = Date.parse(identity.startedAt);
+  if (!Number.isFinite(startedAtMs)) {
+    return res.status(400).json({ error: 'invalid_match_started_at' });
+  }
+
+  const checkpointNowMs = Date.now();
+  const waveBounds = getStandardRunValidationBounds(mode, identity.matchId, wave);
+  if (checkpointNowMs - startedAtMs + 1500 < waveBounds.minElapsedMs) {
+    return res.status(400).json({ error: 'wave_progression_too_fast' });
+  }
+
   const serverDb = clientForToken(req.accessToken, {
     'x-bastionfall-server-secret': matchTokenSecret
   });
+
+  const { data: currentRun, error: currentRunError } = await serverDb
+    .from('standard_run_sessions')
+    .select('last_wave,status')
+    .eq('match_id', identity.matchId)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+
+  if (currentRunError || !currentRun) {
+    return res.status(409).json({ error: 'run_checkpoint_missing' });
+  }
+  if (currentRun.status !== 'active') {
+    return res.status(409).json({ error: 'run_not_active' });
+  }
+  if (wave < Number(currentRun.last_wave)) {
+    return res.status(400).json({ error: 'wave_regression' });
+  }
+  if (wave > Number(currentRun.last_wave) + 1) {
+    return res.status(400).json({ error: 'wave_jump_too_large' });
+  }
+
   const { data, error } = await serverDb.rpc('persist_standard_run_checkpoint', {
     p_match_id: identity.matchId,
     p_mode: mode,
@@ -395,12 +427,14 @@ app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windo
     p_core_max_hp: coreMaxHp,
     p_kills: kills,
     p_gold: gold,
-    p_reported_at: new Date().toISOString()
+    p_reported_at: new Date(checkpointNowMs).toISOString()
   });
 
   if (error) {
     const message = String(error.message || '');
     if (message.includes('wave_regression')) return res.status(400).json({ error: 'wave_regression' });
+    if (message.includes('wave_jump_too_large')) return res.status(400).json({ error: 'wave_jump_too_large' });
+    if (message.includes('initial_wave_must_be_zero')) return res.status(400).json({ error: 'initial_wave_must_be_zero' });
     if (message.includes('kills_regression')) return res.status(400).json({ error: 'kills_regression' });
     if (message.includes('run_not_active')) return res.status(409).json({ error: 'run_not_active' });
     console.error('Standard run checkpoint failed:', error.message);
