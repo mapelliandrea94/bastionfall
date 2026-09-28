@@ -420,6 +420,92 @@ const STRINGS = Object.freeze({
   })
 });
 
+
+const GAME_TEXT_IT = Object.freeze({
+  'ONE FRONT. ONE BASTION.': 'UN FRONTE. UN BASTION.',
+  'Classic endless survival on a single attack front.': 'Sopravvivenza infinita classica su un unico fronte.',
+  'THREE FRONTS. TOTAL SIEGE.': 'TRE FRONTI. ASSEDIO TOTALE.',
+  'Defend three simultaneous attack fronts in one survival run.': 'Difendi tre fronti simultanei in un’unica run di sopravvivenza.',
+  'ROLL. BENCH. BUILD.': 'REROLL. PANCHINA. COSTRUISCI.',
+  'Shop-driven survival using random tower copies.': 'Sopravvivenza basata sul negozio con copie casuali delle torri.',
+  'ROLL FAST. DIE LATE.': 'REROLLA IN FRETTA. RESISTI FINO ALLA FINE.',
+  'TFT Shop rules with harder scaling, faster pressure and shorter preparation.': 'Regole TFT Shop con scaling più duro, pressione più rapida e preparazione ridotta.',
+  'LAST SURVIVOR WINS.': 'VINCE L’ULTIMO SOPRAVVISSUTO.',
+  'Competitive survival: every player faces the same siege and the last defender standing wins.': 'Sopravvivenza competitiva: tutti affrontano lo stesso assedio e vince l’ultimo difensore rimasto.',
+  '1 FRONT': '1 FRONTE',
+  '3 FRONTS': '3 FRONTI',
+  'SHARED SIEGE': 'ASSEDIO CONDIVISO',
+  'SURVIVE': 'SOPRAVVIVI',
+  'OUTLAST': 'RESISTI PIÙ DEGLI ALTRI',
+  'HIGHEST WAVE': 'ONDATA PIÙ ALTA',
+  'SURVIVAL RESULT': 'RISULTATO SOPRAVVIVENZA',
+  'READY TO INITIALIZE': 'PRONTO',
+  'MATCHMAKING LATER': 'MATCHMAKING IN ARRIVO',
+
+  'Flawless Defense': 'Difesa Perfetta',
+  'Clear the wave without losing Bastion HP.': 'Completa l’ondata senza perdere HP del Bastion.',
+  'Lean Defense': 'Difesa Essenziale',
+  'Clear the wave with 8 or fewer towers on the field.': 'Completa l’ondata con massimo 8 torri sul campo.',
+  'Faction Focus': 'Focus di Fazione',
+  'Clear the wave using towers from no more than 2 factions.': 'Completa l’ondata usando torri di massimo 2 fazioni.',
+  'Pressure Hunter': 'Cacciatore di Pressione',
+  'Clear the wave with PRESSURE active.': 'Completa l’ondata con PRESSIONE attiva.',
+  'War Chest': 'Tesoro di Guerra',
+  'Finish the wave with at least 10 Gold unspent.': 'Termina l’ondata con almeno 10 Oro non spesi.',
+  'Evolved Arsenal': 'Arsenale Evoluto',
+  'Clear the wave with at least 1 evolved tower deployed.': 'Completa l’ondata con almeno 1 torre evoluta schierata.',
+
+  'FORTIFIED': 'FORTIFICATI',
+  'Enemies gain 20% more HP.': 'I nemici ottengono il 20% di HP in più.',
+  'FRENZIED': 'FRENESIA',
+  'Enemies move 18% faster.': 'I nemici si muovono il 18% più velocemente.',
+  'IRON SKIN': 'PELLE D’ACCIAIO',
+  'Enemies gain +12 armor.': 'I nemici ottengono +12 Corazza.',
+  'OVERCHARGED': 'SOVRACCARICATI',
+  'Enemies gain extra shields.': 'I nemici ottengono scudi aggiuntivi.',
+  'SWARMING': 'SCIAME',
+  'Enemies spawn 22% faster.': 'I nemici compaiono il 22% più velocemente.',
+
+  'TREASURE SURGE': 'ONDATA DEL TESORO',
+  'A richer but denser wave. Clear it for +3 bonus Gold.': 'Un’ondata più ricca ma più densa. Completala per +3 Oro bonus.',
+  'BLOOD RUSH': 'FURIA SANGUINARIA',
+  'Enemies move and spawn much faster. Clear it for +2 bonus Gold.': 'I nemici si muovono e compaiono molto più velocemente. Completala per +2 Oro bonus.',
+  'JUGGERNAUT MARCH': 'MARCIA DEI COLOSSI',
+  'A brutal high-HP siege. Clear it for +3 bonus Gold.': 'Un assedio brutale con moltissimi HP. Completalo per +3 Oro bonus.',
+
+  'Targeting Grid': 'Rete di Puntamento',
+  '3+ Human towers: +12% damage.': '3+ torri Umane: +12% danni.',
+  'Brood Network': 'Rete della Covata',
+  '3+ Insect towers: +12% attack speed and +20% poison pressure.': '3+ torri Insetto: +12% velocità d’attacco e +20% efficacia veleno.',
+  'Resonance Matrix': 'Matrice di Risonanza',
+  '3+ Alien towers: +8% range and +1 chain target.': '3+ torri Aliene: +8% raggio e +1 bersaglio concatenato.',
+  'Support Lattice': 'Reticolo di Supporto',
+  '2+ Neutral towers: +20% slow, vulnerability and support effects.': '2+ torri Neutrali: +20% rallentamento, vulnerabilità ed effetti di supporto.',
+
+  'ON TRACK': 'IN CORSO',
+  'FAILED': 'FALLITA',
+  'OVER LIMIT': 'LIMITE SUPERATO',
+  'TOO MANY FACTIONS': 'TROPPE FAZIONI',
+  'PRESSURE ACTIVE': 'PRESSIONE ATTIVA',
+  'SELECT PRESSURE': 'SELEZIONA PRESSIONE',
+  'READY': 'PRONTO',
+  'SAFE MODE': 'MODALITÀ SICURA',
+  'SAVE GOLD': 'CONSERVA ORO',
+  'EVOLVE A TOWER': 'EVOLVI UNA TORRE',
+  'NO QUEST': 'NESSUNA MISSIONE',
+  'NO OBJECTIVE': 'NESSUN OBIETTIVO',
+  'THREAT RISING': 'MINACCIA IN AUMENTO',
+  'ESCALATION': 'ESCALATION',
+  'ONSLAUGHT': 'ASSALTO',
+  'ENDLESS PRESSURE': 'PRESSIONE INFINITA'
+});
+
+export function gameText(value, language = getLanguage()) {
+  if (value == null) return value;
+  if (normalizeLanguage(language) !== SUPPORTED_LANGUAGES.IT_IT) return value;
+  return GAME_TEXT_IT[String(value)] ?? value;
+}
+
 export function normalizeLanguage(value) {
   return value === SUPPORTED_LANGUAGES.IT_IT ? SUPPORTED_LANGUAGES.IT_IT : SUPPORTED_LANGUAGES.EN_US;
 }
