@@ -2011,7 +2011,7 @@ button { font: inherit; }
   z-index: 30;
   transform: translateX(-50%);
   display: grid;
-  grid-template-columns: auto auto auto;
+  grid-template-columns: auto auto auto auto;
   align-items: center;
   gap: 8px;
   min-width: 360px;
@@ -3201,23 +3201,30 @@ body { background:#1c3f61; }
 
 
 /* BATCH 89 — Blessing choice UI */
-.blessing-choice {
+.blessing-overlay {
   position: fixed;
-  z-index: 120;
-  left: 50%;
-  top: 50%;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(2, 7, 13, .72);
+  backdrop-filter: blur(2px);
+}
+
+.blessing-choice {
+  position: relative;
   width: min(920px, calc(100vw - 48px));
-  max-height: min(72vh, 620px);
+  max-height: min(76vh, 640px);
   overflow: auto;
   margin: 0;
   padding: 1rem;
-  transform: translate(-50%, -50%);
   border: 2px solid rgba(235, 206, 125, .78);
   background:
     radial-gradient(circle at 50% 0%, rgba(99, 154, 218, .22), transparent 55%),
-    rgba(8, 14, 24, .97);
+    rgba(8, 14, 24, .985);
   box-shadow:
-    0 0 0 100vmax rgba(2, 7, 13, .62),
     0 24px 80px rgba(0, 0, 0, .72),
     inset 0 0 34px rgba(47, 91, 148, .12);
 }
