@@ -1203,6 +1203,13 @@ app.post('/api/fortress/upgrade', requireUser, (_req, res) => {
   });
 });
 
+app.use((err, _req, res, next) => {
+  if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && err?.status === 400)) {
+    return res.status(400).json({ error: 'invalid_json' });
+  }
+  return next(err);
+});
+
 app.use(express.static(path.join(here, 'dist')));
 app.get('/{*splat}', (_req, res) => res.sendFile(path.join(here, 'dist', 'index.html')));
 app.listen(port, '0.0.0.0', () => console.log('Bastionfall server listening on', port));
