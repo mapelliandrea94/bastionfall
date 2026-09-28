@@ -1,3 +1,4 @@
+import './last-bastion-hydration-scope.mjs';
 import './last-bastion-live-anticheat.mjs';
 import {
   advanceLastBastionMatchmaking,
