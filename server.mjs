@@ -444,6 +444,100 @@ app.post('/api/match/start', requireUser, rateLimitUser('match-start', { windowM
   });
 });
 
+app.post('/api/run/snapshot', requireUser, rateLimitUser('run-snapshot', { windowMs: 10000, max: 20 }), async (req, res) => {
+  const matchToken = String(req.body?.matchToken || '');
+  const identity = verifyMatchIdentity(matchToken);
+  if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
+  if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
+
+  const snapshot = req.body?.snapshot;
+  if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
+    return res.status(400).json({ error: 'invalid_snapshot' });
+  }
+
+  const serialized = JSON.stringify(snapshot);
+  if (serialized.length > 750000) return res.status(413).json({ error: 'snapshot_too_large' });
+
+  if (String(snapshot?.run?.mode || '') !== identity.mode || String(snapshot?.run?.matchId || '') !== identity.matchId) {
+    return res.status(400).json({ error: 'snapshot_identity_mismatch' });
+  }
+
+  const serverDb = clientForToken(req.accessToken, {
+    'x-bastionfall-server-secret': matchTokenSecret
+  });
+  const nowIso = new Date().toISOString();
+  const { error } = await serverDb
+    .from('online_run_snapshots')
+    .upsert({
+      match_id: identity.matchId,
+      user_id: req.user.id,
+      mode: identity.mode,
+      snapshot,
+      status: 'active',
+      saved_at: nowIso,
+      updated_at: nowIso
+    }, { onConflict: 'match_id' });
+
+  if (error) {
+    console.error('Online run snapshot persistence failed:', error.message);
+    return res.status(500).json({ error: 'snapshot_persist_failed' });
+  }
+
+  return res.json({ ok: true, savedAt: nowIso });
+});
+
+app.get('/api/run/active', requireUser, rateLimitUser('run-active', { windowMs: 10000, max: 20 }), async (req, res) => {
+  const serverDb = clientForToken(req.accessToken, {
+    'x-bastionfall-server-secret': matchTokenSecret
+  });
+
+  const { data, error } = await serverDb
+    .from('online_run_snapshots')
+    .select('match_id,mode,snapshot,saved_at,updated_at')
+    .eq('user_id', req.user.id)
+    .eq('status', 'active')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Online run snapshot read failed:', error.message);
+    return res.status(500).json({ error: 'snapshot_read_failed' });
+  }
+
+  if (!data) return res.json({ activeRun: null });
+
+  const savedAtMs = Date.parse(data.saved_at);
+  return res.json({
+    activeRun: {
+      matchId: data.match_id,
+      mode: data.mode,
+      snapshot: data.snapshot,
+      savedAt: data.saved_at,
+      offlineElapsedMs: Number.isFinite(savedAtMs) ? Math.max(0, Date.now() - savedAtMs) : 0
+    }
+  });
+});
+
+app.post('/api/run/snapshot/clear', requireUser, rateLimitUser('run-snapshot-clear', { windowMs: 10000, max: 12 }), async (req, res) => {
+  const matchToken = String(req.body?.matchToken || '');
+  const identity = verifyMatchIdentity(matchToken);
+  if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
+  if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
+
+  const serverDb = clientForToken(req.accessToken, {
+    'x-bastionfall-server-secret': matchTokenSecret
+  });
+  const { error } = await serverDb
+    .from('online_run_snapshots')
+    .update({ status: 'completed', updated_at: new Date().toISOString() })
+    .eq('match_id', identity.matchId)
+    .eq('user_id', req.user.id);
+
+  if (error) return res.status(500).json({ error: 'snapshot_clear_failed' });
+  return res.json({ ok: true });
+});
+
 app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windowMs: 10000, max: 30 }), async (req, res) => {
   const matchToken = String(req.body?.matchToken || '');
   const identity = verifyMatchIdentity(matchToken);
