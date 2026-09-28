@@ -55,6 +55,8 @@ jobs:
         run: node tests/sudden-battlefield-escalation.mjs
       - name: Sudden Siege Stage Transition QA
         run: node tests/sudden-stage-transition.mjs
+      - name: Sudden Siege Economy Parity QA
+        run: node tests/sudden-economy-parity.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA
