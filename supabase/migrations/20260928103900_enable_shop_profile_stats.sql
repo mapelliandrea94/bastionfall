@@ -98,13 +98,13 @@ begin
       best_kills = greatest(public.mode_records.best_kills, excluded.best_kills),
       updated_at = now();
 
-    update public.profiles
-    set best_wave = greatest(coalesce(best_wave,0), p_wave),
-        shards = coalesce(shards,0) + v_shards,
-        runs = coalesce(runs,0) + 1,
-        lifetime_kills = coalesce(lifetime_kills,0) + p_kills,
+    update public.profiles as pr
+    set best_wave = greatest(coalesce(pr.best_wave,0), p_wave),
+        shards = coalesce(pr.shards,0) + v_shards,
+        runs = coalesce(pr.runs,0) + 1,
+        lifetime_kills = coalesce(pr.lifetime_kills,0) + p_kills,
         updated_at = now()
-    where user_id = v_user_id;
+    where pr.user_id = v_user_id;
 
     if not found then raise exception 'profile_missing'; end if;
     v_inserted := true;
