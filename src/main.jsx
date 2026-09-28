@@ -12,6 +12,7 @@ import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
 import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.js';
 import { applyTowerSynergy, getNewlyActivatedTowerSynergies, getTowerSynergyState, getTowerSynergyVisualCue } from './game/towers/towerSynergies.js';
+import { getActiveTowerCombos, getTowerComboDamageMultiplier } from './game/towers/towerCombos.js';
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { getTowerAttackVisual } from './game/towers/attackVisuals.js';
@@ -70,6 +71,7 @@ import { BOSS_SUMMON_ADDS, getBossSummonAddsFixtures, getBossSummonAddsPlan } fr
 import { RUN_TIMER, formatSurvivalTime, getElapsedRunMs, getRunTimerFixtures } from './game/run/runTimer.js';
 import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/runScore.js';
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
+import { getEndlessMilestone } from './game/run/endlessMilestones.js';
 import { ACCOUNT_PROGRESSION, getAccountProgress } from './game/profile/accountProgression.js';
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
 import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
@@ -387,6 +389,7 @@ function createInitialRunState(mode, seedInput = `${mode}:prototype`, serverMatc
     endSnapshot: null,
     personalBestResult: null,
     towerMilestones: Object.freeze({ seven: 0, fourteen: 0 }),
+    deathRecap: Object.freeze({ nexusDamage: 0, escapedEnemies: 0, byUnitType: Object.freeze({}), byFaction: Object.freeze({}), lastThreat: null }),
     blessings: []
   };
 }
@@ -1205,6 +1208,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const wallTravelMultiplier = 1;
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
   const towerSynergyState = getTowerSynergyState(placedDefenses, defenseDefinitions);
+  const activeTowerCombos = getActiveTowerCombos(placedDefenses);
 
   useEffect(() => {
     const newlyActivated = getNewlyActivatedTowerSynergies(previousSynergyActiveRef.current, towerSynergyState);
@@ -1570,7 +1574,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     if (escapedEnemies.length === 0) return;
 
     setActiveEnemies((current) => current.filter((enemy) => Number(enemy?.progress ?? 0) < 1));
-    onDamageBastion(escapedEnemies.length * waveScaling.bastionDamage);
+    onDamageBastion(escapedEnemies.length * waveScaling.bastionDamage, escapedEnemies);
   }, [activeEnemies, run?.phase, waveScaling.bastionDamage, onDamageBastion]);
 
   useEffect(() => {
@@ -1640,7 +1644,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               );
             }
 
-            const damage = getTowerHitDamage(definition, placed, target, placedDefenses, defenseDefinitions) * damageScale;
+            const comboMultiplier = getTowerComboDamageMultiplier(placed.defenseId, target);
+            const damage = getTowerHitDamage(definition, placed, target, placedDefenses, defenseDefinitions) * damageScale * comboMultiplier;
             let damaged = applyEnemyDamage(target, damage, definition.damageType);
 
             let statusEffects = { ...(damaged.statusEffects ?? {}) };
@@ -3445,6 +3450,21 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           </div>
 
+          {activeTowerCombos.length > 0 && (
+            <div className="tower-combo-panel" aria-label="Tower combos">
+              <div className="tower-combo-panel__title">TOWER COMBOS</div>
+              {activeTowerCombos.map((combo) => (
+                <div key={combo.id} className="tower-combo-panel__entry"><strong>{combo.name}</strong><small>{combo.description}</small></div>
+              ))}
+            </div>
+          )}
+
+          {getEndlessMilestone(run?.wave) && run?.phase === RUN_PHASES.PREPARATION && (
+            <div className="endless-milestone-banner" aria-live="polite">
+              <span>ENDLESS MILESTONE</span><strong>WAVE {run.wave} · {getEndlessMilestone(run.wave).title}</strong><small>+{getEndlessMilestone(run.wave).goldReward} GOLD</small>
+            </div>
+          )}
+
           <div className={bossWaveIncoming ? 'boss-schedule boss-schedule--incoming' : 'boss-schedule'}>
             <span>{bossWaveIncoming ? 'BOSS WAVE' : 'NEXT BOSS'}</span>
             <strong>Wave {upcomingBossWave}</strong>
@@ -3703,6 +3723,14 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
         <div className="stat-card"><span>{t('bastion')}</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>{t('finalCoreState')}</small></div>
         <div className="stat-card"><span>{t('mode')}</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>{t('runFormat')}</small></div>
       </div>
+
+      {snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED && (
+        <section className="death-recap" aria-label="Death recap">
+          <span>DEATH RECAP</span>
+          <strong>{Object.entries(snapshot.deathRecap?.byUnitType ?? {}).sort((a,b) => b[1]-a[1])[0]?.[0]?.toUpperCase() ?? 'UNKNOWN'} PRESSURE</strong>
+          <small>{snapshot.deathRecap?.escapedEnemies ?? 0} enemies reached the Nexus · {snapshot.deathRecap?.nexusDamage ?? 0} total Nexus damage.{snapshot.deathRecap?.lastThreat?.name ? ' Final breach: ' + snapshot.deathRecap.lastThreat.name + '.' : ''}</small>
+        </section>
+      )}
 
       <div className="results-actions">
         <button className="pre-run-start" onClick={onRetry}>{t('retryRun')}</button>
@@ -4570,10 +4598,27 @@ function App() {
             };
           });
         }}
-        onDamageBastion={(damage) => {
+        onDamageBastion={(damage, escapedEnemies = []) => {
           setRunState((current) => {
             if (!current) return current;
             const adjustedDamage = applyBlessingBastionDamage(damage, current.coreHp, current.coreMaxHp, current.blessings ?? []);
+            const recap = current.deathRecap ?? { nexusDamage: 0, escapedEnemies: 0, byUnitType: {}, byFaction: {}, lastThreat: null };
+            const byUnitType = { ...(recap.byUnitType ?? {}) };
+            const byFaction = { ...(recap.byFaction ?? {}) };
+            for (const enemy of escapedEnemies) {
+              const unitType = String(enemy?.unitType ?? 'unknown');
+              const faction = String(enemy?.faction ?? 'unknown');
+              byUnitType[unitType] = Number(byUnitType[unitType] ?? 0) + 1;
+              byFaction[faction] = Number(byFaction[faction] ?? 0) + 1;
+            }
+            const lastThreatEnemy = escapedEnemies.at(-1) ?? null;
+            const nextDeathRecap = Object.freeze({
+              nexusDamage: Math.max(0, Number(recap.nexusDamage ?? 0)) + adjustedDamage,
+              escapedEnemies: Math.max(0, Number(recap.escapedEnemies ?? 0)) + escapedEnemies.length,
+              byUnitType: Object.freeze(byUnitType),
+              byFaction: Object.freeze(byFaction),
+              lastThreat: lastThreatEnemy ? Object.freeze({ name: lastThreatEnemy.name ?? lastThreatEnemy.archetype ?? 'Enemy', unitType: lastThreatEnemy.unitType ?? 'unknown', faction: lastThreatEnemy.faction ?? 'unknown' }) : recap.lastThreat ?? null
+            });
             const nextHp = Math.max(0, current.coreHp - adjustedDamage);
             emitGameFeedback(GAME_FEEDBACK_EVENTS.BASTION_HIT, {
               damage: adjustedDamage,
@@ -4594,6 +4639,7 @@ function App() {
               return {
                 ...current,
                 coreHp: nextHp,
+                deathRecap: nextDeathRecap,
                 bastionHitId: current.bastionHitId + 1
               };
             }
@@ -4602,6 +4648,7 @@ function App() {
             const endedRun = {
               ...current,
               coreHp: 0,
+              deathRecap: nextDeathRecap,
               bastionHitId: current.bastionHitId + 1,
               phase: RUN_PHASES.ENDED,
               elapsedMs: getElapsedRunMs(current.startedAtMs, endedAtMs),
@@ -4673,6 +4720,7 @@ function App() {
             const waveClearGold = advancingWave
               ? applyRiskRewardGold(modeAdjustedWaveClearGold, current.mode, options.riskRewardTier ?? 'safe')
               : 0;
+            const endlessMilestone = advancingWave ? getEndlessMilestone(completedWaveNumber) : null;
             const nextMaxHp = getBlessingAdjustedMaxHp(RUN_DEFAULTS.coreHp, nextBlessings);
             const maxHpGain = Math.max(0, nextMaxHp - current.coreMaxHp);
 
@@ -4683,6 +4731,7 @@ function App() {
               gold:
                 current.gold +
                 waveClearGold +
+                Math.max(0, Number(endlessMilestone?.goldReward) || 0) +
                 Math.max(0, Number(options.miniObjectiveGold) || 0) +
                 Math.max(0, Number(options.rareEventGold) || 0),
               waveStartCoreHp: nextPhase === RUN_PHASES.ACTIVE ? current.coreHp : current.waveStartCoreHp,
