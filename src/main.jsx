@@ -1079,10 +1079,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     ? getRuntimeTowerDefinition(inspectedDefenseBase, selectedPlacedDefense)
     : inspectedDefenseBase;
   const selectedSellPreview = getSellPreview(
-    inspectedDefenseBase,
     selectedPlacedDefense
-      ? Math.max(0, Number(selectedPlacedDefense.investedGold ?? inspectedDefenseBase.cost) - Number(inspectedDefenseBase.cost ?? 0))
-      : 0
+      ? { id: inspectedDefenseBase.id, cost: Math.max(0, Number(selectedPlacedDefense.investedGold ?? inspectedDefenseBase.cost)) }
+      : inspectedDefenseBase,
+    0
   );
   const selectedUpgradePreview = getNextUpgradePreview(inspectedDefenseBase, selectedPlacedDefense?.level ?? 1);
   const selectedEvolutionChoices = selectedPlacedDefense ? getEvolutionChoices(selectedPlacedDefense.defenseId) : [];
