@@ -8,6 +8,7 @@ import { calculateRunScore } from './src/game/run/runScore.js';
 import { generateWavePlan } from './src/game/spawning/waveDirector.js';
 import { getBandWaveScaling } from './src/game/balance/difficultyBands.js';
 import { getTriGateWaveScaling } from './src/game/balance/triGatePacing.js';
+import { getBossSummonAddsPlan } from './src/game/boss/bossSummonAdds.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -55,6 +56,18 @@ function getStandardRunValidationBounds(mode, matchId, completedWave) {
     minElapsedMs: Math.floor(minElapsedMs)
   });
 }
+
+function getStandardWaveKillCapacity(mode, matchId, waveNumber) {
+  const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
+  const plan = generateWavePlan({
+    seed: `${mode}:${matchId}`,
+    waveNumber: wave,
+    mode
+  });
+  const bossAdds = getBossSummonAddsPlan(wave);
+  return Math.max(0, Number(plan.enemyCount) || 0) + Math.max(0, Number(bossAdds.totalAdds) || 0);
+}
+
 
 function validateLastBastionWavePace(identity, wave, nowMs = Date.now()) {
   const startedAtMs = Date.parse(identity?.startedAt || '');
@@ -400,7 +413,7 @@ app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windo
 
   const { data: currentRun, error: currentRunError } = await serverDb
     .from('standard_run_sessions')
-    .select('last_wave,status')
+    .select('last_wave,last_kills,status')
     .eq('match_id', identity.matchId)
     .eq('user_id', req.user.id)
     .maybeSingle();
@@ -418,7 +431,16 @@ app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windo
     return res.status(400).json({ error: 'wave_jump_too_large' });
   }
 
-  const { data, error } = await serverDb.rpc('persist_standard_run_checkpoint', {
+  const previousKills = Number(currentRun.last_kills ?? 0);
+  const killDelta = kills - previousKills;
+  if (!Number.isInteger(killDelta) || killDelta < 0) {
+    return res.status(400).json({ error: 'kills_regression' });
+  }
+
+  const claimWave = wave > Number(currentRun.last_wave) ? wave : wave + 1;
+  const maxWaveKills = getStandardWaveKillCapacity(mode, identity.matchId, claimWave);
+
+  const { data, error } = await serverDb.rpc('persist_standard_run_progress_v2', {
     p_match_id: identity.matchId,
     p_mode: mode,
     p_started_at: identity.startedAt,
@@ -427,7 +449,11 @@ app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windo
     p_core_max_hp: coreMaxHp,
     p_kills: kills,
     p_gold: gold,
-    p_reported_at: new Date(checkpointNowMs).toISOString()
+    p_reported_at: new Date(checkpointNowMs).toISOString(),
+    p_claim_wave: claimWave,
+    p_kill_delta: killDelta,
+    p_max_wave_kills: maxWaveKills,
+    p_finalize_claim_wave: wave > Number(currentRun.last_wave)
   });
 
   if (error) {
@@ -436,6 +462,8 @@ app.post('/api/run/progress', requireUser, rateLimitUser('run-progress', { windo
     if (message.includes('wave_jump_too_large')) return res.status(400).json({ error: 'wave_jump_too_large' });
     if (message.includes('initial_wave_must_be_zero')) return res.status(400).json({ error: 'initial_wave_must_be_zero' });
     if (message.includes('kills_regression')) return res.status(400).json({ error: 'kills_regression' });
+    if (message.includes('wave_kill_budget_exceeded')) return res.status(400).json({ error: 'wave_kill_budget_exceeded' });
+    if (message.includes('wave_kill_ledger_finalized')) return res.status(409).json({ error: 'wave_kill_ledger_finalized' });
     if (message.includes('run_not_active')) return res.status(409).json({ error: 'run_not_active' });
     console.error('Standard run checkpoint failed:', error.message);
     return res.status(500).json({ error: 'run_progress_persist_failed' });
