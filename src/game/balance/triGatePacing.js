@@ -1,10 +1,14 @@
-import { ECONOMY_BASELINE, getWaveClearReward } from '../economy/economyBaseline.js';
+import { ECONOMY_BASELINE } from '../economy/economyBaseline.js';
 import { getBandWaveScaling } from './difficultyBands.js';
 
 export const TRI_GATE_PACING = Object.freeze({
-  version: 1,
+  version: 2,
   startingGold: 320,
   preparationSeconds: 18,
+  waveClearBaseGold: 18,
+  waveClearBandSize: 5,
+  waveClearBandBonus: 4,
+  waveClearMaxGold: 50,
   waveClearRewardMultiplier: 1.25,
   threatMultiplier: 1.15,
   spawnIntervalMultiplier: 1.08,
@@ -12,8 +16,17 @@ export const TRI_GATE_PACING = Object.freeze({
   bastionDamageMultiplier: 1
 });
 
+function getTriGateBaseWaveClearReward(waveNumber) {
+  const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
+  const band = Math.floor((wave - 1) / TRI_GATE_PACING.waveClearBandSize);
+  return Math.min(
+    TRI_GATE_PACING.waveClearMaxGold,
+    TRI_GATE_PACING.waveClearBaseGold + band * TRI_GATE_PACING.waveClearBandBonus
+  );
+}
+
 export function getTriGateWaveClearReward(waveNumber) {
-  return Math.round(getWaveClearReward(waveNumber) * TRI_GATE_PACING.waveClearRewardMultiplier);
+  return Math.round(getTriGateBaseWaveClearReward(waveNumber) * TRI_GATE_PACING.waveClearRewardMultiplier);
 }
 
 export function getTriGateWaveScaling(waveNumber) {
