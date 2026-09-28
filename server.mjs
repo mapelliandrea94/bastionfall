@@ -206,7 +206,7 @@ app.get('/api/health', (_req, res) => res.json({
 }));
 app.get('/api/config', (_req, res) => res.json({ startingGold: 240, baseHp: 20, waveBonus: 35 }));
 
-const STARTABLE_MODES = new Set(['single-gate', 'tri-gate', 'last-bastion']);
+const STARTABLE_MODES = new Set(['single-gate', 'tri-gate', 'last-bastion', 'tft-shop', 'sudden-siege']);
 const LAST_BASTION_MATCHMAKING_FIXTURE = Object.freeze(getLastBastionMatchmakingFixtures());
 
 function attachLastBastionMatchToken(result, userId) {
@@ -813,7 +813,9 @@ app.get('/api/profile', requireUser, async (req, res) => {
   const byMode = {
     'single-gate': null,
     'tri-gate': null,
-    'last-bastion': null
+    'last-bastion': null,
+    'tft-shop': null,
+    'sudden-siege': null
   };
 
   for (const record of modeRecordsResult.data || []) {
@@ -1097,6 +1099,72 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     if (profileRead.error || !profileRead.data) {
       return res.status(404).json({ error: 'profile_missing' });
     }
+    savedProfile = profileRead.data;
+  }
+
+  if (mode === 'tft-shop' || mode === 'sudden-siege') {
+    const expectedScore = calculateRunScore({
+      wave,
+      elapsedMs,
+      kills,
+      coreHp,
+      coreMaxHp
+    }).totalScore;
+    if (Math.floor(score) !== expectedScore) {
+      return res.status(400).json({ error: 'score_mismatch' });
+    }
+
+    const serverDb = clientForToken(req.accessToken, {
+      'x-bastionfall-server-secret': matchTokenSecret
+    });
+    const endedAt = new Date().toISOString();
+
+    const { data: statRows, error: statError } = await serverDb.rpc(
+      'persist_verified_shop_result_v1',
+      {
+        p_match_id: identity.matchId,
+        p_mode: mode,
+        p_result_reason: resultReason,
+        p_wave: wave,
+        p_elapsed_ms: Math.floor(elapsedMs),
+        p_score: expectedScore,
+        p_gold: gold,
+        p_core_hp: coreHp,
+        p_core_max_hp: coreMaxHp,
+        p_kills: kills,
+        p_started_at: identity.startedAt,
+        p_ended_at: endedAt
+      }
+    );
+
+    if (statError) {
+      const message = String(statError.message || '');
+      if (message.includes('invalid_mode')) return res.status(400).json({ error: 'invalid_mode' });
+      if (message.includes('profile_missing')) return res.status(404).json({ error: 'profile_missing' });
+      console.error('Shop-mode persistence failed:', statError.message);
+      return res.status(500).json({ error: 'shop_mode_persist_failed' });
+    }
+
+    persistedRecord = Array.isArray(statRows) ? statRows[0] ?? null : statRows;
+    earnedShards = Number(persistedRecord?.earned_shards ?? 0);
+    canonicalRun = Object.freeze({
+      wave,
+      kills,
+      elapsedMs: Math.floor(elapsedMs),
+      score: expectedScore,
+      gold,
+      coreHp,
+      coreMaxHp,
+      resultReason
+    });
+
+    const profileRead = await req.db
+      .from('profiles')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (profileRead.error || !profileRead.data) return res.status(404).json({ error: 'profile_missing' });
     savedProfile = profileRead.data;
   }
 
