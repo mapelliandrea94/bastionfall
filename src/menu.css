@@ -2671,6 +2671,47 @@ body { background:#1c3f61; }
   filter: drop-shadow(0 0 6px rgba(255, 226, 121, .72));
 }
 
+.tower-context-actions {
+  pointer-events: auto;
+  filter: drop-shadow(0 5px 10px rgba(0, 0, 0, .42));
+}
+
+.tower-context-action {
+  cursor: pointer;
+  outline: none;
+}
+
+.tower-context-action rect {
+  fill: rgba(236, 190, 58, .96);
+  stroke: #fff0a0;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.tower-context-action text {
+  pointer-events: none;
+  fill: #17130a;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .5px;
+}
+
+.tower-context-action:hover rect,
+.tower-context-action:focus rect,
+.tower-context-action.is-active rect {
+  fill: #ffd85a;
+  stroke: #fff9c8;
+  filter: drop-shadow(0 0 7px rgba(255, 211, 73, .95));
+}
+
+.tower-context-action.is-active text {
+  fill: #0c0a05;
+}
+
+.tower-context-action--invert rect {
+  fill: rgba(244, 199, 62, .96);
+}
+
 .battlefield-map__projectiles { pointer-events: none; }
 .tower-attack { --attack-color: #e9ba69; --attack-core: #fff1c4; }
 .tower-attack--insect { --attack-color: #89d558; --attack-core: #d8ff8e; }
