@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
-import { advanceLastBastionMatchmaking, eliminateLastBastionParticipant, getLastBastionActiveMatchPersistenceSnapshot, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionActiveMatches, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
+import { advanceLastBastionMatchmaking, eliminateLastBastionParticipant, getLastBastionActiveMatchPersistenceSnapshot, getLastBastionActiveMatchUserIds, getLastBastionMatchmakingFixtures, getLastBastionMatchStatus, getLastBastionQueueStatus, hydrateLastBastionActiveMatches, hydrateLastBastionMatch, hydrateLastBastionQueue, joinLastBastionQueue, leaveLastBastionQueue, recordLastBastionHeartbeat, setLastBastionReady } from './server/lastBastionMatchmaking.js';
 import { calculateRunScore } from './src/game/run/runScore.js';
 import { generateWavePlan } from './src/game/spawning/waveDirector.js';
 import { getBandWaveScaling } from './src/game/balance/difficultyBands.js';
@@ -281,6 +281,58 @@ async function hydratePersistentLastBastionState(req) {
   hydrateLastBastionQueue(queueRead.data || []);
 
   return { ok: true, serverDb };
+}
+
+async function hydratePersistentLastBastionMatch(req, matchId) {
+  const requestedMatchId = String(matchId || '').trim();
+  const serverDb = clientForToken(req.accessToken, {
+    'x-bastionfall-server-secret': matchTokenSecret
+  });
+
+  if (!requestedMatchId) {
+    return { ok: false, error: 'last_bastion_match_id_missing', serverDb };
+  }
+
+  const abandonSweep = await serverDb.rpc('resolve_stale_last_bastion_participants', {
+    p_now: new Date().toISOString(),
+    p_timeout_seconds: LAST_BASTION_ABANDON_TIMEOUT_SECONDS
+  });
+  if (abandonSweep.error) {
+    console.error('Last Bastion abandon sweep failed:', abandonSweep.error.message);
+    return { ok: false, error: 'last_bastion_abandon_resolution_failed', serverDb };
+  }
+
+  const matchRead = await serverDb
+    .from('last_bastion_matches')
+    .select('id,seed,status,created_at,started_at,wave_starts_at,ended_at,winner_user_id')
+    .eq('id', requestedMatchId)
+    .maybeSingle();
+
+  if (matchRead.error) {
+    console.error('Last Bastion targeted match hydrate failed:', matchRead.error.message);
+    return { ok: false, error: 'last_bastion_persistence_read_failed', serverDb };
+  }
+  if (!matchRead.data) {
+    return { ok: false, error: 'last_bastion_match_not_found', serverDb };
+  }
+
+  const participantsRead = await serverDb
+    .from('last_bastion_participants')
+    .select('match_id,user_id,slot,alive,last_seen_at,wave,core_hp,placement,eliminated_at')
+    .eq('match_id', requestedMatchId)
+    .order('slot', { ascending: true });
+
+  if (participantsRead.error) {
+    console.error('Last Bastion targeted participant hydrate failed:', participantsRead.error.message);
+    return { ok: false, error: 'last_bastion_persistence_read_failed', serverDb };
+  }
+
+  const hydrated = hydrateLastBastionMatch(matchRead.data, participantsRead.data || []);
+  if (!hydrated.hydrated) {
+    return { ok: false, error: 'last_bastion_persistence_invalid', serverDb };
+  }
+
+  return { ok: true, serverDb, match: matchRead.data };
 }
 
 async function persistLastBastionQueueTicket(serverDb, ticket) {
@@ -570,8 +622,8 @@ app.post('/api/last-bastion/match/heartbeat', requireUser, async (req, res) => {
     return res.status(400).json({ error: heartbeatPace.error });
   }
 
-  const hydrated = await hydratePersistentLastBastionState(req);
-  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+  const hydrated = await hydratePersistentLastBastionMatch(req, identity.matchId);
+  if (!hydrated.ok) return res.status(hydrated.error === 'last_bastion_match_not_found' ? 404 : 503).json({ error: hydrated.error });
 
   const now = new Date().toISOString();
   const { error } = await hydrated.serverDb.rpc(
@@ -618,8 +670,8 @@ app.post('/api/last-bastion/match/heartbeat', requireUser, async (req, res) => {
     return res.status(500).json({ error: 'heartbeat_persistence_failed' });
   }
 
-  const refreshed = await hydratePersistentLastBastionState(req);
-  if (!refreshed.ok) return res.status(503).json({ error: refreshed.error });
+  const refreshed = await hydratePersistentLastBastionMatch(req, identity.matchId);
+  if (!refreshed.ok) return res.status(refreshed.error === 'last_bastion_match_not_found' ? 404 : 503).json({ error: refreshed.error });
 
   const result = getLastBastionMatchStatus(req.user.id, identity.matchId);
   if (!result.ok) return res.status(404).json({ error: result.error || 'heartbeat_failed' });
@@ -634,8 +686,8 @@ app.get('/api/last-bastion/match/status', requireUser, async (req, res) => {
   if (identity.userId !== req.user.id) return res.status(403).json({ error: 'match_user_mismatch' });
   if (identity.mode !== 'last-bastion') return res.status(400).json({ error: 'match_mode_mismatch' });
 
-  const hydrated = await hydratePersistentLastBastionState(req);
-  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+  const hydrated = await hydratePersistentLastBastionMatch(req, identity.matchId);
+  if (!hydrated.ok) return res.status(hydrated.error === 'last_bastion_match_not_found' ? 404 : 503).json({ error: hydrated.error });
 
   const result = getLastBastionMatchStatus(req.user.id, identity.matchId);
   if (!result.ok) return res.status(404).json({ error: result.error || 'match_status_failed' });
@@ -659,8 +711,8 @@ app.post('/api/last-bastion/match/eliminate', requireUser, rateLimitUser('lb-eli
     return res.status(400).json({ error: eliminationPace.error });
   }
 
-  const hydrated = await hydratePersistentLastBastionState(req);
-  if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
+  const hydrated = await hydratePersistentLastBastionMatch(req, identity.matchId);
+  if (!hydrated.ok) return res.status(hydrated.error === 'last_bastion_match_not_found' ? 404 : 503).json({ error: hydrated.error });
 
   const eliminatedAt = new Date().toISOString();
   const { error } = await hydrated.serverDb.rpc(
