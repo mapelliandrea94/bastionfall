@@ -1,9 +1,21 @@
 import { TOWER_ROSTER } from './towerRoster.js';
 
-const profile = (id, stats) => Object.freeze({
-  ...TOWER_ROSTER.byId[id],
-  ...stats
-});
+export const GLOBAL_TOWER_RANGE_MULTIPLIER = 1.10;
+
+const profile = (id, stats) => {
+  const scaled = { ...stats };
+  if (Number.isFinite(Number(scaled.range))) {
+    scaled.range = Number((Number(scaled.range) * GLOBAL_TOWER_RANGE_MULTIPLIER).toFixed(2));
+  }
+  if (Number.isFinite(Number(scaled.buffRadius))) {
+    scaled.buffRadius = Number((Number(scaled.buffRadius) * GLOBAL_TOWER_RANGE_MULTIPLIER).toFixed(2));
+  }
+
+  return Object.freeze({
+    ...TOWER_ROSTER.byId[id],
+    ...scaled
+  });
+};
 
 export const BASE_TOWER_GAMEPLAY = Object.freeze([
   profile('human-aa', {
@@ -84,6 +96,11 @@ export function getBaseTowerGameplayFixtures() {
     slowWorks: BASE_TOWER_GAMEPLAY_BY_ID.slow.slowPercent > 0,
     debuffWorks: BASE_TOWER_GAMEPLAY_BY_ID.debuff.vulnerabilityPercent > 0,
     buffWorks: BASE_TOWER_GAMEPLAY_BY_ID.buff.buffDamageMultiplier > 1,
+    globalRangeMultiplier: GLOBAL_TOWER_RANGE_MULTIPLIER,
+    allRangesScaledByTenPercent:
+      BASE_TOWER_GAMEPLAY_BY_ID['human-aa'].range === 286 &&
+      BASE_TOWER_GAMEPLAY_BY_ID['human-armor'].range === 242 &&
+      BASE_TOWER_GAMEPLAY_BY_ID.buff.buffRadius === 265.65,
     utilityBelowBurst:
       BASE_TOWER_GAMEPLAY_BY_ID.slow.damage < BASE_TOWER_GAMEPLAY_BY_ID['human-armor'].damage &&
       BASE_TOWER_GAMEPLAY_BY_ID.debuff.damage < BASE_TOWER_GAMEPLAY_BY_ID['human-armor'].damage &&
