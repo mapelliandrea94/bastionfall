@@ -1,4 +1,5 @@
 import { DAMAGE_TYPES, resolveDamagePacket } from '../combat/counterplay.js';
+import { applyBossEnrageStats } from '../boss/bossArmorEnrage.js';
 
 export const ENEMY_BASE_MODEL = Object.freeze({
   version: 1,
@@ -67,7 +68,8 @@ export function getEnemyEffectiveSpeed(enemy, nowMs = 0) {
     ? Math.max(0, 1 - Number(enemy.statusEffects.slowPercent) / 100)
     : 1;
 
-  return Number((Number(enemy?.moveSpeed ?? 0) * slowMultiplier).toFixed(4));
+  const bossSpeed = applyBossEnrageStats(enemy).moveSpeed;
+  return Number((Number(bossSpeed ?? enemy?.moveSpeed ?? 0) * slowMultiplier).toFixed(4));
 }
 
 export function applyEnemyDamage(enemy, amount, damageType = DAMAGE_TYPES.PHYSICAL) {
