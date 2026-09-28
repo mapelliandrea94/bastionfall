@@ -16,6 +16,7 @@ import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/
 import { getTowerAttackVisual } from './game/towers/attackVisuals.js';
 import { TOWER_EVOLUTIONS, canChooseEvolution, chooseTowerEvolution, getEvolutionChoices, getEvolutionFixtures, getRuntimeTowerDefinition } from './game/towers/evolutions.js';
 import { TOWER_ART_SYSTEM, getTowerArtFixtures, getTowerArtStyle, getTowerArtStyleForTower } from './game/towers/towerArt.js';
+import { getEffectiveTowerRange, getTowerRangeKind } from './game/towers/towerRange.js';
 import { getTowerEvolutionIntegrityPass, getTowerEvolutionIntegrityQa } from './game/towers/towerEvolutionIntegrityQa.js';
 import { getNormalModeEvolutionFlowPass, getNormalModeEvolutionFlowQa } from './game/towers/normalModeEvolutionFlowQa.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
@@ -2248,7 +2249,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 const previewRuntimeDefense = !placed
                   ? applyBlessingTowerIdentity(applyTowerSynergy(previewDefense, towerSynergyState), run?.blessings ?? [])
                   : null;
-                const visibleRange = Math.max(0, Number(placedRuntimeDefense?.range ?? previewRuntimeDefense?.range ?? 0));
+                const visibleRange = getEffectiveTowerRange(placedRuntimeDefense ?? previewRuntimeDefense);
+                const visibleRangeKind = getTowerRangeKind(placedRuntimeDefense ?? previewRuntimeDefense);
                 const towerLevel = Math.max(1, Math.min(4, Number(placed?.level ?? 1)));
                 const copyProgress = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(placed?.copyProgress ?? 1)));
                 const slotClass = [
@@ -2326,11 +2328,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   >
                     {selectedPlaced && visibleRange > 0 && (
                       <circle
-                        className="tower-range-indicator tower-range-indicator--selected"
+                        className={`tower-range-indicator tower-range-indicator--selected tower-range-indicator--${visibleRangeKind}`}
                         cx="0"
                         cy="0"
                         r={visibleRange}
                         data-range={visibleRange}
+                        data-range-kind={visibleRangeKind}
+                        data-mode={run?.mode ?? ''}
                         aria-hidden="true"
                       />
                     )}

@@ -2554,6 +2554,12 @@ body { background:#1c3f61; }
   filter: drop-shadow(0 0 5px rgba(84, 196, 255, .55));
 }
 
+.tower-range-indicator--support {
+  fill: rgba(255, 214, 96, .11);
+  stroke: rgba(255, 226, 132, .98);
+  filter: drop-shadow(0 0 5px rgba(255, 207, 82, .5));
+}
+
 .tower-progress-badge {
   pointer-events: none;
 }
