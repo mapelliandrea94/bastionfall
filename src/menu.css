@@ -1983,6 +1983,72 @@ button { font: inherit; }
   cursor: not-allowed;
 }
 
+.battlefield-tower-actions {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 30;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 360px;
+  padding: 9px 10px;
+  border: 1px solid rgba(237, 200, 111, .58);
+  border-radius: 8px;
+  background: rgba(8, 15, 23, .94);
+  box-shadow: 0 8px 24px rgba(0,0,0,.34);
+  backdrop-filter: blur(7px);
+}
+
+.battlefield-tower-actions strong {
+  color: #f0dfb8;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.battlefield-tower-actions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(230, 190, 99, .45);
+  border-radius: 6px;
+  background: rgba(23, 35, 48, .96);
+  color: #ead39a;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  cursor: pointer;
+}
+
+.battlefield-tower-actions button:hover,
+.battlefield-tower-actions button.is-active {
+  border-color: #f0ca6a;
+  background: rgba(86, 62, 22, .96);
+}
+
+.battlefield-tower-actions span {
+  grid-column: 1 / -1;
+  color: #f4d77c;
+  font-size: 9px;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: .08em;
+}
+
+@media (max-width: 760px) {
+  .battlefield-tower-actions {
+    min-width: 0;
+    width: calc(100% - 20px);
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .battlefield-tower-actions strong {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+}
+
 
 /* BATCH 41 — upgrade curves / efficiency */
 .defense-inspector__upgrade {

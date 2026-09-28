@@ -1718,7 +1718,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   };
 
   const handleToggleMoveSelectedTower = () => {
-    if (!selectedPlacedDefense || !run || run.phase !== RUN_PHASES.PREPARATION) return;
+    if (!selectedPlacedDefense || !run || run.phase === RUN_PHASES.ENDED) return;
     setMovingPlacedDefenseId((current) => current === selectedPlacedDefense.id ? null : selectedPlacedDefense.id);
   };
 
@@ -1726,7 +1726,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     const occupied = placedDefenses.find((entry) => entry.slotId === slotId);
 
     if (movingPlacedDefenseId) {
-      if (!run || run.phase !== RUN_PHASES.PREPARATION) {
+      if (!run || run.phase === RUN_PHASES.ENDED) {
         setMovingPlacedDefenseId(null);
         return;
       }
@@ -1894,6 +1894,23 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   ? 'Final results processing follows.'
                   : 'You are eliminated. Match status remains live until one defender remains.'}
               </small>
+            </div>
+          )}
+
+          {selectedPlacedDefense && (
+            <div className="battlefield-tower-actions">
+              <strong>{inspectedDefense.name}</strong>
+              <button
+                type="button"
+                className={movingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
+                onClick={handleToggleMoveSelectedTower}
+              >
+                {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
+              </button>
+              <button type="button" onClick={handleSellSelectedTower}>
+                SELL · +{selectedSellPreview.refund}G
+              </button>
+              {movingPlacedDefenseId === selectedPlacedDefense.id && <span>CLICK AN EMPTY PAD</span>}
             </div>
           )}
 
@@ -2620,7 +2637,6 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   <button
                     type="button"
                     className={movingPlacedDefenseId === selectedPlacedDefense.id ? 'is-active' : ''}
-                    disabled={run?.phase !== RUN_PHASES.PREPARATION}
                     onClick={handleToggleMoveSelectedTower}
                   >
                     {movingPlacedDefenseId === selectedPlacedDefense.id ? 'CANCEL MOVE' : 'MOVE · 0G'}
