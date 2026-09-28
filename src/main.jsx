@@ -1062,7 +1062,12 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   };
   const [spawnQueue, setSpawnQueue] = useState(() => matchingOnlineSnapshot?.spawnQueue ?? matchingTftSnapshot?.spawnQueue ?? []);
   const [activeEnemies, setActiveEnemies] = useState(() => matchingOnlineSnapshot?.activeEnemies ?? matchingTftSnapshot?.activeEnemies ?? []);
-  const [preparationRemaining, setPreparationRemaining] = useState(() => matchingOnlineSnapshot?.preparationRemaining ?? run?.preparationSeconds ?? RUN_DEFAULTS.preparationSeconds);
+  const [preparationRemaining, setPreparationRemaining] = useState(() =>
+    matchingOnlineSnapshot?.preparationRemaining ??
+    matchingTftSnapshot?.preparationRemaining ??
+    run?.preparationSeconds ??
+    RUN_DEFAULTS.preparationSeconds
+  );
   const [selectedDefenseId, setSelectedDefenseId] = useState('human-aa');
   const [placedDefenses, setPlacedDefenses] = useState(() => {
     const restored = matchingOnlineSnapshot?.placedDefenses ?? matchingTftSnapshot?.placedDefenses ?? [];
@@ -1106,7 +1111,11 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     virtual: performance.now(),
     speed: (matchingOnlineSnapshot?.waveSpeed ?? matchingTftSnapshot?.waveSpeed) === 2 ? 2 : 1
   });
-  const waveTimelineStartedAtRef = useRef(null);
+  const waveTimelineStartedAtRef = useRef(
+    matchingOnlineSnapshot?.waveTimelineStartedAt ??
+    matchingTftSnapshot?.waveTimelineStartedAt ??
+    null
+  );
   const onlineClockRebasedRef = useRef(false);
   const getWaveNow = () => {
     const clock = waveClockRef.current;
@@ -1156,6 +1165,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
         ? Number(enemy.scheduledSpawnAt) + delta
         : enemy.scheduledSpawnAt
     })));
+    if (Number.isFinite(Number(waveTimelineStartedAtRef.current))) {
+      waveTimelineStartedAtRef.current = Number(waveTimelineStartedAtRef.current) + delta;
+    }
 
     onlineClockRebasedRef.current = true;
   }, []);
@@ -1499,6 +1511,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       preparationRemaining,
       waveSpeed,
       waveClockNow: getWaveNow(),
+      waveTimelineStartedAt: waveTimelineStartedAtRef.current,
       riskRewardTier,
       tftAutoStartEnabled,
       queuedWaveNumber: queuedWaveRef.current,
@@ -1544,7 +1557,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       tftAutoStartEnabled,
       queuedWaveNumber: queuedWaveRef.current,
       spawnedWaveNumber: spawnedWaveRef.current,
-      bossSummonFiredKeys: Array.from(bossSummonFiredRef.current)
+      bossSummonFiredKeys: Array.from(bossSummonFiredRef.current),
+      waveTimelineStartedAt: waveTimelineStartedAtRef.current
     };
 
     if (localSaveTimerRef.current != null) return;
