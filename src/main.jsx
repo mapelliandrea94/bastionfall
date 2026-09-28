@@ -4170,15 +4170,15 @@ function AuthModal({ mode, onClose, onSuccess }) {
 }
 
 function App() {
-  const restoredTftRun = loadTftRunSnapshot();
+  const [savedTftRun, setSavedTftRun] = useState(() => loadTftRunSnapshot());
   const towerPlacementQa = (
     ['127.0.0.1', 'localhost'].includes(window.location.hostname) &&
     new URLSearchParams(window.location.search).get('qa') === 'tower-placement'
   );
-  const [screen, setScreen] = useState(towerPlacementQa ? SCREENS.SINGLE_GATE_RUN : restoredTftRun ? SCREENS.SINGLE_GATE_RUN : SCREENS.MENU);
-  const [selectedMode, setSelectedMode] = useState(towerPlacementQa ? MODES.SINGLE_GATE : restoredTftRun ? restoredTftRun.run?.mode ?? MODES.TFT_SHOP : null);
+  const [screen, setScreen] = useState(towerPlacementQa ? SCREENS.SINGLE_GATE_RUN : SCREENS.MENU);
+  const [selectedMode, setSelectedMode] = useState(towerPlacementQa ? MODES.SINGLE_GATE : null);
   const [runState, setRunState] = useState(
-    towerPlacementQa ? createInitialRunState(MODES.SINGLE_GATE, 'tower-placement-qa') : restoredTftRun?.run ?? null
+    towerPlacementQa ? createInitialRunState(MODES.SINGLE_GATE, 'tower-placement-qa') : null
   );
   const [personalBestByMode, setPersonalBestByMode] = useState({});
   const [completedMatchId, setCompletedMatchId] = useState(null);
@@ -4754,6 +4754,19 @@ function App() {
             className="main-menu__button main-menu__button--primary"
             onClick={() => setScreen(SCREENS.PLAY)}
           >{t('play')}</button>
+          {savedTftRun && (
+            <button
+              className="main-menu__button"
+              onClick={() => {
+                const snapshot = loadTftRunSnapshot();
+                setSavedTftRun(snapshot);
+                if (!snapshot) return;
+                setSelectedMode(snapshot.run.mode);
+                setRunState(snapshot.run);
+                setScreen(SCREENS.SINGLE_GATE_RUN);
+              }}
+            >{language === 'it' ? 'Riprendi partita TFT' : 'Resume TFT run'}</button>
+          )}
           <button className="main-menu__button" onClick={() => setScreen(SCREENS.PROFILE)}>{t('profile')}</button>
           <button className="main-menu__button" onClick={() => setScreen(SCREENS.LEADERBOARD)}>{t('leaderboards')}</button>
           <button className="main-menu__button" onClick={() => setScreen(SCREENS.HOW_TO_PLAY)}>{t('howToPlay')}</button>
