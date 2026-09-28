@@ -23,7 +23,7 @@ import { getLeaderboardPresentation } from './game/records/leaderboardPresentati
 import { getNormalModeEvolutionFlowPass, getNormalModeEvolutionFlowQa } from './game/towers/normalModeEvolutionFlowQa.js';
 import { TFT_SHOP, createTftShopOffers, getTftShopFixtures } from './game/tft/tftShop.js';
 import { TFT_BENCH, addCopyToBench, createEmptyBench, getTftBenchFixtures, removeCopyFromBench } from './game/tft/tftBench.js';
-import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftCopyProgressionFixtures, getTftLevelForCopyProgress, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
+import { TFT_COPY_PROGRESSION, canMergeTftCopy, getTftAscensionTier, getTftCopyProgressionFixtures, getTftLevelForCopyProgress, getTftProgressDenominator, mergeTftCopyProgress } from './game/tft/tftCopyProgression.js';
 import { TFT_PERSISTENCE, clearTftRunSnapshot, createTftRunSnapshot, getTftPersistenceFixtures, loadTftRunSnapshot, saveTftRunSnapshot } from './game/tft/tftPersistence.js';
 import { getTftEvolutionFlowPass, getTftEvolutionFlowQa } from './game/tft/tftEvolutionFlowQa.js';
 import { getEvolutionPersistenceSellReconnectPass, getEvolutionPersistenceSellReconnectQa } from './game/tft/evolutionPersistenceSellReconnectQa.js';
@@ -1923,7 +1923,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
   const handleEvolutionChoice = (evolutionId) => {
     if (!selectedPlacedDefense || !canChooseEvolution(selectedPlacedDefense)) return;
-    if (isShopMode(run?.mode) && Number(selectedPlacedDefense.copyProgress ?? 1) < TFT_COPY_PROGRESSION.maxCopies) return;
+    if (isShopMode(run?.mode) && Number(selectedPlacedDefense.copyProgress ?? 1) < TFT_COPY_PROGRESSION.evolutionCopies) return;
     setPlacedDefenses((current) => current.map((tower) =>
       tower.id === selectedPlacedDefense.id ? chooseTowerEvolution(tower, evolutionId) : tower
     ));
@@ -1948,7 +1948,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     const nextProgress = Number(targetTower.copyProgress ?? 1) + 1;
     if (!skipConfirm) {
       const confirmed = window.confirm(
-        `Merge this ${copy.name ?? copy.towerId} copy into the selected tower? Progress ${targetTower.copyProgress ?? 1}/${TFT_COPY_PROGRESSION.maxCopies} → ${nextProgress}/${TFT_COPY_PROGRESSION.maxCopies}. Cost: 0 Gold.`
+        `Merge this ${copy.name ?? copy.towerId} copy into the selected tower? Progress ${targetTower.copyProgress ?? 1}/${getTftProgressDenominator(targetTower.copyProgress)} → ${nextProgress}/${getTftProgressDenominator(nextProgress)}. Cost: 0 Gold.`
       );
       if (!confirmed) return;
     }
@@ -1964,13 +1964,21 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setSelectedPlacedDefenseId(targetTower.id);
     setTftBench((current) => removeCopyFromBench(current, benchIndex).bench);
     setSelectedTftBenchIndex(null);
-    setTftFeedback(nextProgress === TFT_COPY_PROGRESSION.maxCopies ? '7/7 — CHOOSE EVOLUTION A OR B' : `MERGED — ${nextProgress}/7`);
+    setTftFeedback(
+      nextProgress === TFT_COPY_PROGRESSION.evolutionCopies
+        ? '7/14 — EVOLUTION UNLOCKED · CHOOSE A OR B'
+        : nextProgress === TFT_COPY_PROGRESSION.redAscensionCopies
+          ? '10/14 — RED 4★ ASCENSION · +15%'
+          : nextProgress === TFT_COPY_PROGRESSION.goldAscensionCopies
+            ? '14/14 — GOLD 4★ ASCENSION · +30%'
+            : `MERGED — ${nextProgress}/${getTftProgressDenominator(nextProgress)}`
+    );
   };
 
   const handleStartFieldMerge = () => {
     if (!isShopMode(run?.mode) || !selectedPlacedDefense || run?.phase === RUN_PHASES.ENDED) return;
     if (Number(selectedPlacedDefense.copyProgress ?? 1) >= TFT_COPY_PROGRESSION.maxCopies) {
-      setTftFeedback('TOWER ALREADY 7/7');
+      setTftFeedback('TOWER ALREADY 14/14');
       return;
     }
     setMovingPlacedDefenseId(null);
@@ -1993,13 +2001,13 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     const targetProgress = Number(targetTower.copyProgress ?? 1);
     const mergedProgress = sourceProgress + targetProgress;
     if (mergedProgress > TFT_COPY_PROGRESSION.maxCopies) {
-      setTftFeedback(`MERGE BLOCKED · ${targetProgress}/7 + ${sourceProgress}/7 EXCEEDS 7/7`);
+      setTftFeedback(`MERGE BLOCKED · ${targetProgress}/${getTftProgressDenominator(targetProgress)} + ${sourceProgress}/${getTftProgressDenominator(sourceProgress)} EXCEEDS 14/14`);
       return false;
     }
 
     const towerName = defenseDefinitions[targetTower.defenseId]?.name ?? targetTower.defenseId;
     const confirmed = window.confirm(
-      `Merge these two ${towerName} towers? ${targetProgress}/7 + ${sourceProgress}/7 → ${mergedProgress}/7. The selected source tower will be consumed. Cost: 0 Gold.`
+      `Merge these two ${towerName} towers? ${targetProgress}/${getTftProgressDenominator(targetProgress)} + ${sourceProgress}/${getTftProgressDenominator(sourceProgress)} → ${mergedProgress}/${getTftProgressDenominator(mergedProgress)}. The selected source tower will be consumed. Cost: 0 Gold.`
     );
     if (!confirmed) return false;
 
@@ -2016,7 +2024,15 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     towerAttackTimesRef.current[sourceTower.id] = 0;
     setSelectedPlacedDefenseId(targetTower.id);
     setMergingPlacedDefenseId(null);
-    setTftFeedback(mergedProgress === TFT_COPY_PROGRESSION.maxCopies ? '7/7 — CHOOSE EVOLUTION A OR B' : `FIELD MERGE — ${mergedProgress}/7`);
+    setTftFeedback(
+      mergedProgress === TFT_COPY_PROGRESSION.evolutionCopies
+        ? '7/14 — EVOLUTION UNLOCKED · CHOOSE A OR B'
+        : mergedProgress === TFT_COPY_PROGRESSION.redAscensionCopies
+          ? '10/14 — RED 4★ ASCENSION · +15%'
+          : mergedProgress === TFT_COPY_PROGRESSION.goldAscensionCopies
+            ? '14/14 — GOLD 4★ ASCENSION · +30%'
+            : `FIELD MERGE — ${mergedProgress}/${getTftProgressDenominator(mergedProgress)}`
+    );
     return true;
   };
 
@@ -2172,7 +2188,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           setTftFeedback(
             validation.error === 'wrong_tower_type'
               ? 'WRONG TOWER TYPE'
-              : 'TOWER 7/7 · PLACE THIS COPY ON AN EMPTY PAD'
+              : 'TOWER 14/14 · PLACE THIS COPY ON AN EMPTY PAD'
           );
           return;
         }
@@ -2445,6 +2461,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 const evolutionVisual = placed ? getEvolutionVisualCue(placed) : null;
                 const towerLevel = Math.max(1, Math.min(4, Number(placed?.level ?? 1)));
                 const copyProgress = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(placed?.copyProgress ?? 1)));
+                const copyProgressDenominator = getTftProgressDenominator(copyProgress);
+                const ascensionTier = getTftAscensionTier(copyProgress);
                 const towerActionOffsetX = slot.x > SINGLE_GATE_MAP.size.width - 190 ? -160 : 54;
                 const slotClass = [
                   'battlefield-map__tower-slot',
@@ -2508,7 +2526,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                       setTftFeedback(
                         validation.error === 'wrong_tower_type'
                           ? 'WRONG TOWER TYPE'
-                          : 'TOWER 7/7 · DROP THIS COPY ON AN EMPTY PAD'
+                          : 'TOWER 14/14 · DROP THIS COPY ON AN EMPTY PAD'
                       );
                     }}
                     onClick={() => handleBuildSlot(slot.id)}
@@ -2605,10 +2623,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                             />
                           </foreignObject>
                         </g>
-                        <g className="tower-progress-badge" aria-hidden="true">
+                        <g className={`tower-progress-badge tower-progress-badge--${ascensionTier}`} aria-hidden="true">
                           <rect x="-48" y="31" width="96" height="23" rx="10" />
                           <text x="0" y="47" textAnchor="middle">
-                            {`${'★'.repeat(towerLevel)}${isShopMode(run?.mode) ? ` ${copyProgress}/${TFT_COPY_PROGRESSION.maxCopies}` : ''}`}
+                            {`${'★'.repeat(towerLevel)}${isShopMode(run?.mode) ? ` ${copyProgress}/${copyProgressDenominator}` : ''}`}
                           </text>
                         </g>
 
