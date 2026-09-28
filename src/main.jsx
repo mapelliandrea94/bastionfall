@@ -1732,7 +1732,11 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
         setMovingPlacedDefenseId(null);
         return;
       }
-      if (occupied) return;
+      if (occupied) {
+        setSelectedPlacedDefenseId(occupied.id);
+        setMovingPlacedDefenseId(occupied.id);
+        return;
+      }
       setPlacedDefenses((current) => current.map((tower) =>
         tower.id === movingPlacedDefenseId ? { ...tower, slotId } : tower
       ));
@@ -1743,12 +1747,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     }
 
     if (occupied) {
-      if (selectedPlacedDefenseId === occupied.id) {
-        setMovingPlacedDefenseId((current) => current === occupied.id ? null : occupied.id);
-      } else {
-        setSelectedPlacedDefenseId(occupied.id);
-        setMovingPlacedDefenseId(null);
-      }
+      setSelectedPlacedDefenseId(occupied.id);
+      setMovingPlacedDefenseId(occupied.id);
       return;
     }
 
