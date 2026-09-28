@@ -92,6 +92,7 @@ import { FLYING_ENEMY, createFlyingEnemyState, getFlyingEnemyBudget } from './ga
 import { ELITE_MODIFIER_SYSTEM, applyEliteModifiers, attachEliteModifierFoundation, getEliteModifierFoundationFixtures } from './game/elites/eliteModifiers.js';
 import { WORLD_MODIFIER_SYSTEM, getActiveWorldModifiers, getWorldModifierEffects, getWorldModifierFoundationFixtures } from './game/world/worldModifiers.js';
 import { GAME_FEEDBACK_EVENTS, emitGameFeedback, getGameFeedbackFixtures } from './game/feedback/gameFeedback.js';
+import { getAudioSettings, initAudioEngine, playTowerAttackSound, setAudioMuted, setAudioSetting } from './game/audio/audioEngine.js';
 import { SUPPORTED_LANGUAGES, gameText, getLanguage, setLanguage, t } from './i18n/localization.js';
 import './menu.css';
 
@@ -1609,6 +1610,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           if (!primary) continue;
 
           towerAttackTimesRef.current[placed.id] = now;
+          playTowerAttackSound(definition);
 
           const primaryIndex = working.findIndex((enemy) => enemy.id === primary.id);
           if (primaryIndex < 0) continue;
@@ -3974,6 +3976,16 @@ function Profile({ session, onBack }) {
 }
 
 function Settings({ onBack, language, onLanguageChange }) {
+  const [audio, setAudio] = useState(() => getAudioSettings());
+
+  const updateAudio = (key, value) => {
+    setAudio(setAudioSetting(key, value));
+  };
+
+  const toggleMute = () => {
+    setAudio(setAudioMuted(!audio.muted));
+  };
+
   return (
     <Shell
       onBack={onBack}
@@ -3982,9 +3994,24 @@ function Settings({ onBack, language, onLanguageChange }) {
       subtitle={t('settingsSubtitle')}
     >
       <div className="settings-card">
-        <label><span>{t('masterVolume')}</span><input type="range" min="0" max="100" defaultValue="80" /></label>
-        <label><span>{t('musicVolume')}</span><input type="range" min="0" max="100" defaultValue="65" /></label>
-        <label><span>{t('effectsVolume')}</span><input type="range" min="0" max="100" defaultValue="90" /></label>
+        <label>
+          <span>{t('masterVolume')} · {audio.master}%</span>
+          <input type="range" min="0" max="100" value={audio.master} onChange={(event) => updateAudio('master', event.target.value)} />
+        </label>
+        <label>
+          <span>{t('musicVolume')} · {audio.music}%</span>
+          <input type="range" min="0" max="100" value={audio.music} onChange={(event) => updateAudio('music', event.target.value)} />
+        </label>
+        <label>
+          <span>{t('effectsVolume')} · {audio.effects}%</span>
+          <input type="range" min="0" max="100" value={audio.effects} onChange={(event) => updateAudio('effects', event.target.value)} />
+        </label>
+        <div className="setting-line setting-line--audio">
+          <span>AUDIO</span>
+          <button type="button" className={audio.muted ? 'audio-mute audio-mute--active' : 'audio-mute'} onClick={toggleMute}>
+            {audio.muted ? 'UNMUTE' : 'MUTE ALL'}
+          </button>
+        </div>
         <div className="setting-line setting-line--language">
           <span>{t('language')}</span>
           <div className="language-selector" role="group" aria-label={t('language')}>
@@ -4840,6 +4867,8 @@ function App() {
     </main>
   );
 }
+
+initAudioEngine();
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
