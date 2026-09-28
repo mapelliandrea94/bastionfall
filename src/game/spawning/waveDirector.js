@@ -1,6 +1,7 @@
 import { createSeededRandom, normalizeRunSeed } from '../../lib/runSeed.js';
 import { getWaveThreatBudget } from '../balance/waveThreat.js';
 import { isBossWave } from '../boss/bossSchedule.js';
+import { getBossTuningForWave } from '../boss/bossTuning.js';
 import {
   ENEMY_FACTIONS,
   ENEMY_ROSTER_24,
@@ -166,6 +167,35 @@ export function generateWavePlan({
   const composition = [];
   let spentThreat = 0;
 
+  if (bossMilestone) {
+    const boss = getBossTuningForWave(wave);
+    if (boss) {
+      composition.push(Object.freeze({
+        rosterId: null,
+        archetype: 'normal',
+        name: boss.name,
+        faction: boss.faction,
+        unitType: boss.unitType,
+        tier: ENEMY_TIERS.ELITE,
+        traits: Object.freeze(['boss', 'enrage']),
+        airborne: boss.unitType === ENEMY_UNIT_TYPES.AIR,
+        threatValue: 0,
+        spawnCost: 0,
+        rosterIndex: -1,
+        isBoss: true,
+        bossIndex: boss.bossIndex,
+        bossProfileId: boss.profileId,
+        maxHp: boss.maxHp,
+        hp: boss.maxHp,
+        armor: boss.armor,
+        moveSpeed: boss.moveSpeed,
+        bastionDamage: boss.bastionDamage,
+        goldReward: boss.goldReward,
+        source: 'boss'
+      }));
+    }
+  }
+
   if (eliteMilestone && wave >= 15) {
     const eliteCandidates = candidates.filter((enemy) => enemy.tier === ENEMY_TIERS.ELITE && enemy.spawnCost <= budget);
     const elite = weightedPick(random, eliteCandidates, wave, true);
@@ -261,6 +291,11 @@ export function getWaveDirectorFixtures() {
     allFactionPoolAvailable31Plus: late.factions.length >= 1 && allowedFactionCount(late.waveNumber) === 3,
     eliteMilestone15: generateWavePlan({ seed: 'elite', waveNumber: 15 }).eliteMilestone === true,
     bossMilestone10: generateWavePlan({ seed: 'boss', waveNumber: 10 }).bossMilestone === true,
+    bossWaveIncludesRealBoss: (() => {
+      const plan = generateWavePlan({ seed: 'boss-real', waveNumber: 10 });
+      const boss = plan.composition.find((enemy) => enemy.isBoss === true);
+      return Boolean(boss && boss.maxHp === 2200 && boss.goldReward === 30 && boss.source === 'boss');
+    })(),
     quantityWave4: getWaveQuantityMultiplier(4) === 1,
     quantityWave5: getWaveQuantityMultiplier(5) === 1.18,
     quantityWave10: getWaveQuantityMultiplier(10) === 1.3924,
