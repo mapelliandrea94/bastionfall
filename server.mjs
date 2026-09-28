@@ -9,6 +9,7 @@ import { generateWavePlan } from './src/game/spawning/waveDirector.js';
 import { getBandWaveScaling } from './src/game/balance/difficultyBands.js';
 import { getTriGateWaveScaling } from './src/game/balance/triGatePacing.js';
 import { getBossSummonAddsPlan } from './src/game/boss/bossSummonAdds.js';
+import { calculateAccountXpReward } from './src/game/profile/accountProgression.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -968,6 +969,10 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
   const coreHp = Number(req.body?.coreHp);
   const coreMaxHp = Number(req.body?.coreMaxHp);
   const resultReason = String(req.body?.resultReason || '');
+  const towerMilestones = Object.freeze({
+    seven: Number(req.body?.towerMilestones?.seven ?? 0),
+    fourteen: Number(req.body?.towerMilestones?.fourteen ?? 0)
+  });
 
   if (!Number.isInteger(wave) || wave < 0 || wave > 9999) {
     return res.status(400).json({ error: 'invalid_wave' });
@@ -992,6 +997,19 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
   }
   if (!['bastion-destroyed', 'player-exit', 'last-bastion-win'].includes(resultReason)) {
     return res.status(400).json({ error: 'invalid_result_reason' });
+  }
+  if (
+    !Number.isInteger(towerMilestones.seven) ||
+    towerMilestones.seven < 0 ||
+    towerMilestones.seven > 28 ||
+    !Number.isInteger(towerMilestones.fourteen) ||
+    towerMilestones.fourteen < 0 ||
+    towerMilestones.fourteen > 28
+  ) {
+    return res.status(400).json({ error: 'invalid_tower_milestones' });
+  }
+  if (!['tft-shop', 'sudden-siege'].includes(mode) && (towerMilestones.seven > 0 || towerMilestones.fourteen > 0)) {
+    return res.status(400).json({ error: 'tower_milestones_not_allowed' });
   }
 
   const startedAtMs = Date.parse(identity.startedAt);
@@ -1292,6 +1310,31 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     savedProfile = profileRead.data;
   }
 
+  const xpReward = calculateAccountXpReward({
+    wave: canonicalRun?.wave ?? wave,
+    kills: canonicalRun?.kills ?? kills,
+    towerMilestones
+  });
+
+  const { error: xpError } = await req.db.rpc('grant_profile_xp', {
+    p_amount: xpReward.totalXp
+  });
+  if (xpError) {
+    console.error('Profile XP persistence failed:', xpError.message);
+    return res.status(500).json({ error: 'profile_xp_persist_failed' });
+  }
+
+  const refreshedProfile = await req.db
+    .from('profiles')
+    .select('*')
+    .eq('user_id', req.user.id)
+    .single();
+
+  if (refreshedProfile.error || !refreshedProfile.data) {
+    return res.status(404).json({ error: 'profile_missing_after_xp' });
+  }
+  savedProfile = refreshedProfile.data;
+
   consumedMatchCompletions.set(completionKey, { touchedAtMs: Date.now() });
 
   res.json({
@@ -1299,6 +1342,7 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     matchId: identity.matchId,
     profile: savedProfile,
     earnedShards,
+    earnedXp: xpReward,
     record: persistedRecord,
     canonical: canonicalRun
   });
