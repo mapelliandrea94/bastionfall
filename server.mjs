@@ -26,6 +26,9 @@ app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   next();
 });
 
@@ -740,7 +743,7 @@ app.post('/api/last-bastion/matchmaking/ready', requireUser, rateLimitUser('lb-r
   return res.json(attachLastBastionMatchToken(result, req.user.id));
 });
 
-app.get('/api/last-bastion/matchmaking/status', requireUser, async (req, res) => {
+app.get('/api/last-bastion/matchmaking/status', requireUser, rateLimitUser('lb-status', { windowMs: 10000, max: 20 }), async (req, res) => {
   const hydrated = await hydratePersistentLastBastionState(req);
   if (!hydrated.ok) return res.status(503).json({ error: hydrated.error });
 
@@ -756,7 +759,7 @@ app.get('/api/last-bastion/matchmaking/status', requireUser, async (req, res) =>
   return res.json(attachLastBastionMatchToken(getLastBastionQueueStatus(req.user.id), req.user.id));
 });
 
-app.post('/api/last-bastion/match/heartbeat', requireUser, async (req, res) => {
+app.post('/api/last-bastion/match/heartbeat', requireUser, rateLimitUser('lb-heartbeat', { windowMs: 10000, max: 30 }), async (req, res) => {
   const matchToken = String(req.body?.matchToken || '');
   const identity = verifyMatchIdentity(matchToken);
   if (!identity) return res.status(400).json({ error: 'invalid_match_token' });
