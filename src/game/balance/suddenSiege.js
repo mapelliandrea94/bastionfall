@@ -46,7 +46,8 @@ export function applySuddenSiegeEnemyScaling(enemy, waveNumber) {
 }
 
 export function getSuddenSiegeWaveReward(waveNumber) {
-  Math.max(1, Math.floor(Number(waveNumber) || 1));
+  const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
+  void wave;
   return SUDDEN_SIEGE.baseWaveClearGold;
 }
 
