@@ -2300,7 +2300,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                 data-objective-status={miniObjectiveLive.status}
                 aria-hidden="true"
               >
-                <g className="mini-objective-battlefield__card" transform="translate(250 76)">
+                <g className="mini-objective-battlefield__card" transform="translate(250 824)">
                   <rect x="-205" y="-34" width="410" height="68" rx="18" />
                   <text className="mini-objective-battlefield__title" x="0" y="-7" textAnchor="middle">
                     MINI OBJECTIVE · +{miniObjectiveReward}G
