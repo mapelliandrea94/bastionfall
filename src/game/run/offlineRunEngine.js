@@ -129,9 +129,19 @@ function buildWaveQueue(snapshot) {
     ? flattenTriGateDistribution(distributeTriGateWave(plan.composition, ctx.wave))
     : plan.composition;
 
+  const deterministicSpawnIntervalMs = Math.max(
+    1,
+    Number(ctx.scaling.spawnIntervalMs ?? 900) *
+      ctx.world.spawnIntervalMultiplier *
+      Number(ctx.affix?.spawnIntervalMultiplier ?? 1) *
+      Number(ctx.rare?.spawnIntervalMultiplier ?? 1) *
+      0.5
+  );
+
   return composition.map((enemy, index) => attachEliteModifierFoundation({
     ...enemy,
-    id: `wave-${ctx.wave}-enemy-${index + 1}`
+    id: `wave-${ctx.wave}-enemy-${index + 1}`,
+    scheduledSpawnOffsetMs: 150 + index * deterministicSpawnIntervalMs
   }, {
     seed: run.seed ?? 'run',
     waveNumber: ctx.wave,
@@ -139,14 +149,14 @@ function buildWaveQueue(snapshot) {
   }));
 }
 
-function createEnemyState(item, snapshot, virtualNow) {
+function createEnemyState(item, snapshot, virtualNow, spawnedAt = virtualNow) {
   let enemy = item?.rosterId
-    ? createRosterEnemyState(item.rosterId, { ...item, progress: 0, spawnedAt: virtualNow })
+    ? createRosterEnemyState(item.rosterId, { ...item, progress: 0, spawnedAt, lastMovementAt: spawnedAt })
     : item?.archetype === 'runner'
-      ? createRunnerEnemyState({ ...item, progress: 0, spawnedAt: virtualNow })
+      ? createRunnerEnemyState({ ...item, progress: 0, spawnedAt, lastMovementAt: spawnedAt })
       : item?.archetype === 'shielded'
-        ? createShieldedEnemyState({ ...item, progress: 0, spawnedAt: virtualNow })
-        : createNormalEnemyState({ ...item, progress: 0, spawnedAt: virtualNow });
+        ? createShieldedEnemyState({ ...item, progress: 0, spawnedAt, lastMovementAt: spawnedAt })
+        : createNormalEnemyState({ ...item, progress: 0, spawnedAt, lastMovementAt: spawnedAt });
 
   const ctx = waveContext(snapshot);
   if (snapshot.run.mode === 'sudden-siege') enemy = applySuddenSiegeEnemyScaling(enemy, ctx.wave);
@@ -401,7 +411,14 @@ function spawnBossAddsIfDue(snapshot, engine) {
           laneId: TRI_GATE_MAP.pathPlan.lanes[index % TRI_GATE_MAP.pathPlan.lanes.length].id
         }))
       : pulse.adds;
-    snapshot.spawnQueue.push(...adds);
+    snapshot.spawnQueue.push(...adds.map((enemy, index) => ({
+      ...enemy,
+      id: enemy.id ?? `boss-${ctx.wave}-pulse-${pulse.pulseIndex}-add-${index + 1}`,
+      scheduledSpawnOffsetMs: Number(pulse.offsetMs ?? 0)
+    })));
+    snapshot.spawnQueue.sort(
+      (a, b) => Number(a.scheduledSpawnOffsetMs ?? 0) - Number(b.scheduledSpawnOffsetMs ?? 0)
+    );
   }
   snapshot.bossSummonFiredKeys = Array.from(fired);
 }
@@ -453,19 +470,17 @@ function activeStep(snapshot, dtMs, engine) {
 
   spawnBossAddsIfDue(snapshot, engine);
 
-  const spawnInterval = Math.max(
-    80,
-    Number(ctx.scaling.spawnIntervalMs ?? 900) *
-      ctx.world.spawnIntervalMultiplier *
-      Number(ctx.affix?.spawnIntervalMultiplier ?? 1) *
-      Number(ctx.rare?.spawnIntervalMultiplier ?? 1) *
-      0.5
-  );
-
-  while (snapshot.spawnQueue.length > 0 && engine.spawnAccumulatorMs >= spawnInterval) {
-    engine.spawnAccumulatorMs -= spawnInterval;
+  while (
+    snapshot.spawnQueue.length > 0 &&
+    Number(snapshot.spawnQueue[0]?.scheduledSpawnOffsetMs ?? 0) <= Number(engine.currentWaveElapsedMs ?? 0)
+  ) {
     const item = snapshot.spawnQueue.shift();
-    const spawned = createEnemyState(item, snapshot, virtualNow);
+    const overdueMs = Math.max(
+      0,
+      Number(engine.currentWaveElapsedMs ?? 0) - Number(item?.scheduledSpawnOffsetMs ?? 0)
+    );
+    const exactSpawnedAt = virtualNow - Math.min(simulationDtMs, overdueMs);
+    const spawned = createEnemyState(item, snapshot, virtualNow, exactSpawnedAt);
     if (spawned) snapshot.activeEnemies.push(spawned);
   }
 
@@ -475,7 +490,11 @@ function activeStep(snapshot, dtMs, engine) {
   let enemies = (snapshot.activeEnemies ?? []).map((enemy) => applyStatusTick(enemy, simulationDtMs, virtualNow));
   enemies = enemies.map((enemy) => {
     const speed = getEnemyEffectiveSpeed(enemy, virtualNow) * 0.48 * moveMultiplier;
-    let progress = Math.min(1, Number(enemy.progress ?? 0) + (simulationDtMs / Math.max(1, ctx.scaling.travelDurationMs)) * speed);
+    const enemyStepMs = Math.min(
+      simulationDtMs,
+      Math.max(0, virtualNow - Number(enemy.spawnedAt ?? (virtualNow - simulationDtMs)))
+    );
+    let progress = Math.min(1, Number(enemy.progress ?? 0) + (enemyStepMs / Math.max(1, ctx.scaling.travelDurationMs)) * speed);
 
     if (!enemy.airborne && (snapshot.activeWallIds ?? []).length > 0) {
       const wall = Object.entries(WALL_PROGRESS_BY_ID)
