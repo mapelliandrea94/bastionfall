@@ -2538,6 +2538,46 @@ body { background:#1c3f61; }
   pointer-events: auto;
 }
 
+.pressure-wave-overlay {
+  pointer-events: none;
+}
+
+.pressure-wave-overlay__frame {
+  fill: none;
+  stroke: rgba(255, 92, 66, .92);
+  stroke-width: 10;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 14px rgba(255, 69, 52, .5));
+  animation: pressure-frame-pulse 1.25s ease-in-out infinite;
+}
+
+.pressure-wave-overlay__vignette {
+  fill: rgba(115, 14, 8, .08);
+}
+
+.pressure-wave-overlay__badge rect {
+  fill: rgba(55, 10, 9, .9);
+  stroke: rgba(255, 174, 112, .88);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 10px rgba(255, 78, 50, .42));
+}
+
+.pressure-wave-overlay__badge text {
+  fill: #ffd7b2;
+  font-size: 20px;
+  font-weight: 950;
+  letter-spacing: 2px;
+  paint-order: stroke;
+  stroke: rgba(52, 6, 4, .95);
+  stroke-width: 4px;
+}
+
+@keyframes pressure-frame-pulse {
+  0%, 100% { opacity: .48; }
+  50% { opacity: 1; }
+}
+
 .battlefield-map__tower-slot {
   cursor: pointer;
   outline: none;
