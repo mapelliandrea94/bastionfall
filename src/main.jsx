@@ -1074,9 +1074,10 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     if (!isShopMode(run?.mode)) return restored;
     return restored.map((tower, index) => ({
       ...tower,
-      id: tower.sourceCopyId
-        ? `field:${tower.sourceCopyId}`
-        : `field-restored:${tower.id ?? tower.defenseId ?? 'tower'}:${index}`
+      id: tower.id ??
+        (tower.sourceCopyId
+          ? `field:${tower.sourceCopyId}`
+          : `field-restored:${tower.defenseId ?? 'tower'}:${index}`)
     }));
   });
   const [activeWallIds, setActiveWallIds] = useState(() => matchingOnlineSnapshot?.activeWallIds ?? matchingTftSnapshot?.activeWallIds ?? []);
@@ -1188,7 +1189,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       ((matchingOnlineSnapshot ?? matchingTftSnapshot)?.activeEnemies?.length ?? 0) > 0 ? restoredWaveNumber : null)
   );
   const towerAttackTimesRef = useRef({});
-  const towerAttackChargeRef = useRef({});
+  const towerAttackChargeRef = useRef({
+    ...(matchingOnlineSnapshot?.towerAttackChargeById ?? matchingTftSnapshot?.towerAttackChargeById ?? {})
+  });
   const combatClockRef = useRef(null);
   const wallDamageClockRef = useRef(null);
   const statusClockRef = useRef(null);
@@ -1516,7 +1519,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       tftAutoStartEnabled,
       queuedWaveNumber: queuedWaveRef.current,
       spawnedWaveNumber: spawnedWaveRef.current,
-      bossSummonFiredKeys: Array.from(bossSummonFiredRef.current)
+      bossSummonFiredKeys: Array.from(bossSummonFiredRef.current),
+      towerAttackChargeById: { ...towerAttackChargeRef.current }
     });
   }, [
     run,
@@ -1558,7 +1562,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       queuedWaveNumber: queuedWaveRef.current,
       spawnedWaveNumber: spawnedWaveRef.current,
       bossSummonFiredKeys: Array.from(bossSummonFiredRef.current),
-      waveTimelineStartedAt: waveTimelineStartedAtRef.current
+      waveTimelineStartedAt: waveTimelineStartedAtRef.current,
+      towerAttackChargeById: { ...towerAttackChargeRef.current }
     };
 
     if (localSaveTimerRef.current != null) return;
