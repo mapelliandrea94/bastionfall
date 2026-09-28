@@ -53,6 +53,8 @@ jobs:
         run: node tests/sudden-identity-polish.mjs
       - name: Sudden Siege Battlefield Escalation QA
         run: node tests/sudden-battlefield-escalation.mjs
+      - name: Sudden Siege Stage Transition QA
+        run: node tests/sudden-stage-transition.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA
