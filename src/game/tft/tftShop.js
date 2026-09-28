@@ -1,8 +1,8 @@
 import { TOWER_ROSTER, TOWER_FACTIONS } from '../towers/towerRoster.js';
 
 export const TFT_SHOP = Object.freeze({
-  version: 2,
-  slotCount: 7,
+  version: 3,
+  slotCount: 8,
   copyCost: 2,
   rerollCost: 3,
   startingGold: 10,
@@ -15,7 +15,7 @@ export const TFT_SHOP = Object.freeze({
     [TOWER_FACTIONS.HUMAN]: 2,
     [TOWER_FACTIONS.INSECT]: 2,
     [TOWER_FACTIONS.ALIEN]: 2,
-    [TOWER_FACTIONS.NEUTRAL]: 1
+    [TOWER_FACTIONS.NEUTRAL]: 2
   })
 });
 
@@ -51,7 +51,7 @@ export function createTftShopOffers(seed, rollIndex = 0) {
     ...pickFactionOffers(TOWER_FACTIONS.HUMAN, 2, rollSeed),
     ...pickFactionOffers(TOWER_FACTIONS.INSECT, 2, rollSeed),
     ...pickFactionOffers(TOWER_FACTIONS.ALIEN, 2, rollSeed),
-    ...pickFactionOffers(TOWER_FACTIONS.NEUTRAL, 1, rollSeed)
+    ...pickFactionOffers(TOWER_FACTIONS.NEUTRAL, 2, rollSeed)
   ]);
 }
 
@@ -61,7 +61,7 @@ export function getTftShopFixtures() {
   const count = (faction) => offers.filter((offer) => offer.faction === faction).length;
 
   return Object.freeze({
-    slotCountExpected: 7,
+    slotCountExpected: 8,
     slotCountActual: offers.length,
     humanExpected: 2,
     humanActual: count(TOWER_FACTIONS.HUMAN),
@@ -69,7 +69,7 @@ export function getTftShopFixtures() {
     insectActual: count(TOWER_FACTIONS.INSECT),
     alienExpected: 2,
     alienActual: count(TOWER_FACTIONS.ALIEN),
-    neutralExpected: 1,
+    neutralExpected: 2,
     neutralActual: count(TOWER_FACTIONS.NEUTRAL),
     everyCopyCostsTwo: offers.every((offer) => offer.cost === 2),
     rerollCostExpected: 3,
