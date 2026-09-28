@@ -1156,6 +1156,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const towerAttackTimesRef = useRef({});
   const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
   const previousSuddenStageRef = useRef(null);
+  const bossSummonFiredRef = useRef(new Set(matchingOnlineSnapshot?.bossSummonFiredKeys ?? []));
   const projectileQueueRef = useRef([]);
   const projectileIdRef = useRef(0);
   const defeatedEnemyIdsRef = useRef(new Set());
@@ -1444,7 +1445,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       activeEnemies,
       preparationRemaining,
       waveSpeed,
-      waveClockNow: getWaveNow()
+      waveClockNow: getWaveNow(),
+      bossSummonFiredKeys: Array.from(bossSummonFiredRef.current)
     });
   }, [
     run,
@@ -1575,12 +1577,12 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || !bossSummonPlan.active) return undefined;
     const startedAt = getWaveNow();
-    const fired = new Set();
     const intervalId = window.setInterval(() => {
       const elapsed = getWaveNow() - startedAt;
       bossSummonPlan.pulses.forEach((pulse) => {
-        if (fired.has(pulse.pulseIndex) || elapsed < pulse.offsetMs) return;
-        fired.add(pulse.pulseIndex);
+        const pulseKey = `${bossSummonPlan.waveNumber}:${pulse.pulseIndex}`;
+        if (bossSummonFiredRef.current.has(pulseKey) || elapsed < pulse.offsetMs) return;
+        bossSummonFiredRef.current.add(pulseKey);
         const adds = run?.mode === MODES.TRI_GATE
           ? pulse.adds.map((enemy, index) => ({
               ...enemy,
