@@ -26,22 +26,33 @@ export function getEffectiveTowerAttackInterval(definition, attacker, placedDefe
 }
 
 export function getTowerTargets(definition, attacker, enemies = []) {
-  const inRange = enemies
-    .filter((enemy) =>
-      canDefenseTargetEnemy(definition, enemy) &&
-      distance(attacker, enemy.position ?? enemy) <= Number(definition.range ?? 0)
-    )
-    .sort((a, b) => Number(b.progress ?? 0) - Number(a.progress ?? 0));
+  const inRange = enemies.filter((enemy) =>
+    canDefenseTargetEnemy(definition, enemy) &&
+    distance(attacker, enemy.position ?? enemy) <= Number(definition.range ?? 0)
+  );
 
+  const progressOf = (enemy) => Number(enemy?.progress ?? 0);
+  const compareByThreatToNexus = (a, b) => progressOf(b) - progressOf(a);
+
+  // Nexus safety is always the primary rule: among valid targets in range,
+  // shoot the enemy furthest along the path first. Tower-specific targeting
+  // only breaks ties between enemies at effectively the same path progress.
   if (definition.targetRule === 'highest-hp') {
-    inRange.sort((a, b) => Number(b.hp ?? 0) - Number(a.hp ?? 0) || Number(b.progress ?? 0) - Number(a.progress ?? 0));
-  }
+    inRange.sort((a, b) =>
+      compareByThreatToNexus(a, b) ||
+      Number(b.hp ?? 0) - Number(a.hp ?? 0)
+    );
+  } else if (definition.targetRule === 'cluster') {
+    const countNearby = (candidate) => inRange.filter((other) =>
+      distance(candidate.position ?? candidate, other.position ?? other) <= Number(definition.splashRadius ?? 0)
+    ).length;
 
-  if (definition.targetRule === 'cluster') {
-    inRange.sort((a, b) => {
-      const count = (candidate) => inRange.filter((other) => distance(candidate.position ?? candidate, other.position ?? other) <= Number(definition.splashRadius ?? 0)).length;
-      return count(b) - count(a) || Number(b.progress ?? 0) - Number(a.progress ?? 0);
-    });
+    inRange.sort((a, b) =>
+      compareByThreatToNexus(a, b) ||
+      countNearby(b) - countNearby(a)
+    );
+  } else {
+    inRange.sort(compareByThreatToNexus);
   }
 
   return inRange;
@@ -64,11 +75,16 @@ export function getBaseTowerCombatFixtures(definitions) {
   const attacker = { id: 'a', defenseId: 'human-aa', x: 0, y: 0 };
   const buff = { id: 'b', defenseId: 'buff', x: 10, y: 0 };
 
+  const nearNexus = { ...insectAir, id: 'near-nexus', hp: 20, progress: .9 };
+  const highHpBehind = { ...insectAir, id: 'high-hp-behind', hp: 1000, progress: .35 };
+  const armorDefinition = { ...definitions['human-armor'], range: 999 };
+
   return Object.freeze({
     perfectCounterDamageExpected: Number((humanAA.damage * 2.25).toFixed(4)),
     perfectCounterDamageActual: getTowerHitDamage(humanAA, attacker, insectAir, [], definitions),
     buffRaisesDamage: getTowerHitDamage(humanAA, attacker, insectAir, [buff], definitions) > getTowerHitDamage(humanAA, attacker, insectAir, [], definitions),
     buffRaisesAttackSpeed: getEffectiveTowerAttackInterval(humanAA, attacker, [buff], definitions) < humanAA.attackIntervalMs,
-    targetInRange: getTowerTargets(humanAA, attacker, [insectAir]).length === 1
+    targetInRange: getTowerTargets(humanAA, attacker, [insectAir]).length === 1,
+    nexusThreatPriority: getTowerTargets(armorDefinition, attacker, [highHpBehind, nearNexus])[0]?.id === 'near-nexus'
   });
 }
