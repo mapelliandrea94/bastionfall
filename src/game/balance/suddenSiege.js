@@ -46,8 +46,21 @@ export function applySuddenSiegeEnemyScaling(enemy, waveNumber) {
 }
 
 export function getSuddenSiegeWaveReward(waveNumber) {
+  Math.max(1, Math.floor(Number(waveNumber) || 1));
+  return SUDDEN_SIEGE.baseWaveClearGold;
+}
+
+export function getSuddenSiegeEconomyParity(waveNumber, tftConfig) {
   const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
-  return SUDDEN_SIEGE.baseWaveClearGold + (wave >= 8 ? 1 : 0) + (wave >= 15 ? 1 : 0);
+  const suddenBase = getSuddenSiegeWaveReward(wave);
+  const tftBase = Math.max(0, Number(tftConfig?.waveClearGold ?? 0));
+  return Object.freeze({
+    wave,
+    suddenBase,
+    tftBase,
+    delta: suddenBase - tftBase,
+    exactParity: suddenBase === tftBase
+  });
 }
 
 export function getSuddenSiegeTelemetry(waveNumber) {
@@ -131,6 +144,7 @@ export function getSuddenSiegeFixtures() {
     rewardWave1: getSuddenSiegeWaveReward(1),
     rewardWave8: getSuddenSiegeWaveReward(8),
     rewardWave15: getSuddenSiegeWaveReward(15),
+    rewardCurveFlat: getSuddenSiegeWaveReward(1) === getSuddenSiegeWaveReward(8) && getSuddenSiegeWaveReward(8) === getSuddenSiegeWaveReward(25),
     telemetryStage10: telemetry10.stage === 'ESCALATION',
     telemetryStage25: telemetry25.stage === 'ENDLESS',
     telemetryUsesWaveReward: telemetry10.waveReward === getSuddenSiegeWaveReward(10),
