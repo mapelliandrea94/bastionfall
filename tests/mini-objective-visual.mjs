@@ -8,7 +8,10 @@ const flawless = getMiniObjectiveForWave(1);
 assert.equal(getMiniObjectiveLiveState(flawless, { coreHp: 20, waveStartCoreHp: 20 }).status, 'on-track');
 assert.equal(getMiniObjectiveLiveState(flawless, { coreHp: 19, waveStartCoreHp: 20 }).status, 'failed');
 
-const lean = getMiniObjectiveForWave(2);
+assert.equal(getMiniObjectiveForWave(5).id, 'flawless');
+assert.equal(getMiniObjectiveForWave(10).id, 'lean-defense');
+assert.equal(getMiniObjectiveForWave(11).id, 'flawless');
+const lean = getMiniObjectiveForWave(6);
 assert.equal(getMiniObjectiveLiveState(lean, { placedTowerCount: 8 }).label, 'ON TRACK');
 assert.equal(getMiniObjectiveLiveState(lean, { placedTowerCount: 9 }).label, 'OVER LIMIT');
 
