@@ -2601,21 +2601,41 @@ body { background:#1c3f61; }
 }
 
 .battlefield-map__projectiles { pointer-events: none; }
-.battlefield-map__projectile {
-  fill: #f8dc77;
-  stroke: #fff9d7;
-  stroke-width: 2;
-  filter: drop-shadow(0 0 5px currentColor);
-  color: #f8dc77;
-  animation: tower-shot linear forwards;
+.tower-attack { --attack-color: #e9ba69; --attack-core: #fff1c4; }
+.tower-attack--insect { --attack-color: #89d558; --attack-core: #d8ff8e; }
+.tower-attack--alien { --attack-color: #72d5ff; --attack-core: #e4fbff; }
+.tower-attack--neutral { --attack-color: #ffac55; --attack-core: #ffe1a2; }
+.tower-attack--frost { --attack-color: #8ce9ff; --attack-core: #e6ffff; }
+.tower-attack--mark { --attack-color: #e288ff; --attack-core: #ffe4ff; }
+.tower-attack--venom, .tower-attack--acid { --attack-color: #a2e94c; --attack-core: #ebffa4; }
+.tower-attack__travel {
+  animation: tower-attack-travel linear both;
+  filter: drop-shadow(0 0 5px var(--attack-color));
 }
-.battlefield-map__projectile--human { fill: #e2ad53; color: #e2ad53; }
-.battlefield-map__projectile--insect { fill: #8de166; color: #8de166; }
-.battlefield-map__projectile--alien { fill: #73d9ff; color: #73d9ff; }
-.battlefield-map__projectile--neutral { fill: #ff9f43; color: #ff9f43; }
-@keyframes tower-shot {
-  from { transform: translate(0, 0); opacity: 1; }
-  to { transform: translate(var(--shot-x), var(--shot-y)); opacity: .35; }
+.tower-attack__body, .tower-attack__arrow, .tower-attack__crystal {
+  fill: var(--attack-color);
+  stroke: var(--attack-core);
+  stroke-width: 1.5;
+}
+.tower-attack__trail { fill: none; stroke: var(--attack-color); stroke-width: 3; stroke-linecap: round; opacity: .7; }
+.tower-attack__crystal { stroke-width: 2; }
+.tower-attack__beam { animation: tower-attack-flash ease-out both; }
+.tower-attack__beam-glow, .tower-attack__beam-core { fill: none; stroke-linecap: round; }
+.tower-attack__beam-glow { stroke: var(--attack-color); stroke-width: 10; opacity: .28; filter: blur(4px); }
+.tower-attack__beam-core { stroke: var(--attack-core); stroke-width: 2.5; filter: drop-shadow(0 0 4px var(--attack-color)); }
+.tower-attack--chain .tower-attack__beam-core { stroke-width: 2; }
+.tower-attack__impact { fill: none; stroke: var(--attack-color); stroke-width: 3; opacity: 0; transform-box: fill-box; transform-origin: center; animation: tower-attack-impact 190ms ease-out both; }
+.tower-attack__aura { fill: none; stroke: var(--attack-color); stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: tower-attack-aura 260ms ease-out both; }
+@keyframes tower-attack-travel {
+  from { transform: translate(0, 0); opacity: .75; }
+  20% { opacity: 1; }
+  to { transform: translate(var(--shot-x), var(--shot-y)); opacity: .95; }
+}
+@keyframes tower-attack-flash { from { opacity: .1; } 22% { opacity: 1; } to { opacity: 0; } }
+@keyframes tower-attack-impact { from { opacity: .85; transform: scale(.35); } to { opacity: 0; transform: scale(1.5); } }
+@keyframes tower-attack-aura { from { opacity: .8; transform: scale(.4); } to { opacity: 0; transform: scale(2.2); } }
+@media (prefers-reduced-motion: reduce) {
+  .tower-attack__travel, .tower-attack__beam, .tower-attack__impact, .tower-attack__aura { animation-duration: 1ms !important; }
 }
 
 .tower-slot__shadow {
