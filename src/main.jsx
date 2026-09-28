@@ -2521,7 +2521,9 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               <rect className="battlefield-map__bastion-tower" x="44" y="-70" width="34" height="70" rx="7" />
               <path className="battlefield-map__bastion-roof" d="M -48 -80 L 0 -116 L 48 -80 Z" />
               <circle className="battlefield-map__bastion-core" cx="0" cy="-20" r="18" />
-              <g className="battlefield-map__nexus-meter" role="img" aria-label={`Nexus ${run?.coreHp ?? 0} of ${run?.coreMaxHp ?? 0} health`}>
+              <path className="battlefield-map__bastion-gate" d="M -18 48 V 18 Q 0 2 18 18 V 48 Z" />
+            </g>
+            <g className={`battlefield-map__nexus-meter ${bastionStateClass}`} transform={`translate(${bastionAnchor.x} ${bastionAnchor.y})`} role="img" aria-label={`Nexus ${run?.coreHp ?? 0} of ${run?.coreMaxHp ?? 0} health`}>
                 <path className="battlefield-map__nexus-frame" d="M -106 -180 H 92 L 106 -168 V -126 H -92 L -106 -138 Z" />
                 <path className="battlefield-map__nexus-rim" d="M -103 -177 H 90 L 103 -167 M -103 -139 V -129 H 92 L 103 -139" />
                 <path className="battlefield-map__nexus-gem" d="M -92 -169 L -86 -163 L -92 -157 L -98 -163 Z" />
@@ -2540,8 +2542,6 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
               />
                 <path className="battlefield-map__nexus-bar-shine" d={`M -88 -146 H ${-88 + 176 * coreRatio}`} />
               </g>
-              <path className="battlefield-map__bastion-gate" d="M -18 48 V 18 Q 0 2 18 18 V 48 Z" />
-            </g>
             {spawnAnchors.map((spawn) => (
               <text
                 key={`${spawn.id}-label`}
