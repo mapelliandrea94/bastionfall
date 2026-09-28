@@ -1100,6 +1100,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const [tftAutoStartEnabled, setTftAutoStartEnabled] = useState(() => Boolean(matchingOnlineSnapshot?.tftAutoStartEnabled));
   const [waveSpeed, setWaveSpeed] = useState(() => matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1);
   const waveClockRef = useRef({ real: performance.now(), virtual: performance.now(), speed: matchingOnlineSnapshot?.waveSpeed === 2 ? 2 : 1 });
+  const waveTimelineStartedAtRef = useRef(null);
   const onlineClockRebasedRef = useRef(false);
   const getWaveNow = () => {
     const clock = waveClockRef.current;
@@ -1582,10 +1583,22 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       : waveComposition;
 
     queuedWaveRef.current = spawnWaveNumber;
+    const timelineStartedAt = getWaveNow();
+    waveTimelineStartedAtRef.current = timelineStartedAt;
+    const deterministicSpawnIntervalMs = Math.max(
+      1,
+      waveScaling.spawnIntervalMs *
+        worldModifierEffects.spawnIntervalMultiplier *
+        (waveAffix?.spawnIntervalMultiplier ?? 1) *
+        (rareWaveEvent?.spawnIntervalMultiplier ?? 1) *
+        0.5
+    );
     setSpawnQueue(
       laneAwareComposition.map((enemy, index) => attachEliteModifierFoundation({
         ...enemy,
-        id: `wave-${spawnWaveNumber}-enemy-${index + 1}`
+        id: `wave-${spawnWaveNumber}-enemy-${index + 1}`,
+        scheduledSpawnAt: timelineStartedAt + 150 + index * deterministicSpawnIntervalMs,
+        scheduledSpawnOffsetMs: 150 + index * deterministicSpawnIntervalMs
       }, {
         seed: run?.seed ?? 'run',
         waveNumber: spawnWaveNumber,
@@ -1618,47 +1631,65 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   useEffect(() => {
     if (run?.phase !== RUN_PHASES.ACTIVE || spawnQueue.length === 0) return undefined;
 
-    const timeoutId = window.setTimeout(() => {
+    const spawnDueEnemies = () => {
+      const now = getWaveNow();
+
       setSpawnQueue((current) => {
         if (current.length === 0) return current;
-        const [nextEnemy, ...remaining] = current;
-        const baseEnemyState = nextEnemy.rosterId
-          ? createRosterEnemyState(nextEnemy.rosterId, {
-              ...nextEnemy,
-              progress: 0,
-              spawnedAt: getWaveNow()
-            })
-          : nextEnemy.archetype === FLYING_ENEMY.archetype
-            ? createFlyingEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
-            : nextEnemy.archetype === SHIELDED_ENEMY.archetype
-              ? createShieldedEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
-              : nextEnemy.archetype === ARMORED_ENEMY.archetype
-                ? createArmoredEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
-                : nextEnemy.archetype === TANK_ENEMY.archetype
-                  ? createTankEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
-                  : nextEnemy.archetype === RUNNER_ENEMY.archetype
-                    ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() })
-                    : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: getWaveNow() });
 
-        const modeScaledEnemy = run?.mode === MODES.SUDDEN_SIEGE
-          ? applySuddenSiegeEnemyScaling(baseEnemyState, waveScaling.waveNumber)
-          : baseEnemyState;
-        const affixScaledEnemy = applyWaveAffix(modeScaledEnemy, waveAffix);
-        const eventScaledEnemy = applyRareWaveEvent(affixScaledEnemy, rareWaveEvent);
+        const due = [];
+        const remaining = [];
+        for (const enemy of current) {
+          const scheduledAt = Number(enemy.scheduledSpawnAt);
+          if (!Number.isFinite(scheduledAt) || scheduledAt <= now) due.push(enemy);
+          else remaining.push(enemy);
+        }
+        if (due.length === 0) return current;
+
+        const spawned = due.map((nextEnemy) => {
+          const scheduledSpawnAt = Number.isFinite(Number(nextEnemy.scheduledSpawnAt))
+            ? Number(nextEnemy.scheduledSpawnAt)
+            : now;
+          const baseEnemyState = nextEnemy.rosterId
+            ? createRosterEnemyState(nextEnemy.rosterId, {
+                ...nextEnemy,
+                progress: 0,
+                spawnedAt: scheduledSpawnAt,
+                lastMovementAt: scheduledSpawnAt
+              })
+            : nextEnemy.archetype === FLYING_ENEMY.archetype
+              ? createFlyingEnemyState({ ...nextEnemy, progress: 0, spawnedAt: scheduledSpawnAt, lastMovementAt: scheduledSpawnAt })
+              : nextEnemy.archetype === SHIELDED_ENEMY.archetype
+                ? createShieldedEnemyState({ ...nextEnemy, progress: 0, spawnedAt: scheduledSpawnAt, lastMovementAt: scheduledSpawnAt })
+                : nextEnemy.archetype === ARMORED_ENEMY.archetype
+                  ? createArmoredEnemyState({ ...nextEnemy, progress: 0, spawnedAt: scheduledSpawnAt, lastMovementAt: scheduledSpawnAt })
+                  : nextEnemy.archetype === TANK_ENEMY.archetype
+                    ? createTankEnemyState({ ...nextEnemy, progress: 0, spawnedAt: scheduledSpawnAt, lastMovementAt: scheduledSpawnAt })
+                    : nextEnemy.archetype === RUNNER_ENEMY.archetype
+                      ? createRunnerEnemyState({ ...nextEnemy, progress: 0, spawnedAt: scheduledSpawnAt, lastMovementAt: scheduledSpawnAt })
+                      : createNormalEnemyState({ ...nextEnemy, progress: 0, spawnedAt: scheduledSpawnAt, lastMovementAt: scheduledSpawnAt });
+
+          const modeScaledEnemy = run?.mode === MODES.SUDDEN_SIEGE
+            ? applySuddenSiegeEnemyScaling(baseEnemyState, waveScaling.waveNumber)
+            : baseEnemyState;
+          return applyEliteModifiers(
+            applyRareWaveEvent(
+              applyWaveAffix(modeScaledEnemy, waveAffix),
+              rareWaveEvent
+            )
+          );
+        });
+
         spawnedWaveRef.current = waveScaling.waveNumber;
-        setActiveEnemies((active) => [...active, applyEliteModifiers(eventScaledEnemy)]);
+        setActiveEnemies((active) => [...active, ...spawned]);
         return remaining;
       });
-    }, activeEnemies.length === 0
-      ? 150 / waveSpeed
-      : waveScaling.spawnIntervalMs *
-        worldModifierEffects.spawnIntervalMultiplier *
-        (waveAffix?.spawnIntervalMultiplier ?? 1) *
-        (rareWaveEvent?.spawnIntervalMultiplier ?? 1) *
-        0.5 / waveSpeed);
+    };
 
-    return () => window.clearTimeout(timeoutId);
-  }, [run?.phase, spawnQueue.length, activeEnemies.length, waveSpeed]);
+    spawnDueEnemies();
+    const intervalId = window.setInterval(spawnDueEnemies, 50);
+    return () => window.clearInterval(intervalId);
+  }, [run?.phase, spawnQueue.length, waveScaling.waveNumber]);
 
   useEffect(() => {
     if (activeEnemies.length === 0 || run?.phase === RUN_PHASES.ENDED) return undefined;
