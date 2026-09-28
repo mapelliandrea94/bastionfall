@@ -3031,8 +3031,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   <div><span>ENEMY HP</span><strong>×{suddenTelemetry.hpMultiplier.toFixed(2)}</strong></div>
                   <div><span>SPAWN</span><strong>{(suddenTelemetry.spawnIntervalMs / 1000).toFixed(2)}s</strong></div>
                   <div><span>PREP</span><strong>{suddenTelemetry.preparationSeconds}s</strong></div>
+                  <div><span>CLEAR GOLD</span><strong>{suddenTelemetry.waveReward}G</strong></div>
+                  <div><span>ECONOMY</span><strong>TFT PARITY</strong></div>
                 </div>
-                <small>Difficulty escalates by wave bracket. Economy remains TFT-style.</small>
+                <small>Difficulty escalates by wave bracket. Base clear economy stays exactly aligned with TFT Shop.</small>
               </section>
             )}
             <div className="tft-shop-layout">
