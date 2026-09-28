@@ -29,6 +29,8 @@ jobs:
         run: npm run build
       - name: End-to-End 24x24 Regression QA
         run: node tests/end-to-end-regression.mjs
+      - name: Gameplay Determinism Stress QA
+        run: node tests/gameplay-determinism-stress.mjs
       - name: Wave Director QA
         run: node tests/wave-director.mjs
       - name: Sudden Siege Calibration QA
