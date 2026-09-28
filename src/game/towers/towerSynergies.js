@@ -51,6 +51,15 @@ export function getTowerSynergyState(placedDefenses = [], definitions = {}) {
     })))
   });
 }
+export function getNewlyActivatedTowerSynergies(previousActive = {}, synergyState) {
+  if (!synergyState?.entries) return Object.freeze([]);
+  return Object.freeze(
+    synergyState.entries
+      .filter((entry) => entry.active && !previousActive?.[entry.faction])
+      .map((entry) => Object.freeze({ ...entry }))
+  );
+}
+
 export function applyTowerSynergy(definition, synergyState) {
   if (!definition) return definition;
   const faction = definition.faction;
@@ -107,9 +116,16 @@ export function getTowerSynergyFixtures() {
     { defenseId: 'n1' }, { defenseId: 'n2' }
   ], definitions);
 
+  const newlyActivated = getNewlyActivatedTowerSynergies(
+    { human: false, insect: false, alien: false, neutral: false },
+    state
+  );
+
   return Object.freeze({
     humanActivatesAtThree: state.active.human === true,
     neutralActivatesAtTwo: state.active.neutral === true,
-    insectInactiveWithoutThree: state.active.insect === false
+    insectInactiveWithoutThree: state.active.insect === false,
+    activationFeedbackIncludesHuman: newlyActivated.some((entry) => entry.faction === 'human'),
+    activationFeedbackIncludesNeutral: newlyActivated.some((entry) => entry.faction === 'neutral')
   });
 }

@@ -2946,6 +2946,26 @@ body { background:#1c3f61; }
   letter-spacing: .12em;
 }
 
+.tower-synergy-panel__title strong {
+  display: block;
+  margin-top: .28rem;
+  color: #f5d77e;
+  font-size: .57rem;
+  letter-spacing: .09em;
+}
+
+.tower-synergy-panel--flash {
+  animation: tower-synergy-activate 700ms ease-out 2;
+  border-color: rgba(245, 207, 113, .7);
+  box-shadow: 0 0 22px rgba(225, 176, 77, .2), inset 0 0 18px rgba(225, 176, 77, .08);
+}
+
+@keyframes tower-synergy-activate {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.018); }
+  100% { transform: scale(1); }
+}
+
 .tower-synergy-panel__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -10,7 +10,7 @@ import { ARCHER_TOWER } from './game/towers/archer.js';
 import { CANNON_TOWER } from './game/towers/cannon.js';
 import { FROST_TOWER } from './game/towers/frost.js';
 import { TOWER_ROSTER, getTowerRosterFixtures } from './game/towers/towerRoster.js';
-import { applyTowerSynergy, getTowerSynergyState } from './game/towers/towerSynergies.js';
+import { applyTowerSynergy, getNewlyActivatedTowerSynergies, getTowerSynergyState } from './game/towers/towerSynergies.js';
 import { NORMAL_MODE_TOWERS, NORMAL_MODE_TOWERS_BY_ID, getNormalBuildRosterFixtures } from './game/towers/normalBuildRoster.js';
 import { BASE_TOWER_GAMEPLAY_BY_ID, getBaseTowerGameplayFixtures } from './game/towers/baseTowerGameplay.js';
 import { getTowerAttackVisual } from './game/towers/attackVisuals.js';
@@ -1076,6 +1076,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const [mergingPlacedDefenseId, setMergingPlacedDefenseId] = useState(null);
   const [riskRewardTier, setRiskRewardTier] = useState('safe');
   const [miniObjectiveFeedback, setMiniObjectiveFeedback] = useState('');
+  const [synergyFeedback, setSynergyFeedback] = useState(null);
   const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
   const [blessingRerollCount, setBlessingRerollCount] = useState(0);
   const [tftRollIndex, setTftRollIndex] = useState(() => matchingTftSnapshot?.tftRollIndex ?? 0);
@@ -1096,6 +1097,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const spawnedWaveRef = useRef(null);
   const bossSummonTimeoutsRef = useRef([]);
   const towerAttackTimesRef = useRef({});
+  const previousSynergyActiveRef = useRef({ human: false, insect: false, alien: false, neutral: false });
   const projectileQueueRef = useRef([]);
   const projectileIdRef = useRef(0);
   const defeatedEnemyIdsRef = useRef(new Set());
@@ -1177,6 +1179,20 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
   const wallTravelMultiplier = 1;
   const defenseDefinitions = NORMAL_MODE_TOWERS_BY_ID;
   const towerSynergyState = getTowerSynergyState(placedDefenses, defenseDefinitions);
+
+  useEffect(() => {
+    const newlyActivated = getNewlyActivatedTowerSynergies(previousSynergyActiveRef.current, towerSynergyState);
+    previousSynergyActiveRef.current = Object.freeze(
+      Object.fromEntries(towerSynergyState.entries.map((entry) => [entry.faction, entry.active]))
+    );
+    if (newlyActivated.length === 0) return undefined;
+
+    const activated = newlyActivated.at(-1);
+    setSynergyFeedback(activated);
+    const timeoutId = window.setTimeout(() => setSynergyFeedback(null), 2200);
+    return () => window.clearTimeout(timeoutId);
+  }, [towerSynergyState.entries.map((entry) => `${entry.faction}:${entry.active ? 1 : 0}`).join('|')]);
+
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? NORMAL_MODE_TOWERS[0];
   const selectedPlacedDefense = placedDefenses.find((entry) => entry.id === selectedPlacedDefenseId) ?? null;
   const inspectedDefenseBase = selectedPlacedDefense
@@ -3102,8 +3118,14 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           </section>
 
-          <div className="tower-synergy-panel" aria-label="Tower synergies">
-            <div className="tower-synergy-panel__title">TOWER SYNERGIES</div>
+          <div
+            className={synergyFeedback ? 'tower-synergy-panel tower-synergy-panel--flash' : 'tower-synergy-panel'}
+            aria-label="Tower synergies"
+          >
+            <div className="tower-synergy-panel__title">
+              TOWER SYNERGIES
+              {synergyFeedback && <strong>SYNERGY ACTIVE · {synergyFeedback.name}</strong>}
+            </div>
             <div className="tower-synergy-panel__grid">
               {towerSynergyState.entries.map((entry) => (
                 <div
