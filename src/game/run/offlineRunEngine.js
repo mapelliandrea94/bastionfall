@@ -410,9 +410,7 @@ function applyOfflineWallDamage(snapshot, dtMs) {
   const activeWallIds = [...(snapshot.activeWallIds ?? [])];
   if (activeWallIds.length === 0) return;
 
-  const waveSpeed = Math.max(1, Number(snapshot.waveSpeed ?? 1));
-  const tickDurationMs = WALL_SYSTEM.damageTickMs / waveSpeed;
-  const tickScale = Math.max(0, Number(dtMs) || 0) / Math.max(1, tickDurationMs);
+  const tickScale = Math.max(0, Number(dtMs) || 0) / Math.max(1, WALL_SYSTEM.damageTickMs);
   if (tickScale <= 0) return;
 
   const nextHp = { ...(snapshot.wallHpById ?? {}) };
@@ -446,10 +444,12 @@ function applyOfflineWallDamage(snapshot, dtMs) {
 function activeStep(snapshot, dtMs, engine) {
   const run = { ...snapshot.run };
   const ctx = waveContext(snapshot);
-  const virtualNow = Number(engine.virtualNowMs ?? snapshot.waveClockNow ?? 0) + dtMs;
+  const waveSpeed = Math.max(1, Number(snapshot.waveSpeed ?? 1));
+  const simulationDtMs = Math.max(0, Number(dtMs) || 0) * waveSpeed;
+  const virtualNow = Number(engine.virtualNowMs ?? snapshot.waveClockNow ?? 0) + simulationDtMs;
   engine.virtualNowMs = virtualNow;
-  engine.currentWaveElapsedMs = Number(engine.currentWaveElapsedMs ?? 0) + dtMs;
-  engine.spawnAccumulatorMs = Number(engine.spawnAccumulatorMs ?? 0) + dtMs;
+  engine.currentWaveElapsedMs = Number(engine.currentWaveElapsedMs ?? 0) + simulationDtMs;
+  engine.spawnAccumulatorMs = Number(engine.spawnAccumulatorMs ?? 0) + simulationDtMs;
 
   spawnBossAddsIfDue(snapshot, engine);
 
@@ -459,8 +459,7 @@ function activeStep(snapshot, dtMs, engine) {
       ctx.world.spawnIntervalMultiplier *
       Number(ctx.affix?.spawnIntervalMultiplier ?? 1) *
       Number(ctx.rare?.spawnIntervalMultiplier ?? 1) *
-      0.5 /
-      Math.max(1, Number(snapshot.waveSpeed ?? 1))
+      0.5
   );
 
   while (snapshot.spawnQueue.length > 0 && engine.spawnAccumulatorMs >= spawnInterval) {
@@ -473,10 +472,10 @@ function activeStep(snapshot, dtMs, engine) {
   const blessing = getBlessingModifiers(run.blessings ?? []);
   const moveMultiplier = blessing.enemyMoveSpeedMultiplier * ctx.world.enemyMoveSpeedMultiplier;
 
-  let enemies = (snapshot.activeEnemies ?? []).map((enemy) => applyStatusTick(enemy, dtMs, virtualNow));
+  let enemies = (snapshot.activeEnemies ?? []).map((enemy) => applyStatusTick(enemy, simulationDtMs, virtualNow));
   enemies = enemies.map((enemy) => {
     const speed = getEnemyEffectiveSpeed(enemy, virtualNow) * 0.48 * moveMultiplier;
-    let progress = Math.min(1, Number(enemy.progress ?? 0) + (dtMs / Math.max(1, ctx.scaling.travelDurationMs)) * speed);
+    let progress = Math.min(1, Number(enemy.progress ?? 0) + (simulationDtMs / Math.max(1, ctx.scaling.travelDurationMs)) * speed);
 
     if (!enemy.airborne && (snapshot.activeWallIds ?? []).length > 0) {
       const wall = Object.entries(WALL_PROGRESS_BY_ID)
@@ -489,8 +488,8 @@ function activeStep(snapshot, dtMs, engine) {
   });
 
   snapshot.activeEnemies = enemies;
-  applyOfflineWallDamage(snapshot, dtMs);
-  snapshot.activeEnemies = simulateTowerAttacks(snapshot, dtMs, virtualNow, engine);
+  applyOfflineWallDamage(snapshot, simulationDtMs);
+  snapshot.activeEnemies = simulateTowerAttacks(snapshot, simulationDtMs, virtualNow, engine);
 
   const dead = snapshot.activeEnemies.filter((enemy) => Number(enemy.hp ?? 0) <= 0);
   if (dead.length > 0) {
