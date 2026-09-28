@@ -488,6 +488,7 @@ async function fetchProfileData(session) {
   }
 
   const response = await fetch('/api/profile', {
+    cache: 'no-store',
     headers: {
       Authorization: `Bearer ${session.access_token}`
     }
@@ -3639,6 +3640,8 @@ function Profile({ session, onBack }) {
 
   const single = profileData?.modes?.['single-gate'] ?? null;
   const tri = profileData?.modes?.['tri-gate'] ?? null;
+  const tft = profileData?.modes?.['tft-shop'] ?? null;
+  const sudden = profileData?.modes?.['sudden-siege'] ?? null;
   const last = profileData?.lastBastion ?? null;
   const totalRuns = Number(profileData?.profile?.runs || 0);
   const totalSurvivalMs = Number(last?.total_survival_ms || 0);
@@ -3674,6 +3677,16 @@ function Profile({ session, onBack }) {
               <span>TRI-GATE</span>
               <strong>Wave {tri?.best_wave ?? 0}</strong>
               <small>Survival {formatSurvivalTime(tri?.best_survival_ms ?? 0)} · Score {(tri?.best_score ?? 0).toLocaleString()} · Kills {(tri?.best_kills ?? 0).toLocaleString()}</small>
+            </section>
+            <section className="profile-mode-card">
+              <span>TFT SHOP</span>
+              <strong>Wave {tft?.best_wave ?? 0}</strong>
+              <small>Survival {formatSurvivalTime(tft?.best_survival_ms ?? 0)} · Score {(tft?.best_score ?? 0).toLocaleString()} · Kills {(tft?.best_kills ?? 0).toLocaleString()}</small>
+            </section>
+            <section className="profile-mode-card">
+              <span>SUDDEN SIEGE</span>
+              <strong>Wave {sudden?.best_wave ?? 0}</strong>
+              <small>Survival {formatSurvivalTime(sudden?.best_survival_ms ?? 0)} · Score {(sudden?.best_score ?? 0).toLocaleString()} · Kills {(sudden?.best_kills ?? 0).toLocaleString()}</small>
             </section>
             <section className="profile-mode-card">
               <span>LAST BASTION</span>
@@ -4228,9 +4241,7 @@ function App() {
           if (mode !== MODES.SINGLE_GATE && mode !== MODES.TRI_GATE && !isShopMode(mode) && mode !== MODES.LAST_BASTION) return;
           const started = preparedMatch
             ? { ok: true, match: preparedMatch }
-            : isShopMode(mode)
-              ? { ok: true, match: { id: null, token: null, startedAt: null, seed: `${mode}:${Date.now()}` } }
-              : await startServerMatch(session, mode);
+            : await startServerMatch(session, mode);
           if (!started.ok) return;
           const nextRun = createInitialRunState(mode, started.match.seed, started.match);
           if (!nextRun) return;
