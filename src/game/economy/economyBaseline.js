@@ -1,11 +1,11 @@
 export const ECONOMY_BASELINE = Object.freeze({
-  version: 2,
+  version: 3,
   startingGold: 300,
-  waveClearBaseGold: 26,
+  waveClearBaseGold: 360,
   waveClearBandSize: 5,
-  waveClearBandBonus: 5,
-  waveClearMaxGold: 70,
-  enemyKillRewardMultiplier: 2
+  waveClearBandBonus: 20,
+  waveClearMaxGold: 500,
+  enemyKillRewardMultiplier: 1
 });
 
 export function getWaveClearReward(waveNumber) {
@@ -46,9 +46,9 @@ export function getEconomyBaselineFixtures(defenses) {
     archerCopiesActual: byId.archer?.maxCopies ?? null,
     cannonCopiesExpected: 2,
     cannonCopiesActual: byId.cannon?.maxCopies ?? null,
-    wave1RewardExpected: 26,
+    wave1RewardExpected: 360,
     wave1RewardActual: getWaveClearReward(1),
-    wave6RewardExpected: 31,
+    wave6RewardExpected: 380,
     wave6RewardActual: getWaveClearReward(6)
   });
 }
