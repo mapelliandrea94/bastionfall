@@ -1919,7 +1919,12 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     setActiveEnemies((current) => current.filter(
       (enemy) => Number(enemy?.hp ?? 0) > 0 && Number(enemy?.progress ?? 0) < 1
     ));
-    onDamageBastion(escapedEnemies.length * waveScaling.bastionDamage, escapedEnemies);
+    const rawDamage = escapedEnemies.reduce((sum, enemy) => {
+      const baseDamage = Number(enemy?.bastionDamage ?? waveScaling.bastionDamage ?? 1);
+      const enrage = applyBossEnrageStats(enemy);
+      return sum + baseDamage * Number(enrage.bastionDamageMultiplier ?? 1);
+    }, 0);
+    onDamageBastion(rawDamage, escapedEnemies);
   }, [activeEnemies, run?.phase, waveScaling.bastionDamage, onDamageBastion]);
 
   useEffect(() => {
