@@ -1984,7 +1984,10 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   !placed && !affordable ? 'battlefield-map__tower-slot--unaffordable' : '',
                   hovered ? 'battlefield-map__tower-slot--hovered' : '',
                   selectedPlaced ? 'battlefield-map__tower-slot--selected' : '',
-                  movingTower && !placed ? 'battlefield-map__tower-slot--move-target' : ''
+                  movingTower && !placed ? 'battlefield-map__tower-slot--move-target' : '',
+                  run?.mode === MODES.TFT_SHOP && placed && benchCopy && canMergeTftCopy(placed, benchCopy).ok
+                    ? 'battlefield-map__tower-slot--merge-target'
+                    : ''
                 ].filter(Boolean).join(' ');
 
                 return (
