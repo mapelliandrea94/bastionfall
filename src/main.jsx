@@ -3459,7 +3459,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
             </div>
           )}
 
-          {run?.mode === MODES.SINGLE_GATE && getEndlessMilestone(run?.wave) && run?.phase === RUN_PHASES.PREPARATION && (
+          {[MODES.SINGLE_GATE, MODES.TFT_SHOP].includes(run?.mode) && getEndlessMilestone(run?.wave, run?.mode) && run?.phase === RUN_PHASES.PREPARATION && (
             <div className="endless-milestone-banner" aria-live="polite">
               <span>ENDLESS MILESTONE</span><strong>WAVE {run.wave} · {getEndlessMilestone(run.wave).title}</strong><small>+{getEndlessMilestone(run.wave).goldReward} GOLD</small>
             </div>
@@ -4720,7 +4720,7 @@ function App() {
             const waveClearGold = advancingWave
               ? applyRiskRewardGold(modeAdjustedWaveClearGold, current.mode, options.riskRewardTier ?? 'safe')
               : 0;
-            const endlessMilestone = advancingWave && current.mode === MODES.SINGLE_GATE ? getEndlessMilestone(completedWaveNumber) : null;
+            const endlessMilestone = advancingWave && [MODES.SINGLE_GATE, MODES.TFT_SHOP].includes(current.mode) ? getEndlessMilestone(completedWaveNumber, current.mode) : null;
             const nextMaxHp = getBlessingAdjustedMaxHp(RUN_DEFAULTS.coreHp, nextBlessings);
             const maxHpGain = Math.max(0, nextMaxHp - current.coreMaxHp);
 
