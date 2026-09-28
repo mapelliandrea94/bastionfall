@@ -5417,3 +5417,23 @@ button:focus-visible,
     font-size: .9rem;
   }
 }
+
+
+/* TFT 4-star ascension milestones */
+.tower-progress-badge--red .tower-progress-stars {
+  fill: #ff4f56;
+  filter: drop-shadow(0 0 4px rgba(255, 61, 72, .9));
+}
+
+.tower-progress-badge--gold .tower-progress-stars {
+  fill: #ffd45a;
+  filter: drop-shadow(0 0 5px rgba(255, 201, 61, .95));
+}
+
+.tower-progress-badge--gold rect {
+  stroke: rgba(255, 210, 84, .92);
+}
+
+.tower-progress-count {
+  fill: #f4f7fa;
+}
