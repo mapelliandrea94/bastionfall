@@ -1833,40 +1833,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
           if (attackCharge < attackInterval) continue;
 
           const attacksDue = Math.max(1, Math.min(48, Math.floor(attackCharge / attackInterval)));
-          const candidates = getTowerTargets(definition, placed, working.filter((enemy) => enemy.hp > 0));
-          const primary = candidates[0];
-          if (!primary) {
-            // Keep at most one ready shot while idle; never bank a burst.
-            towerAttackChargeRef.current[placed.id] = Math.min(attackCharge, attackInterval);
-            continue;
-          }
-
-          towerAttackChargeRef.current[placed.id] = Math.max(0, attackCharge - attacksDue * attackInterval);
-          towerAttackTimesRef.current[placed.id] = now;
-          playTowerAttackSound(definition);
-
-          const primaryIndex = working.findIndex((enemy) => enemy.id === primary.id);
-          if (primaryIndex < 0) continue;
-
-          const slot = buildSlots.find((entry) => entry.id === placed.slotId);
-          if (slot && primary.position) {
-            const visual = getTowerAttackVisual(definition, placed.evolution);
-            const duration = ['beam', 'chain', 'mark', 'aura'].includes(visual)
-              ? 190
-              : Math.max(160, Math.min(430, Math.hypot(primary.position.x - slot.x, primary.position.y - slot.y) / Math.max(1, definition.projectileSpeed ?? 700) * 1000));
-            projectileQueueRef.current.push({
-              id: ++projectileIdRef.current,
-              x: slot.x, y: slot.y - 24,
-              dx: primary.position.x - slot.x,
-              dy: primary.position.y - (slot.y - 24),
-              faction: definition.faction ?? baseDefinition.faction ?? 'neutral',
-              visual,
-              duration,
-              expiresAt: now + duration + 330
-            });
-          }
-
-          const hitEnemyAtIndex = (enemyIndex, damageScale = 1) => {
+          const hitEnemyAtIndex = (enemyIndex, damageScale = 1, attackNow = now) => {
             const enemy = working[enemyIndex];
             if (!enemy || enemy.hp <= 0) return;
 
@@ -1875,7 +1842,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
               target = applyStrongestArmorShred(
                 target,
                 definition.armorShred,
-                now + Number(definition.armorShredDurationMs ?? 0)
+                attackNow + Number(definition.armorShredDurationMs ?? 0)
               );
             }
 
@@ -1889,7 +1856,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                 valueKey: 'slowPercent',
                 untilKey: 'slowUntilMs',
                 incomingValue: definition.slowPercent,
-                incomingUntilMs: now + Number(definition.slowDurationMs ?? 0)
+                incomingUntilMs: attackNow + Number(definition.slowDurationMs ?? 0)
               });
             }
             if (definition.vulnerabilityPercent) {
@@ -1897,7 +1864,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                 valueKey: 'vulnerabilityPercent',
                 untilKey: 'vulnerabilityUntilMs',
                 incomingValue: definition.vulnerabilityPercent,
-                incomingUntilMs: now + Number(definition.vulnerabilityDurationMs ?? 0)
+                incomingUntilMs: attackNow + Number(definition.vulnerabilityDurationMs ?? 0)
               });
             }
             if (definition.poisonDamagePerSecond) {
@@ -1905,53 +1872,89 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                 valueKey: 'poisonDamagePerSecond',
                 untilKey: 'poisonUntilMs',
                 incomingValue: definition.poisonDamagePerSecond,
-                incomingUntilMs: now + Number(definition.poisonDurationMs ?? 0)
+                incomingUntilMs: attackNow + Number(definition.poisonDurationMs ?? 0)
               });
             }
 
-            damaged = { ...damaged, statusEffects };
-            working[enemyIndex] = damaged;
+            working[enemyIndex] = { ...damaged, statusEffects };
           };
 
-          hitEnemyAtIndex(primaryIndex, attacksDue);
+          let attacksExecuted = 0;
+          for (let recoveredIndex = 0; recoveredIndex < attacksDue; recoveredIndex += 1) {
+            const candidates = getTowerTargets(
+              definition,
+              placed,
+              working.filter((enemy) => enemy.hp > 0)
+            );
+            const primary = candidates[0];
+            if (!primary) break;
 
-          if (definition.splashRadius) {
-            working.forEach((enemy, index) => {
-              if (enemy.id === primary.id || enemy.hp <= 0) return;
-              const dx = Number(enemy.position?.x ?? 0) - Number(primary.position?.x ?? 0);
-              const dy = Number(enemy.position?.y ?? 0) - Number(primary.position?.y ?? 0);
-              if (Math.hypot(dx, dy) <= definition.splashRadius) hitEnemyAtIndex(index, 0.72 * attacksDue);
-            });
-          }
+            const primaryIndex = working.findIndex((enemy) => enemy.id === primary.id);
+            if (primaryIndex < 0) break;
 
-          if (definition.chainTargets && definition.chainTargets > 1) {
-            const chained = working
-              .filter((enemy) => enemy.id !== primary.id && enemy.hp > 0)
-              .sort((a, b) => {
-                const da = Math.hypot(Number(a.position?.x ?? 0) - Number(primary.position?.x ?? 0), Number(a.position?.y ?? 0) - Number(primary.position?.y ?? 0));
-                const db = Math.hypot(Number(b.position?.x ?? 0) - Number(primary.position?.x ?? 0), Number(b.position?.y ?? 0) - Number(primary.position?.y ?? 0));
-                return da - db;
-              })
-              .slice(0, definition.chainTargets - 1);
+            attacksExecuted += 1;
+            const attackNow = now - Math.max(0, attacksDue - recoveredIndex - 1) * attackInterval;
 
-            chained.forEach((enemy, chainIndex) => {
-              const index = working.findIndex((entry) => entry.id === enemy.id);
-              const previous = chainIndex === 0 ? primary : chained[chainIndex - 1];
-              if (index >= 0 && previous.position && enemy.position) {
+            if (recoveredIndex === attacksDue - 1) {
+              const slot = buildSlots.find((entry) => entry.id === placed.slotId);
+              if (slot && primary.position) {
+                const visual = getTowerAttackVisual(definition, placed.evolution);
+                const duration = ['beam', 'chain', 'mark', 'aura'].includes(visual)
+                  ? 190
+                  : Math.max(160, Math.min(430, Math.hypot(primary.position.x - slot.x, primary.position.y - slot.y) / Math.max(1, definition.projectileSpeed ?? 700) * 1000));
                 projectileQueueRef.current.push({
                   id: ++projectileIdRef.current,
-                  x: previous.position.x,
-                  y: previous.position.y,
-                  dx: enemy.position.x - previous.position.x,
-                  dy: enemy.position.y - previous.position.y,
-                  faction: definition.faction ?? 'alien',
-                  visual: 'chain',
-                  duration: 170,
-                  expiresAt: now + 430
+                  x: slot.x, y: slot.y - 24,
+                  dx: primary.position.x - slot.x,
+                  dy: primary.position.y - (slot.y - 24),
+                  faction: definition.faction ?? baseDefinition.faction ?? 'neutral',
+                  visual,
+                  duration,
+                  expiresAt: now + duration + 330
                 });
               }
-              if (index >= 0) hitEnemyAtIndex(index, Math.pow(definition.chainFalloff ?? 0.65, chainIndex + 1) * attacksDue);
-            });
+            }
+
+            hitEnemyAtIndex(primaryIndex, 1, attackNow);
+
+            if (definition.splashRadius) {
+              working.forEach((enemy, index) => {
+                if (enemy.id === primary.id || enemy.hp <= 0) return;
+                const dx = Number(enemy.position?.x ?? 0) - Number(primary.position?.x ?? 0);
+                const dy = Number(enemy.position?.y ?? 0) - Number(primary.position?.y ?? 0);
+                if (Math.hypot(dx, dy) <= definition.splashRadius) {
+                  hitEnemyAtIndex(index, 0.72, attackNow);
+                }
+              });
+            }
+
+            if (definition.chainTargets && definition.chainTargets > 1) {
+              const chained = working
+                .filter((enemy) => enemy.id !== primary.id && enemy.hp > 0)
+                .sort((a, b) => {
+                  const da = Math.hypot(Number(a.position?.x ?? 0) - Number(primary.position?.x ?? 0), Number(a.position?.y ?? 0) - Number(primary.position?.y ?? 0));
+                  const db = Math.hypot(Number(b.position?.x ?? 0) - Number(primary.position?.x ?? 0), Number(b.position?.y ?? 0) - Number(primary.position?.y ?? 0));
+                  return da - db;
+                })
+                .slice(0, definition.chainTargets - 1);
+
+              chained.forEach((enemy, chainIndex) => {
+                const index = working.findIndex((entry) => entry.id === enemy.id);
+                if (index >= 0) {
+                  hitEnemyAtIndex(index, Math.pow(definition.chainFalloff ?? 0.65, chainIndex + 1), attackNow);
+                }
+              });
+            }
+          }
+
+          if (attacksExecuted === 0) {
+            towerAttackChargeRef.current[placed.id] = Math.min(attackCharge, attackInterval);
+            continue;
+          }
+
+          towerAttackChargeRef.current[placed.id] = Math.max(0, attackCharge - attacksExecuted * attackInterval);
+          towerAttackTimesRef.current[placed.id] = now;
+          playTowerAttackSound(definition);
           }
         }
 
