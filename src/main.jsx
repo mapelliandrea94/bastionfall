@@ -1987,6 +1987,40 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     position: getPathPosition(getEnemyPath(enemy), enemy.progress)
   }));
 
+  const handleBuyTftShopOffer = (offer) => {
+    if (!offer || !isShopMode(run?.mode)) return;
+    if ((run?.gold ?? 0) < offer.cost) {
+      setTftFeedback(`NEED ${offer.cost}G`);
+      return;
+    }
+
+    const result = addCopyToBench(tftBench, {
+      copyId: typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${run?.seed ?? 'run'}:${tftRollIndex}:${offer.slotId}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
+      towerId: offer.towerId,
+      name: offer.name,
+      faction: offer.faction,
+      role: offer.role,
+      cost: offer.cost
+    });
+
+    if (!result.ok) {
+      setTftFeedback(gameText('BENCH FULL'));
+      return;
+    }
+
+    setTftBench(result.bench);
+    setTftPurchasedSlotIds((current) => (
+      current.includes(offer.slotId)
+        ? current
+        : [...current, offer.slotId]
+    ));
+    onSpendGold(offer.cost);
+    setSelectedTftShopSlotId(null);
+    setTftFeedback('');
+  };
+
   const handleWallPurchase = (wallId) => {
     if (!run || run.phase !== RUN_PHASES.PREPARATION) {
       if (isShopMode(run?.mode)) setTftFeedback(gameText('WALLS CAN ONLY BE BOUGHT DURING PREPARATION'));
@@ -3256,6 +3290,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                     setSelectedPlacedDefenseId(null);
                     setTftFeedback('');
                   }}
+                  onDoubleClick={() => handleBuyTftShopOffer(offer)}
                 >
                   <div
                     className="tft-shop-card__art"
@@ -3280,33 +3315,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                   type="button"
                   className="tft-shop-buy"
                   disabled={!selectedTftShopOffer || (run?.gold ?? 0) < (selectedTftShopOffer?.cost ?? 0) || tftBench.every(Boolean)}
-                  onClick={() => {
-                    if (!selectedTftShopOffer) return;
-                    if ((run?.gold ?? 0) < selectedTftShopOffer.cost) return;
-                    const result = addCopyToBench(tftBench, {
-                      copyId: typeof crypto !== 'undefined' && crypto.randomUUID
-                        ? crypto.randomUUID()
-                        : `${run?.seed ?? 'run'}:${tftRollIndex}:${selectedTftShopOffer.slotId}:${Date.now()}:${Math.random().toString(36).slice(2)}`,
-                      towerId: selectedTftShopOffer.towerId,
-                      name: selectedTftShopOffer.name,
-                      faction: selectedTftShopOffer.faction,
-                      role: selectedTftShopOffer.role,
-                      cost: selectedTftShopOffer.cost
-                    });
-                    if (!result.ok) {
-                      setTftFeedback(gameText('BENCH FULL'));
-                      return;
-                    }
-                    setTftBench(result.bench);
-                    setTftPurchasedSlotIds((current) => (
-                      current.includes(selectedTftShopOffer.slotId)
-                        ? current
-                        : [...current, selectedTftShopOffer.slotId]
-                    ));
-                    onSpendGold(selectedTftShopOffer.cost);
-                    setSelectedTftShopSlotId(null);
-                    setTftFeedback('');
-                  }}
+                  onClick={() => handleBuyTftShopOffer(selectedTftShopOffer)}
                 >
                   <span>{t('buy')}</span>
                   <small>{selectedTftShopOffer ? `${selectedTftShopOffer.cost}G` : 'SELECT'}</small>
