@@ -33,7 +33,7 @@ import { BARRACKS } from './game/structures/barracks.js';
 import { COMBAT_BALANCE_MODEL, COMBAT_BALANCE_SNAPSHOT } from './game/balance/combatBalance.js';
 import { getPlacementValidationFixtures, getTowerSlotPurchaseFixtures, tryPurchaseDefenseOnSlot, validateSingleGatePlacement } from './game/placement/singleGatePlacement.js';
 import { SELL_ECONOMY, getSellPreview } from './game/economy/sellEconomy.js';
-import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getWaveClearReward } from './game/economy/economyBaseline.js';
+import { ECONOMY_BASELINE, getEconomyBaselineFixtures, getEnemyKillReward, getWaveClearReward } from './game/economy/economyBaseline.js';
 import { GOLD_MINE, getGoldMineBreakEvenWave, getGoldMineFixtures, getGoldMineOpportunityCost } from './game/structures/goldMine.js';
 import { WAR_FORGE, applyWarForgePreview, getWarForgeFixtures } from './game/structures/warForge.js';
 import { GUARDIAN_SHRINE, applyGuardianShrineRangePreview, applyGuardianShrineToBastionDamage, getGuardianShrineFixtures } from './game/structures/guardianShrine.js';
@@ -1082,7 +1082,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       const enemyId = String(enemy?.id || '');
       if (enemyId && !defeatedEnemyIdsRef.current.has(enemyId)) {
         defeatedEnemyIdsRef.current.add(enemyId);
-        onEnemyKilled?.(enemyId);
+        onEnemyKilled?.(enemy);
       }
     }
     return survivors;
@@ -4546,10 +4546,15 @@ function App() {
             return { ...current, gold: current.gold + gain };
           });
         }}
-        onEnemyKilled={() => {
+        onEnemyKilled={(enemy) => {
           setRunState((current) => {
             if (!current || current.phase === RUN_PHASES.ENDED) return current;
-            return { ...current, kills: Math.max(0, Number(current.kills) || 0) + 1 };
+            const killGold = current.mode === MODES.SINGLE_GATE ? getEnemyKillReward(enemy) : 0;
+            return {
+              ...current,
+              kills: Math.max(0, Number(current.kills) || 0) + 1,
+              gold: Math.max(0, Number(current.gold) || 0) + killGold
+            };
           });
         }}
         onTowerMilestone={(threshold) => {
