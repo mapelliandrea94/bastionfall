@@ -1,3 +1,6 @@
+import { TFT_COPY_PROGRESSION } from './tftCopyProgression.js';
+import { TFT_SHOP } from './tftShop.js';
+
 export const TFT_PERSISTENCE = Object.freeze({
   version: 2,
   storageKey: 'bastionfall:tft-run:v2'
@@ -42,7 +45,7 @@ export function createTftRunSnapshot({
     tftShopLocked: Boolean(tftShopLocked),
     tftPurchasedSlotIds: Object.freeze(
       Array.isArray(tftPurchasedSlotIds)
-        ? [...new Set(tftPurchasedSlotIds.map((id) => String(id)).filter(Boolean))].slice(0, 7)
+        ? [...new Set(tftPurchasedSlotIds.map((id) => String(id)).filter(Boolean))].slice(0, TFT_SHOP.slotCount)
         : []
     )
   });
@@ -54,7 +57,7 @@ export function normalizeTftRunSnapshot(snapshot) {
   const placedDefenses = Array.isArray(snapshot.placedDefenses)
     ? snapshot.placedDefenses.map((tower) => ({
         ...tower,
-        copyProgress: clampInt(tower?.copyProgress ?? 1, 1, 7, 1),
+        copyProgress: clampInt(tower?.copyProgress ?? 1, 1, TFT_COPY_PROGRESSION.maxCopies, 1),
         level: clampInt(tower?.level ?? 1, 1, 4, 1)
       }))
     : [];
@@ -86,7 +89,7 @@ export function normalizeTftRunSnapshot(snapshot) {
     tftRollIndex: clampInt(snapshot.tftRollIndex, 0, Number.MAX_SAFE_INTEGER, 0),
     tftShopLocked: Boolean(snapshot.tftShopLocked),
     tftPurchasedSlotIds: Array.isArray(snapshot.tftPurchasedSlotIds)
-      ? [...new Set(snapshot.tftPurchasedSlotIds.map((id) => String(id)).filter(Boolean))].slice(0, 7)
+      ? [...new Set(snapshot.tftPurchasedSlotIds.map((id) => String(id)).filter(Boolean))].slice(0, TFT_SHOP.slotCount)
       : []
   };
 }
@@ -129,7 +132,7 @@ export function getTftPersistenceFixtures() {
     run: { mode: 'tft-shop', wave: 8, gold: 17, phase: 'preparation', blessings: ['a'] },
     placedDefenses: [
       { id: 'tower-a', defenseId: 'human-aa', copyProgress: 6, level: 3, evolution: null },
-      { id: 'tower-b', defenseId: 'alien-aa', copyProgress: 7, level: 4, evolution: 'prism-beam-array' }
+      { id: 'tower-b', defenseId: 'alien-aa', copyProgress: 14, level: 4, evolution: 'prism-beam-array' }
     ],
     activeWallIds: ['wall-01', 'wall-03'],
     wallHpById: { 'wall-01': 4560, 'wall-03': 6000 },
@@ -137,7 +140,7 @@ export function getTftPersistenceFixtures() {
     selectedTftBenchIndex: 0,
     tftRollIndex: 4,
     tftShopLocked: true,
-    tftPurchasedSlotIds: ['human-1', 'alien-2']
+    tftPurchasedSlotIds: ['human-1', 'human-2', 'insect-1', 'insect-2', 'alien-1', 'alien-2', 'neutral-1', 'neutral-2']
   });
   const restored = normalizeTftRunSnapshot(JSON.parse(JSON.stringify(source)));
   const corrupt = normalizeTftRunSnapshot({ version: 999, run: { mode: 'tft-shop' } });
@@ -146,6 +149,9 @@ export function getTftPersistenceFixtures() {
     validSnapshotCreated: source?.run?.mode === 'tft-shop',
     runFieldsPersist: restored?.run?.wave === 8 && restored?.run?.gold === 17,
     towerProgressPersists: restored?.placedDefenses?.[0]?.copyProgress === 6 && restored?.placedDefenses?.[0]?.level === 3,
+    maxProgressPersists:
+      restored?.placedDefenses?.[1]?.copyProgress === TFT_COPY_PROGRESSION.maxCopies &&
+      restored?.placedDefenses?.[1]?.level === 4,
     evolutionPersists: restored?.placedDefenses?.[1]?.evolution === 'prism-beam-array',
     benchPersists: restored?.tftBench?.[0]?.copyId === 'copy-a' && restored?.tftBench?.length === 7,
     wallsPersist:
@@ -154,7 +160,8 @@ export function getTftPersistenceFixtures() {
       restored?.wallHpById?.['wall-03'] === 6000,
     rollLockPersist: restored?.tftRollIndex === 4 && restored?.tftShopLocked === true,
     purchasedSlotsPersist:
-      restored?.tftPurchasedSlotIds?.join(',') === 'human-1,alien-2',
+      restored?.tftPurchasedSlotIds?.length === TFT_SHOP.slotCount &&
+      restored?.tftPurchasedSlotIds?.includes('neutral-2'),
     invalidVersionRejected: corrupt === null
   });
 }
