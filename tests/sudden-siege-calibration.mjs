@@ -1,18 +1,19 @@
 import assert from 'node:assert/strict';
 import { composeWaveByThreatBudget } from '../src/game/balance/waveThreat.js';
+import { TFT_SHOP } from '../src/game/tft/tftShop.js';
 import {
   getSuddenSiegeWaveReward,
   getSuddenSiegeWaveScaling
 } from '../src/game/balance/suddenSiege.js';
 
 const checkpoints = Object.freeze([
-  { wave: 1, maxCountRatio: 1.25, expectedReward: 5 },
-  { wave: 5, maxCountRatio: 1.25, expectedReward: 5 },
-  { wave: 8, maxCountRatio: 1.35, expectedReward: 5 },
-  { wave: 12, maxCountRatio: 1.35, expectedReward: 5 },
-  { wave: 15, maxCountRatio: 1.50, expectedReward: 5 },
-  { wave: 20, maxCountRatio: 1.50, expectedReward: 5 },
-  { wave: 25, maxCountRatio: 1.65, expectedReward: 5 }
+  { wave: 1, maxCountRatio: 1.25, expectedReward: TFT_SHOP.waveClearGold },
+  { wave: 5, maxCountRatio: 1.25, expectedReward: TFT_SHOP.waveClearGold },
+  { wave: 8, maxCountRatio: 1.35, expectedReward: TFT_SHOP.waveClearGold },
+  { wave: 12, maxCountRatio: 1.35, expectedReward: TFT_SHOP.waveClearGold },
+  { wave: 15, maxCountRatio: 1.50, expectedReward: TFT_SHOP.waveClearGold },
+  { wave: 20, maxCountRatio: 1.50, expectedReward: TFT_SHOP.waveClearGold },
+  { wave: 25, maxCountRatio: 1.65, expectedReward: TFT_SHOP.waveClearGold }
 ]);
 
 const rows = checkpoints.map(({ wave, maxCountRatio, expectedReward }) => {
