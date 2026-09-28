@@ -1318,6 +1318,10 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
   const selectedDefense = defenseDefinitions[selectedDefenseId] ?? NORMAL_MODE_TOWERS[0];
   const selectedPlacedDefense = placedDefenses.find((entry) => entry.id === selectedPlacedDefenseId) ?? null;
+  const selectedPlacedActionSlot = selectedPlacedDefense
+    ? buildSlots.find((slot) => slot.id === selectedPlacedDefense.slotId) ?? null
+    : null;
+  const selectedPlacedActionOffsetX = selectedPlacedActionSlot && selectedPlacedActionSlot.x > SINGLE_GATE_MAP.size.width - 190 ? -160 : 54;
   const inspectedDefenseBase = selectedPlacedDefense
     ? defenseDefinitions[selectedPlacedDefense.defenseId] ?? selectedDefense
     : selectedDefense;
@@ -2665,7 +2669,6 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                 const copyProgress = Math.max(1, Math.min(TFT_COPY_PROGRESSION.maxCopies, Number(placed?.copyProgress ?? 1)));
                 const copyProgressDenominator = getTftProgressDenominator(copyProgress);
                 const ascensionTier = getTftAscensionTier(copyProgress);
-                const towerActionOffsetX = slot.x > SINGLE_GATE_MAP.size.width - 190 ? -160 : 54;
                 const slotClass = [
                   'battlefield-map__tower-slot',
                   placed ? 'battlefield-map__tower-slot--occupied' : 'battlefield-map__tower-slot--available',
@@ -2841,33 +2844,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                           </text>
                         </g>
 
-                        {selectedPlaced && (
-                          <g className="tower-context-actions"
-                            transform={`translate(${towerActionOffsetX} -44)`}
-                            onClick={(event) => event.stopPropagation()}
-                            onMouseDown={(event) => event.stopPropagation()}
-                            role="group" aria-label="Tower quick actions">
-                            {[
-                              ...(isShopMode(run?.mode) ? [{ label: mergingPlacedDefenseId === placed.id ? 'ANNULLA' : 'MERGE', action: handleStartFieldMerge, active: mergingPlacedDefenseId === placed.id }] : []),
-                              { label: swappingPlacedDefenseId === placed.id ? 'ANNULLA' : 'INVERTI', action: handleToggleSwapSelectedTower, active: swappingPlacedDefenseId === placed.id },
-                              { label: movingPlacedDefenseId === placed.id ? 'ANNULLA' : 'SPOSTA', action: handleToggleMoveSelectedTower, active: movingPlacedDefenseId === placed.id },
-                              { label: `VENDI +${selectedSellPreview.refund}G`, action: handleSellSelectedTower, active: false }
-                            ].map((action, index) => (
-                              <g key={index} className={`tower-context-action${action.active ? ' is-active' : ''}`}
-                                transform={`translate(${(index % 2) * 74} ${Math.floor(index / 2) * 36})`}
-                                role="button" tabIndex="0" aria-label={action.label}
-                                onClick={(event) => { event.stopPropagation(); action.action(); }}
-                                onKeyDown={(event) => {
-                                  if (event.key === 'Enter' || event.key === ' ') {
-                                    event.preventDefault(); event.stopPropagation(); action.action();
-                                  }
-                                }}>
-                                <rect x="0" y="0" width="68" height="30" rx="7" />
-                                <text x="34" y="19" textAnchor="middle">{action.label}</text>
-                              </g>
-                            ))}
-                          </g>
-                        )}
+
                       </>
                     )}
                   </g>
@@ -3067,6 +3044,57 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             >
               BASTION
             </text>}
+
+            {selectedPlacedDefense && selectedPlacedActionSlot && (
+              <g
+                className="tower-context-actions tower-context-actions--overlay"
+                transform={`translate(${selectedPlacedActionSlot.x + selectedPlacedActionOffsetX} ${selectedPlacedActionSlot.y - 44})`}
+                onClick={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                role="group"
+                aria-label="Tower quick actions"
+                data-overlay-layer="top"
+              >
+                {[
+                  ...(isShopMode(run?.mode) ? [{
+                    label: mergingPlacedDefenseId === selectedPlacedDefense.id ? 'ANNULLA' : 'MERGE',
+                    action: handleStartFieldMerge,
+                    active: mergingPlacedDefenseId === selectedPlacedDefense.id
+                  }] : []),
+                  {
+                    label: swappingPlacedDefenseId === selectedPlacedDefense.id ? 'ANNULLA' : 'INVERTI',
+                    action: handleToggleSwapSelectedTower,
+                    active: swappingPlacedDefenseId === selectedPlacedDefense.id
+                  },
+                  {
+                    label: movingPlacedDefenseId === selectedPlacedDefense.id ? 'ANNULLA' : 'SPOSTA',
+                    action: handleToggleMoveSelectedTower,
+                    active: movingPlacedDefenseId === selectedPlacedDefense.id
+                  },
+                  { label: `VENDI +${selectedSellPreview.refund}G`, action: handleSellSelectedTower, active: false }
+                ].map((action, index) => (
+                  <g
+                    key={index}
+                    className={`tower-context-action${action.active ? ' is-active' : ''}`}
+                    transform={`translate(${(index % 2) * 74} ${Math.floor(index / 2) * 36})`}
+                    role="button"
+                    tabIndex="0"
+                    aria-label={action.label}
+                    onClick={(event) => { event.stopPropagation(); action.action(); }}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        action.action();
+                      }
+                    }}
+                  >
+                    <rect x="0" y="0" width="68" height="30" rx="7" />
+                    <text x="34" y="19" textAnchor="middle">{action.label}</text>
+                  </g>
+                ))}
+              </g>
+            )}
           </svg>
 
           <button type="button" className={`wave-speed-toggle${waveSpeed === 2 ? ' is-active' : ''}`}
