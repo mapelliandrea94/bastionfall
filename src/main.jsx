@@ -1947,6 +1947,46 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
     setMovingPlacedDefenseId((current) => current === selectedPlacedDefense.id ? null : selectedPlacedDefense.id);
   };
 
+  const placeTftBenchCopyOnSlot = (benchIndex, slotId) => {
+    if (!run || run.phase === RUN_PHASES.ENDED || !isShopMode(run.mode)) return false;
+    const copy = tftBench[benchIndex];
+    if (!copy) return false;
+    if (placedDefenses.some((entry) => entry.slotId === slotId)) return false;
+
+    const defense = defenseDefinitions[copy.towerId];
+    if (!defense) return false;
+
+    const attempt = tryPurchaseDefenseOnSlot({
+      slotId,
+      defense: { ...defense, cost: 0 },
+      gold: availableGoldRef.current,
+      placedStructures: placedDefenses
+    });
+    if (!attempt.ok) return false;
+
+    const placedTower = {
+      ...attempt.structure,
+      defenseId: copy.towerId,
+      level: 1,
+      copyProgress: 1,
+      investedGold: Number(copy.cost ?? TFT_SHOP.copyCost),
+      sourceCopyId: copy.copyId
+    };
+
+    setPlacedDefenses((current) => [...current, placedTower]);
+    setSelectedPlacedDefenseId(placedTower.id);
+    setTftBench((current) => removeCopyFromBench(current, benchIndex).bench);
+    setSelectedTftBenchIndex(null);
+    setMovingPlacedDefenseId(null);
+    setTftFeedback('TOWER PLACED · 1/7');
+    emitGameFeedback(GAME_FEEDBACK_EVENTS.TOWER_BUILT, {
+      towerId: copy.towerId,
+      slotId,
+      mode: run.mode
+    });
+    return true;
+  };
+
   const handleBuildSlot = (slotId) => {
     const occupied = placedDefenses.find((entry) => entry.slotId === slotId);
 
@@ -1992,7 +2032,12 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
           return;
         }
         if (copy) {
-          setTftFeedback(validation.error === 'wrong_tower_type' ? 'WRONG TOWER TYPE' : 'COPY PROGRESS MAXED');
+          setTftFeedback(
+            validation.error === 'wrong_tower_type'
+              ? 'WRONG TOWER TYPE'
+              : 'TOWER 7/7 · PLACE THIS COPY ON AN EMPTY PAD'
+          );
+          return;
         }
       }
       setSelectedPlacedDefenseId(occupied.id);
@@ -2004,37 +2049,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
 
     if (isShopMode(run.mode)) {
       if (selectedTftBenchIndex == null) return;
-      const copy = tftBench[selectedTftBenchIndex];
-      if (!copy) return;
-      const defense = defenseDefinitions[copy.towerId];
-      if (!defense) return;
-
-      const attempt = tryPurchaseDefenseOnSlot({
-        slotId,
-        defense: { ...defense, cost: 0 },
-        gold: availableGoldRef.current,
-        placedStructures: placedDefenses
-      });
-      if (!attempt.ok) return;
-
-      const placedTower = {
-        ...attempt.structure,
-        defenseId: copy.towerId,
-        level: 1,
-        copyProgress: 1,
-        investedGold: Number(copy.cost ?? TFT_SHOP.copyCost),
-        sourceCopyId: copy.copyId
-      };
-      setPlacedDefenses((current) => [...current, placedTower]);
-      setSelectedPlacedDefenseId(placedTower.id);
-      setTftBench((current) => removeCopyFromBench(current, selectedTftBenchIndex).bench);
-      setSelectedTftBenchIndex(null);
-      setTftFeedback('');
-      emitGameFeedback(GAME_FEEDBACK_EVENTS.TOWER_BUILT, {
-        towerId: copy.towerId,
-        slotId,
-        mode: run.mode
-      });
+      placeTftBenchCopyOnSlot(selectedTftBenchIndex, slotId);
       return;
     }
 
@@ -2275,17 +2290,34 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                     onMouseEnter={() => setHoveredSlotId(slot.id)}
                     onMouseLeave={() => setHoveredSlotId((current) => current === slot.id ? null : current)}
                     onDragOver={(event) => {
-                      if (isShopMode(run?.mode) && placed) {
-                        event.preventDefault();
-                        event.dataTransfer.dropEffect = 'move';
-                      }
+                      if (!isShopMode(run?.mode)) return;
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = 'move';
                     }}
                     onDrop={(event) => {
-                      if (!isShopMode(run?.mode) || !placed) return;
+                      if (!isShopMode(run?.mode)) return;
                       event.preventDefault();
                       const benchIndex = Number(event.dataTransfer.getData('text/plain'));
                       if (!Number.isInteger(benchIndex)) return;
-                      handleMergeTftCopy(benchIndex, placed.id, true);
+                      const draggedCopy = tftBench[benchIndex];
+                      if (!draggedCopy) return;
+
+                      if (!placed) {
+                        placeTftBenchCopyOnSlot(benchIndex, slot.id);
+                        return;
+                      }
+
+                      const validation = canMergeTftCopy(placed, draggedCopy);
+                      if (validation.ok) {
+                        handleMergeTftCopy(benchIndex, placed.id, true);
+                        return;
+                      }
+
+                      setTftFeedback(
+                        validation.error === 'wrong_tower_type'
+                          ? 'WRONG TOWER TYPE'
+                          : 'TOWER 7/7 · DROP THIS COPY ON AN EMPTY PAD'
+                      );
                     }}
                     onClick={() => handleBuildSlot(slot.id)}
                     onKeyDown={(event) => {
