@@ -2943,18 +2943,18 @@ body { background:#1c3f61; }
 }
 
 .battlefield-map__tower-slot--bench-match .tower-slot__stone {
-  stroke: #ffe18a;
-  stroke-width: 6;
-  filter: drop-shadow(0 0 18px rgba(255, 219, 96, .95));
+  stroke: #ff2949;
+  stroke-width: 7;
+  filter: drop-shadow(0 0 8px #ff163c) drop-shadow(0 0 22px rgba(255, 24, 58, .95));
 }
 
 .battlefield-map__tower-slot--bench-match .tower-art-sprite {
-  filter: brightness(1.3) drop-shadow(0 0 13px #ffd96b);
-  animation: bench-tower-match-pulse 1.35s ease-in-out infinite;
+  filter: brightness(1.3) drop-shadow(0 0 15px #ff2447);
+  animation: bench-tower-match-pulse 1.15s ease-in-out infinite;
 }
 
 @keyframes bench-tower-match-pulse {
-  50% { filter: brightness(1.65) drop-shadow(0 0 22px #ffeaa1); }
+  50% { filter: brightness(1.6) drop-shadow(0 0 28px #ff1744); }
 }
 
 @media (prefers-reduced-motion: reduce) {
