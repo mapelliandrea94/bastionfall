@@ -50,17 +50,38 @@ export function getSuddenSiegeWaveReward(waveNumber) {
   return SUDDEN_SIEGE.baseWaveClearGold + (wave >= 8 ? 1 : 0) + (wave >= 15 ? 1 : 0);
 }
 
+export function getSuddenSiegeTelemetry(waveNumber) {
+  const wave = Math.max(1, Math.floor(Number(waveNumber) || 1));
+  const scaling = getSuddenSiegeWaveScaling(wave);
+  const stage = wave <= 5 ? 'OPENING' : wave <= 12 ? 'ESCALATION' : wave <= 20 ? 'ONSLAUGHT' : 'ENDLESS';
+  return Object.freeze({
+    wave,
+    stage,
+    threatMultiplier: scaling.suddenThreatMultiplier ?? 1,
+    hpMultiplier: scaling.enemyHpMultiplier ?? 1,
+    spawnIntervalMs: scaling.spawnIntervalMs,
+    bastionDamage: scaling.bastionDamage,
+    waveReward: getSuddenSiegeWaveReward(wave),
+    preparationSeconds: SUDDEN_SIEGE.preparationSeconds
+  });
+}
+
 export function getSuddenSiegeFixtures() {
   const early = getSuddenSiegeWaveScaling(3);
   const mid = getSuddenSiegeWaveScaling(10);
   const late = getSuddenSiegeWaveScaling(18);
   const endless = getSuddenSiegeWaveScaling(25);
+  const telemetry10 = getSuddenSiegeTelemetry(10);
+  const telemetry25 = getSuddenSiegeTelemetry(25);
   return Object.freeze({
     gradualThreat: early.suddenThreatMultiplier < mid.suddenThreatMultiplier && mid.suddenThreatMultiplier < late.suddenThreatMultiplier && late.suddenThreatMultiplier < endless.suddenThreatMultiplier,
     gradualHp: early.enemyHpMultiplier < mid.enemyHpMultiplier && mid.enemyHpMultiplier < late.enemyHpMultiplier && late.enemyHpMultiplier < endless.enemyHpMultiplier,
     fasterSpawnsLate: late.spawnIntervalMs < early.spawnIntervalMs,
     rewardWave1: getSuddenSiegeWaveReward(1),
     rewardWave8: getSuddenSiegeWaveReward(8),
-    rewardWave15: getSuddenSiegeWaveReward(15)
+    rewardWave15: getSuddenSiegeWaveReward(15),
+    telemetryStage10: telemetry10.stage === 'ESCALATION',
+    telemetryStage25: telemetry25.stage === 'ENDLESS',
+    telemetryUsesWaveReward: telemetry10.waveReward === getSuddenSiegeWaveReward(10)
   });
 }
