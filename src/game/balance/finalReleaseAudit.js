@@ -67,9 +67,9 @@ export function getFinalReleaseAudit() {
     topTenPresentationWorks: leaderboard.podiumHasThree === true && leaderboard.personalTopTenDetected === true,
     suddenBaseEconomyMatchesTft: suddenParity,
     suddenPressureCeilingRespected: suddenPressureCeiling,
-    suddenRewardFlatAtFive:
-      getSuddenSiegeWaveReward(1) === 5 &&
-      getSuddenSiegeWaveReward(25) === 5
+    suddenRewardMatchesTft:
+      getSuddenSiegeWaveReward(1) === TFT_SHOP.waveClearGold &&
+      getSuddenSiegeWaveReward(25) === TFT_SHOP.waveClearGold
   });
 
   return Object.freeze({
