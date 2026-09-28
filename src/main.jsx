@@ -3034,7 +3034,7 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
                   <div><span>CLEAR GOLD</span><strong>{suddenTelemetry.waveReward}G</strong></div>
                   <div><span>ECONOMY</span><strong>TFT PARITY</strong></div>
                 </div>
-                <small>Difficulty escalates by wave bracket. Base clear economy stays exactly aligned with TFT Shop.</small>
+                <small>Difficulty escalates by wave bracket. Base clear economy stays aligned with TFT Shop; PRESSURE adds a smaller Sudden-specific risk premium.</small>
               </section>
             )}
             <div className="tft-shop-layout">
