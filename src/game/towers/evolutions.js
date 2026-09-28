@@ -89,6 +89,17 @@ export function getEvolutionChoices(towerId) {
   return TOWER_EVOLUTIONS_BY_TOWER[towerId] ?? Object.freeze([]);
 }
 
+export function getEvolutionVisualCue(placedTower) {
+  const evolution = TOWER_EVOLUTIONS.find((entry) => entry.id === placedTower?.evolution) ?? null;
+  return Object.freeze({
+    active: Boolean(evolution),
+    id: evolution?.id ?? null,
+    name: evolution?.name ?? null,
+    branch: evolution?.branch ?? null,
+    towerId: evolution?.towerId ?? placedTower?.defenseId ?? null
+  });
+}
+
 export function canChooseEvolution(placedTower) {
   return Number(placedTower?.level ?? 1) >= 4 && !placedTower?.evolution;
 }
@@ -128,6 +139,8 @@ export function getEvolutionFixtures() {
   const sample = { defenseId: 'human-aa', level: 4, evolution: null };
   const evolved = chooseTowerEvolution(sample, 'skypiercer-ballista');
   const base = TOWER_ROSTER.byId['human-aa'];
+  const visual = getEvolutionVisualCue(evolved);
+  const baseVisual = getEvolutionVisualCue(sample);
 
   return Object.freeze({
     evolutionCountExpected: 24,
@@ -137,6 +150,8 @@ export function getEvolutionFixtures() {
     levelFourAllowsChoice: canChooseEvolution(sample) === true,
     choiceIsPerTower: evolved.evolution === 'skypiercer-ballista' && evolved.evolutionChoice === 'A',
     counterFactionPreserved: getRuntimeTowerDefinition(base, evolved).faction === base.faction,
-    counterTypePreserved: getRuntimeTowerDefinition(base, evolved).counterType === base.counterType
+    counterTypePreserved: getRuntimeTowerDefinition(base, evolved).counterType === base.counterType,
+    evolvedVisualActive: visual.active === true && visual.branch === 'A' && visual.name === 'Skypiercer Ballista',
+    baseVisualInactive: baseVisual.active === false
   });
 }

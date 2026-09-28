@@ -2645,6 +2645,93 @@ body { background:#1c3f61; }
   50% { opacity: 1; transform: scale(1.05); }
 }
 
+.tower-evolution-aura {
+  --evolution-color: rgba(255, 219, 112, .98);
+  pointer-events: none;
+  filter: drop-shadow(0 0 12px var(--evolution-color));
+}
+
+.tower-evolution-aura__outer,
+.tower-evolution-aura__inner {
+  fill: none;
+  stroke: var(--evolution-color);
+  vector-effect: non-scaling-stroke;
+}
+
+.tower-evolution-aura__outer {
+  stroke-width: 4;
+  stroke-dasharray: 2 8;
+}
+
+.tower-evolution-aura__inner {
+  stroke-width: 2;
+  opacity: .6;
+}
+
+.tower-evolution-aura__badge {
+  fill: rgba(8, 14, 24, .94);
+  stroke: var(--evolution-color);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.tower-evolution-aura__letter {
+  fill: #fff2bf;
+  font-size: 13px;
+  font-weight: 950;
+  paint-order: stroke;
+  stroke: rgba(7, 11, 18, .95);
+  stroke-width: 3px;
+}
+
+.tower-evolution-aura--a {
+  --evolution-color: rgba(255, 211, 88, .98);
+  animation: tower-evolution-a-pulse 1.4s ease-in-out infinite;
+}
+
+.tower-evolution-aura--b {
+  --evolution-color: rgba(101, 214, 255, .98);
+  animation: tower-evolution-b-pulse 1.9s ease-in-out infinite;
+}
+
+.tower-visual--evolved .tower-art-sprite {
+  filter:
+    drop-shadow(0 0 7px var(--evolution-color))
+    drop-shadow(0 0 14px color-mix(in srgb, var(--evolution-color) 55%, transparent));
+}
+
+.tower-visual--evolution-a { --evolution-color: rgba(255, 211, 88, .98); }
+.tower-visual--evolution-b { --evolution-color: rgba(101, 214, 255, .98); }
+
+@keyframes tower-evolution-a-pulse {
+  0%, 100% { opacity: .62; transform: scale(.96) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.05) rotate(8deg); }
+}
+
+@keyframes tower-evolution-b-pulse {
+  0%, 100% { opacity: .62; transform: scale(1.02) rotate(0deg); }
+  50% { opacity: 1; transform: scale(.94) rotate(-8deg); }
+}
+
+.evolution-active-label {
+  display: grid;
+  gap: .16rem;
+  margin-top: .45rem;
+  padding: .48rem .55rem;
+  border: 1px solid rgba(244, 208, 111, .32);
+  background: rgba(87, 61, 18, .14);
+}
+
+.evolution-active-label strong {
+  color: #ffe49a;
+  font-size: .7rem;
+}
+
+.evolution-active-label small {
+  color: #b7c3cc;
+  font-size: .54rem;
+}
+
 .tower-progress-badge {
   pointer-events: none;
 }
