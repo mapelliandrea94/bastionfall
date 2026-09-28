@@ -985,7 +985,7 @@ function TowerAttackEffect({ shot, speed = 1 }) {
   );
 }
 
-function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled, onTowerMilestone }) {
+function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled, onEnemyKilledDetail, onTowerMilestone }) {
   const [cleanEnemyArt, setCleanEnemyArt] = useState({});
   useEffect(() => {
     let active = true;
@@ -1086,7 +1086,8 @@ function SoloRun({ run, onExit, onDamageBastion, onPhaseChange, onTimerTick, onS
       const enemyId = String(enemy?.id || '');
       if (enemyId && !defeatedEnemyIdsRef.current.has(enemyId)) {
         defeatedEnemyIdsRef.current.add(enemyId);
-        onEnemyKilled?.(enemy);
+        onEnemyKilled?.(enemyId);
+        onEnemyKilledDetail?.(enemy);
       }
     }
     return survivors;
@@ -4601,14 +4602,21 @@ function App() {
             return { ...current, gold: current.gold + gain };
           });
         }}
-        onEnemyKilled={(enemy) => {
+        onEnemyKilled={() => {
           setRunState((current) => {
             if (!current || current.phase === RUN_PHASES.ENDED) return current;
-            const killGold = current.mode === MODES.SINGLE_GATE ? getEnemyKillReward(enemy) : 0;
             return {
               ...current,
-              kills: Math.max(0, Number(current.kills) || 0) + 1,
-              gold: Math.max(0, Number(current.gold) || 0) + killGold
+              kills: Math.max(0, Number(current.kills) || 0) + 1
+            };
+          });
+        }}
+        onEnemyKilledDetail={(enemy) => {
+          setRunState((current) => {
+            if (!current || current.phase === RUN_PHASES.ENDED || current.mode !== MODES.SINGLE_GATE) return current;
+            return {
+              ...current,
+              gold: Math.max(0, Number(current.gold) || 0) + getEnemyKillReward(enemy)
             };
           });
         }}
