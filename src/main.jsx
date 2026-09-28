@@ -471,6 +471,21 @@ async function saveOnlineRunSnapshot(session, snapshot) {
   return { ok: true, payload };
 }
 
+async function clearOnlineRunSnapshot(session, run) {
+  if (!session?.access_token || !run?.matchToken) return { ok: false, error: 'snapshot_clear_not_ready' };
+  const response = await fetch('/api/run/snapshot/clear', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({ matchToken: run.matchToken })
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return { ok: false, error: payload?.error || 'snapshot_clear_failed' };
+  return { ok: true, payload };
+}
+
 async function fetchActiveOnlineRun(session) {
   if (!session?.access_token) return { ok: false, error: 'authentication_required' };
 
@@ -4634,9 +4649,11 @@ function App() {
 
     let cancelled = false;
 
-    completeServerRun(session, runState).then((result) => {
+    completeServerRun(session, runState).then(async (result) => {
       if (cancelled || !result.ok) return;
       setCompletedMatchId(runState.matchId);
+      await clearOnlineRunSnapshot(session, runState);
+      if (!cancelled) setOnlineRun((current) => current?.matchId === runState.matchId ? null : current);
     });
 
     return () => {
