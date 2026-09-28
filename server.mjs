@@ -909,23 +909,40 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     if (checkpoint.status !== 'active') {
       return res.status(409).json({ error: 'run_not_active' });
     }
-    if (wave !== Number(checkpoint.last_wave)) {
-      return res.status(400).json({ error: 'final_wave_checkpoint_mismatch' });
-    }
-    if (kills !== Number(checkpoint.last_kills)) {
-      return res.status(400).json({ error: 'final_kills_checkpoint_mismatch' });
-    }
-    if (gold !== Number(checkpoint.last_gold)) {
-      return res.status(400).json({ error: 'final_gold_checkpoint_mismatch' });
-    }
+
+    const canonicalWave = Number(checkpoint.last_wave);
+    const canonicalCoreHp = Number(checkpoint.last_core_hp);
+    const canonicalCoreMaxHp = Number(checkpoint.last_core_max_hp);
+    const canonicalGold = Number(checkpoint.last_gold);
+
     if (
-      coreHp !== Number(checkpoint.last_core_hp) ||
-      coreMaxHp !== Number(checkpoint.last_core_max_hp)
+      !Number.isInteger(canonicalCoreMaxHp) ||
+      canonicalCoreMaxHp < 1 ||
+      canonicalCoreMaxHp > 28 ||
+      !Number.isInteger(canonicalCoreHp) ||
+      canonicalCoreHp < 0 ||
+      canonicalCoreHp > canonicalCoreMaxHp
     ) {
-      return res.status(400).json({ error: 'final_core_checkpoint_mismatch' });
+      return res.status(409).json({ error: 'invalid_canonical_core_state' });
     }
-    if (!['bastion-destroyed', 'player-exit'].includes(resultReason)) {
-      return res.status(400).json({ error: 'invalid_standard_result_reason' });
+
+    const { data: killRows, error: killLedgerError } = await serverDb
+      .from('standard_run_wave_kills')
+      .select('claimed_kills')
+      .eq('match_id', identity.matchId);
+
+    if (killLedgerError) {
+      console.error('Standard kill ledger read failed:', killLedgerError.message);
+      return res.status(500).json({ error: 'kill_ledger_read_failed' });
+    }
+
+    const canonicalKills = (killRows || []).reduce(
+      (sum, row) => sum + Math.max(0, Number(row.claimed_kills) || 0),
+      0
+    );
+
+    if (canonicalKills !== Number(checkpoint.last_kills)) {
+      return res.status(409).json({ error: 'kill_ledger_mismatch' });
     }
 
     const checkpointReportedAtMs = Date.parse(checkpoint.last_reported_at || '');
@@ -934,56 +951,61 @@ app.post('/api/run/complete', requireUser, rateLimitUser('run-complete', { windo
     }
 
     const officialElapsedMs = Math.max(0, checkpointReportedAtMs - startedAtMs);
-    const validationBounds = getStandardRunValidationBounds(mode, identity.matchId, wave);
-    if (kills > validationBounds.maxKills) {
-      return res.status(400).json({ error: 'kills_exceed_wave_capacity' });
+    const validationBounds = getStandardRunValidationBounds(mode, identity.matchId, canonicalWave);
+    if (canonicalKills > validationBounds.maxKills) {
+      return res.status(409).json({ error: 'canonical_kills_exceed_wave_capacity' });
     }
 
     const minElapsedToleranceMs = 1500;
     if (officialElapsedMs + minElapsedToleranceMs < validationBounds.minElapsedMs) {
-      return res.status(400).json({ error: 'elapsed_time_below_wave_minimum' });
+      return res.status(409).json({ error: 'canonical_elapsed_time_below_wave_minimum' });
     }
 
-    const expectedScore = calculateRunScore({
-      wave,
-      elapsedMs: officialElapsedMs,
-      kills,
-      coreHp,
-      coreMaxHp
-    }).totalScore;
-
-    canonicalRun = Object.freeze({
-      elapsedMs: Math.floor(officialElapsedMs),
-      score: expectedScore
-    });
-
+    const canonicalReason = canonicalCoreHp === 0 ? 'bastion-destroyed' : 'player-exit';
     const endedAt = new Date(checkpointReportedAtMs).toISOString();
 
     const { data: recordRows, error: recordError } = await serverDb.rpc(
-      'persist_verified_standard_result_v2',
+      'persist_verified_standard_result_v3',
       {
         p_match_id: identity.matchId,
         p_mode: mode,
-        p_result_reason: resultReason,
-        p_wave: wave,
-        p_elapsed_ms: Math.floor(officialElapsedMs),
-        p_score: expectedScore,
-        p_gold: gold,
-        p_core_hp: coreHp,
-        p_core_max_hp: coreMaxHp,
-        p_kills: kills,
+        p_result_reason: canonicalReason,
+        p_gold: canonicalGold,
+        p_core_hp: canonicalCoreHp,
+        p_core_max_hp: canonicalCoreMaxHp,
         p_started_at: identity.startedAt,
         p_ended_at: endedAt
       }
     );
 
     if (recordError) {
+      const message = String(recordError.message || '');
+      if (message.includes('kill_ledger_mismatch')) {
+        return res.status(409).json({ error: 'kill_ledger_mismatch' });
+      }
+      if (message.includes('invalid_core_state')) {
+        return res.status(409).json({ error: 'invalid_canonical_core_state' });
+      }
+      if (message.includes('canonical_end_time_mismatch')) {
+        return res.status(409).json({ error: 'canonical_end_time_mismatch' });
+      }
       console.error('Standard record persistence failed:', recordError.message);
       return res.status(500).json({ error: 'record_persist_failed' });
     }
 
     persistedRecord = Array.isArray(recordRows) ? recordRows[0] ?? null : recordRows;
     earnedShards = Number(persistedRecord?.earned_shards ?? 0);
+
+    canonicalRun = Object.freeze({
+      wave: Number(persistedRecord?.canonical_wave ?? canonicalWave),
+      kills: Number(persistedRecord?.canonical_kills ?? canonicalKills),
+      elapsedMs: Number(persistedRecord?.canonical_elapsed_ms ?? officialElapsedMs),
+      score: Number(persistedRecord?.canonical_score ?? 0),
+      gold: canonicalGold,
+      coreHp: canonicalCoreHp,
+      coreMaxHp: canonicalCoreMaxHp,
+      resultReason: canonicalReason
+    });
 
     const profileRead = await req.db
       .from('profiles')
