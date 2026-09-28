@@ -39,6 +39,8 @@ jobs:
         run: node tests/tower-synergy-feedback.mjs
       - name: Tower Synergy Visual QA
         run: node tests/tower-synergy-visual.mjs
+      - name: Risk Reward Visual QA
+        run: node tests/risk-reward-visual.mjs
       - name: Last Bastion Sync QA
         run: node tests/last-bastion-sync.mjs
       - name: Last Bastion Final Result QA
