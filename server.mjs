@@ -969,7 +969,7 @@ app.get('/api/profile', requireUser, async (req, res) => {
 
 app.get('/api/leaderboards/:mode', requireUser, async (req, res) => {
   const mode = String(req.params?.mode || '').trim();
-  if (!['single-gate', 'tri-gate'].includes(mode)) {
+  if (!['single-gate', 'tri-gate', 'tft-shop'].includes(mode)) {
     return res.status(400).json({ error: 'unsupported_leaderboard_mode' });
   }
 
