@@ -84,8 +84,18 @@ export function getTowerStatSummary(stat, tower = {}) {
 }
 
 export function getTowerRunAwards(stats = {}, towers = []) {
-  const summaries = towers
-    .map((tower) => ({ tower, stat: getTowerStatSummary(stats[tower.id] ?? createTowerRunStat(tower), tower) }))
+  const towerById = new Map((towers ?? []).map((tower) => [String(tower.id), tower]));
+  const allIds = new Set([...Object.keys(stats ?? {}), ...towerById.keys()]);
+  const summaries = [...allIds]
+    .map((id) => {
+      const stat = stats?.[id] ?? null;
+      const tower = towerById.get(id) ?? {
+        id,
+        defenseId: stat?.defenseId ?? '',
+        investedGold: stat?.investedGold ?? 0
+      };
+      return { tower, stat: getTowerStatSummary(stat ?? createTowerRunStat(tower), tower) };
+    })
     .filter((entry) => entry.stat.damage > 0 || entry.stat.supportDamage > 0 || entry.stat.kills > 0);
 
   const maxBy = (key) => summaries.reduce((best, entry) =>
