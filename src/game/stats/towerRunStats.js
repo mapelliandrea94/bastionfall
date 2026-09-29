@@ -29,6 +29,7 @@ export function normalizeTowerRunStats(input = {}) {
       supportDamage: Math.max(0, Number(stat?.supportDamage ?? 0)),
       slowAppliedMs: Math.max(0, Number(stat?.slowAppliedMs ?? 0)),
       attacks: Math.max(0, Math.floor(Number(stat?.attacks ?? 0))),
+      investedGold: Math.max(0, Number(stat?.investedGold ?? 0)),
       firstActiveAtMs: Math.max(0, Number(stat?.firstActiveAtMs ?? 0)),
       lastActiveAtMs: Math.max(0, Number(stat?.lastActiveAtMs ?? 0))
     }])
