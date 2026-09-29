@@ -1120,6 +1120,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   );
   const towerRunStatsRef = useRef(initialTowerRunStats);
   const [towerRunStatsView, setTowerRunStatsView] = useState(initialTowerRunStats);
+  const [towerStatsOpen, setTowerStatsOpen] = useState(false);
   const towerStatsDirtyRef = useRef(false);
   const recordTowerTelemetry = (tower, delta = {}, nowMs = getWaveNow()) => {
     if (!tower?.id) return;
@@ -1150,6 +1151,23 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     waveClockRef.current.speed = next;
     setWaveSpeed(next);
   };
+
+  useEffect(() => {
+    const flush = () => {
+      const snapshot = { ...towerRunStatsRef.current };
+      if (towerStatsDirtyRef.current) {
+        setTowerRunStatsView(snapshot);
+        towerStatsDirtyRef.current = false;
+      }
+      onTowerStatsUpdate?.(snapshot, placedDefenses);
+    };
+    flush();
+    const intervalId = window.setInterval(flush, 500);
+    return () => {
+      window.clearInterval(intervalId);
+      flush();
+    };
+  }, [placedDefenses, onTowerStatsUpdate]);
 
   useEffect(() => {
     const restoredSnapshot = matchingOnlineSnapshot ?? matchingTftSnapshot;
@@ -1550,7 +1568,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       bossSummonFiredKeys: Array.from(bossSummonFiredRef.current),
       towerAttackChargeById: { ...towerAttackChargeRef.current },
       blessingRerollCount,
-      selectedBlessingPreviewId
+      selectedBlessingPreviewId,
+      towerRunStats: towerRunStatsRef.current
     });
   }, [
     run,
@@ -1597,7 +1616,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       waveTimelineStartedAt: waveTimelineStartedAtRef.current,
       towerAttackChargeById: { ...towerAttackChargeRef.current },
       blessingRerollCount,
-      selectedBlessingPreviewId
+      selectedBlessingPreviewId,
+      towerRunStats: towerRunStatsRef.current
     };
 
     if (localSaveTimerRef.current != null) return;
@@ -5229,6 +5249,12 @@ function App() {
               ...current,
               gold: Math.max(0, Number(current.gold) || 0) + getEnemyKillReward(enemy)
             };
+          });
+        }}
+        onTowerStatsUpdate={(stats, towers) => {
+          setRunState((current) => {
+            if (!current || current.phase === RUN_PHASES.ENDED) return current;
+            return { ...current, towerRunStats: stats, towerLoadout: towers };
           });
         }}
         onTowerMilestone={(threshold) => {
