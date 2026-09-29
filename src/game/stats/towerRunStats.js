@@ -12,6 +12,7 @@ export function createTowerRunStat(tower = {}, nowMs = 0) {
     supportDamage: 0,
     slowAppliedMs: 0,
     attacks: 0,
+    investedGold: Math.max(0, Number(tower.investedGold ?? 0)),
     firstActiveAtMs: Number(nowMs) || 0,
     lastActiveAtMs: Number(nowMs) || 0
   };
@@ -47,7 +48,8 @@ export function recordTowerStat(stats, tower, delta = {}, nowMs = 0) {
     bossDamage: Math.max(0, Number(raw?.bossDamage ?? 0)),
     supportDamage: Math.max(0, Number(raw?.supportDamage ?? 0)),
     slowAppliedMs: Math.max(0, Number(raw?.slowAppliedMs ?? 0)),
-    attacks: Math.max(0, Math.floor(Number(raw?.attacks ?? 0)))
+    attacks: Math.max(0, Math.floor(Number(raw?.attacks ?? 0))),
+    investedGold: Math.max(0, Number(raw?.investedGold ?? tower.investedGold ?? 0))
   };
   next[id] = {
     ...current,
@@ -59,6 +61,7 @@ export function recordTowerStat(stats, tower, delta = {}, nowMs = 0) {
     supportDamage: current.supportDamage + Math.max(0, Number(delta.supportDamage ?? 0)),
     slowAppliedMs: current.slowAppliedMs + Math.max(0, Number(delta.slowAppliedMs ?? 0)),
     attacks: current.attacks + Math.max(0, Math.floor(Number(delta.attacks ?? 0))),
+    investedGold: Math.max(current.investedGold, Math.max(0, Number(tower.investedGold ?? 0))),
     firstActiveAtMs: current.firstActiveAtMs || Number(nowMs) || 0,
     lastActiveAtMs: Math.max(current.lastActiveAtMs, Number(nowMs) || 0)
   };
@@ -67,7 +70,7 @@ export function recordTowerStat(stats, tower, delta = {}, nowMs = 0) {
 
 export function getTowerStatSummary(stat, tower = {}) {
   const damage = Math.max(0, Number(stat?.damage ?? 0));
-  const investedGold = Math.max(0, Number(tower?.investedGold ?? 0));
+  const investedGold = Math.max(0, Number(stat?.investedGold ?? tower?.investedGold ?? 0));
   const first = Math.max(0, Number(stat?.firstActiveAtMs ?? 0));
   const last = Math.max(first, Number(stat?.lastActiveAtMs ?? first));
   const activeSeconds = Math.max(1, (last - first) / 1000);
