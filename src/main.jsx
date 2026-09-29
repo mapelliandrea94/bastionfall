@@ -1091,8 +1091,12 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const [miniObjectiveFeedback, setMiniObjectiveFeedback] = useState('');
   const [synergyFeedback, setSynergyFeedback] = useState(null);
   const [suddenStageTransition, setSuddenStageTransition] = useState(null);
-  const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(null);
-  const [blessingRerollCount, setBlessingRerollCount] = useState(0);
+  const [selectedBlessingPreviewId, setSelectedBlessingPreviewId] = useState(
+    () => matchingOnlineSnapshot?.selectedBlessingPreviewId ?? matchingTftSnapshot?.selectedBlessingPreviewId ?? null
+  );
+  const [blessingRerollCount, setBlessingRerollCount] = useState(
+    () => matchingOnlineSnapshot?.blessingRerollCount ?? matchingTftSnapshot?.blessingRerollCount ?? 0
+  );
   const [tftRollIndex, setTftRollIndex] = useState(() => matchingOnlineSnapshot?.tftRollIndex ?? matchingTftSnapshot?.tftRollIndex ?? 0);
   const [tftShopLocked, setTftShopLocked] = useState(() => matchingOnlineSnapshot?.tftShopLocked ?? matchingTftSnapshot?.tftShopLocked ?? false);
   const [tftPurchasedSlotIds, setTftPurchasedSlotIds] = useState(
@@ -1521,7 +1525,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       queuedWaveNumber: queuedWaveRef.current,
       spawnedWaveNumber: spawnedWaveRef.current,
       bossSummonFiredKeys: Array.from(bossSummonFiredRef.current),
-      towerAttackChargeById: { ...towerAttackChargeRef.current }
+      towerAttackChargeById: { ...towerAttackChargeRef.current },
+      blessingRerollCount,
+      selectedBlessingPreviewId
     });
   }, [
     run,
@@ -1538,7 +1544,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     preparationRemaining,
     waveSpeed,
     riskRewardTier,
-    tftAutoStartEnabled
+    tftAutoStartEnabled,
+    blessingRerollCount,
+    selectedBlessingPreviewId
   ]);
 
   useEffect(() => {
@@ -1564,7 +1572,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       spawnedWaveNumber: spawnedWaveRef.current,
       bossSummonFiredKeys: Array.from(bossSummonFiredRef.current),
       waveTimelineStartedAt: waveTimelineStartedAtRef.current,
-      towerAttackChargeById: { ...towerAttackChargeRef.current }
+      towerAttackChargeById: { ...towerAttackChargeRef.current },
+      blessingRerollCount,
+      selectedBlessingPreviewId
     };
 
     if (localSaveTimerRef.current != null) return;
