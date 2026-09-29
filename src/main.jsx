@@ -3403,7 +3403,8 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             data-guardian-shrine-range-multiplier={GUARDIAN_SHRINE.nearbyDefenseRangeMultiplier}
             data-guardian-shrine-preview-damage={GUARDIAN_SHRINE_DAMAGE_PREVIEW.finalDamage}
             data-guardian-shrine-preview-range={GUARDIAN_SHRINE_RANGE_PREVIEW.modifiedRange}
-            data-guardian-shrine-pass={GUARDIAN_SHRINE_FIXTURE.activeExpected === GUARDIAN_SHRINE_FIXTURE.activeActual && GUARDIAN_SHRINE_FIXTURE.mitigatedExpected === GUARDIAN_SHRINE_FIXTURE.mitigatedActual && GUARDIAN_SHRINE_FIXTURE.outOfRangeExpected === GUARDIAN_SHRINE_FIXTURE.outOfRangeActual && GUARDIAN_SHRINE_FIXTURE.rangeIncreased === true}
+            data-guardian-shrine-foundation-pass={GUARDIAN_SHRINE_FIXTURE.activeExpected === GUARDIAN_SHRINE_FIXTURE.activeActual && GUARDIAN_SHRINE_FIXTURE.mitigatedExpected === GUARDIAN_SHRINE_FIXTURE.mitigatedActual && GUARDIAN_SHRINE_FIXTURE.outOfRangeExpected === GUARDIAN_SHRINE_FIXTURE.outOfRangeActual && GUARDIAN_SHRINE_FIXTURE.rangeIncreased === true}
+             data-guardian-shrine-live="false"
             data-spend-curve-version={ECONOMY_SPEND_CURVE.version}
             data-spend-curve-opening-reserve={OPENING_ECONOMY_RISK.reserve}
             data-spend-curve-opening-mine-share={OPENING_ECONOMY_RISK.mineShare}
