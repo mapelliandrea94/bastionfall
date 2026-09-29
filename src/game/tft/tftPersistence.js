@@ -36,7 +36,8 @@ export function createTftRunSnapshot({
   bossSummonFiredKeys = [],
   towerAttackChargeById = {},
   blessingRerollCount = 0,
-  selectedBlessingPreviewId = null
+  selectedBlessingPreviewId = null,
+  towerRunStats = {}
 } = {}) {
   if (!run || !TFT_PERSISTENCE.supportedModes.includes(run.mode)) return null;
 
@@ -85,7 +86,12 @@ export function createTftRunSnapshot({
       )
     ),
     blessingRerollCount: clampInt(blessingRerollCount, 0, 99, 0),
-    selectedBlessingPreviewId: selectedBlessingPreviewId == null ? null : String(selectedBlessingPreviewId)
+    selectedBlessingPreviewId: selectedBlessingPreviewId == null ? null : String(selectedBlessingPreviewId),
+    towerRunStats: Object.freeze(
+      Object.fromEntries(
+        Object.entries(towerRunStats ?? {}).map(([id, stat]) => [String(id), Object.freeze({ ...stat })])
+      )
+    )
   });
 }
 
@@ -149,7 +155,10 @@ export function normalizeTftRunSnapshot(snapshot) {
         .map(([id, value]) => [String(id), Math.max(0, Number(value))])
     ),
     blessingRerollCount: clampInt(snapshot.blessingRerollCount, 0, 99, 0),
-    selectedBlessingPreviewId: snapshot.selectedBlessingPreviewId == null ? null : String(snapshot.selectedBlessingPreviewId)
+    selectedBlessingPreviewId: snapshot.selectedBlessingPreviewId == null ? null : String(snapshot.selectedBlessingPreviewId),
+    towerRunStats: Object.fromEntries(
+      Object.entries(snapshot.towerRunStats ?? {}).map(([id, stat]) => [String(id), { ...stat }])
+    )
   };
 }
 
@@ -213,7 +222,8 @@ export function getTftPersistenceFixtures() {
     bossSummonFiredKeys: ['10:0'],
     towerAttackChargeById: { 'field:copy-a': 375 },
     blessingRerollCount: 2,
-    selectedBlessingPreviewId: 'fixture-blessing'
+    selectedBlessingPreviewId: 'fixture-blessing',
+    towerRunStats: { 'tower-a': { towerId: 'tower-a', defenseId: 'human-aa', damage: 1234, kills: 4 } }
   });
   const restored = normalizeTftRunSnapshot(JSON.parse(JSON.stringify(source)));
   const corrupt = normalizeTftRunSnapshot({ version: 999, run: { mode: 'tft-shop' } });
@@ -247,7 +257,9 @@ export function getTftPersistenceFixtures() {
       restored?.spawnedWaveNumber === 9 &&
       restored?.towerAttackChargeById?.['field:copy-a'] === 375 &&
       restored?.blessingRerollCount === 2 &&
-      restored?.selectedBlessingPreviewId === 'fixture-blessing',
+      restored?.selectedBlessingPreviewId === 'fixture-blessing' &&
+      restored?.towerRunStats?.['tower-a']?.damage === 1234 &&
+      restored?.towerRunStats?.['tower-a']?.kills === 4,
     suddenSiegeSupported: sudden?.run?.mode === 'sudden-siege',
     invalidVersionRejected: corrupt === null
   });
