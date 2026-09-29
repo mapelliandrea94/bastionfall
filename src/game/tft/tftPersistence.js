@@ -34,7 +34,9 @@ export function createTftRunSnapshot({
   queuedWaveNumber = null,
   spawnedWaveNumber = null,
   bossSummonFiredKeys = [],
-  towerAttackChargeById = {}
+  towerAttackChargeById = {},
+  blessingRerollCount = 0,
+  selectedBlessingPreviewId = null
 } = {}) {
   if (!run || !TFT_PERSISTENCE.supportedModes.includes(run.mode)) return null;
 
@@ -81,7 +83,9 @@ export function createTftRunSnapshot({
           .filter(([id, value]) => id && Number.isFinite(Number(value)))
           .map(([id, value]) => [String(id), Math.max(0, Number(value))])
       )
-    )
+    ),
+    blessingRerollCount: clampInt(blessingRerollCount, 0, 99, 0),
+    selectedBlessingPreviewId: selectedBlessingPreviewId == null ? null : String(selectedBlessingPreviewId)
   });
 }
 
@@ -143,7 +147,9 @@ export function normalizeTftRunSnapshot(snapshot) {
       Object.entries(snapshot.towerAttackChargeById ?? {})
         .filter(([id, value]) => id && Number.isFinite(Number(value)))
         .map(([id, value]) => [String(id), Math.max(0, Number(value))])
-    )
+    ),
+    blessingRerollCount: clampInt(snapshot.blessingRerollCount, 0, 99, 0),
+    selectedBlessingPreviewId: snapshot.selectedBlessingPreviewId == null ? null : String(snapshot.selectedBlessingPreviewId)
   };
 }
 
@@ -205,7 +211,9 @@ export function getTftPersistenceFixtures() {
     queuedWaveNumber: 9,
     spawnedWaveNumber: 9,
     bossSummonFiredKeys: ['10:0'],
-    towerAttackChargeById: { 'field:copy-a': 375 }
+    towerAttackChargeById: { 'field:copy-a': 375 },
+    blessingRerollCount: 2,
+    selectedBlessingPreviewId: 'fixture-blessing'
   });
   const restored = normalizeTftRunSnapshot(JSON.parse(JSON.stringify(source)));
   const corrupt = normalizeTftRunSnapshot({ version: 999, run: { mode: 'tft-shop' } });
@@ -237,7 +245,9 @@ export function getTftPersistenceFixtures() {
       restored?.waveTimelineStartedAt === 900 &&
       restored?.queuedWaveNumber === 9 &&
       restored?.spawnedWaveNumber === 9 &&
-      restored?.towerAttackChargeById?.['field:copy-a'] === 375,
+      restored?.towerAttackChargeById?.['field:copy-a'] === 375 &&
+      restored?.blessingRerollCount === 2 &&
+      restored?.selectedBlessingPreviewId === 'fixture-blessing',
     suddenSiegeSupported: sudden?.run?.mode === 'sudden-siege',
     invalidVersionRejected: corrupt === null
   });
