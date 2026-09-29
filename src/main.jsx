@@ -1962,7 +1962,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
           const attackInterval = getEffectiveTowerAttackInterval(definition, placed, combatPlacedDefenses, defenseDefinitions);
           const previousCharge = Math.max(0, Number(towerAttackChargeRef.current[placed.id] ?? attackInterval));
-          const attackCharge = Math.min(attackInterval * 48, previousCharge + combatDeltaMs);
+          const attackCharge = Math.max(0, previousCharge + combatDeltaMs);
           towerAttackChargeRef.current[placed.id] = attackCharge;
           if (attackCharge < attackInterval) continue;
 
