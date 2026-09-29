@@ -21,7 +21,8 @@ export const WAVE_DIRECTOR = Object.freeze({
     SINGLE_GATE: 'single-gate',
     TRI_GATE: 'tri-gate',
     LAST_BASTION: 'last-bastion',
-    TFT_SHOP: 'tft-shop'
+    TFT_SHOP: 'tft-shop',
+    SUDDEN_SIEGE: 'sudden-siege'
   })
 });
 
@@ -279,6 +280,7 @@ export function getWaveDirectorFixtures() {
   const late = generateWavePlan({ seed: 'late', waveNumber: 42, mode: 'single-gate' });
   const triA = generateWavePlan({ seed: 'tri', waveNumber: 24, mode: 'tri-gate' });
   const triB = generateWavePlan({ seed: 'tri', waveNumber: 24, mode: 'tri-gate' });
+  const sudden = generateWavePlan({ seed: 'sudden', waveNumber: 24, mode: 'sudden-siege' });
 
   return Object.freeze({
     deterministicSameSeed: fingerprint(sameA) === fingerprint(sameB),
@@ -303,6 +305,7 @@ export function getWaveDirectorFixtures() {
     budgetRespected: [sameA, early, airIntro, mixed, late, triA].every((plan) => plan.spentThreat <= plan.budget + 0.001),
     triGateDeterministic: fingerprint(triA) === fingerprint(triB),
     triGateHasThreeLanes: triA.laneDistribution?.lanes?.length === 3,
+    suddenSiegeModePreserved: sudden.mode === WAVE_DIRECTOR.modes.SUDDEN_SIEGE,
     endlessWaveValid: late.enemyCount > 0 && late.budget > 0
   });
 }
