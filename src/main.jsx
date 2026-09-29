@@ -1153,21 +1153,23 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   };
 
   useEffect(() => {
+    onTowerStatsUpdate?.({ ...towerRunStatsRef.current }, placedDefenses);
+  }, [placedDefenses]);
+
+  useEffect(() => {
     const flush = () => {
+      if (!towerStatsDirtyRef.current) return;
       const snapshot = { ...towerRunStatsRef.current };
-      if (towerStatsDirtyRef.current) {
-        setTowerRunStatsView(snapshot);
-        towerStatsDirtyRef.current = false;
-      }
+      setTowerRunStatsView(snapshot);
+      towerStatsDirtyRef.current = false;
       onTowerStatsUpdate?.(snapshot, placedDefenses);
     };
-    flush();
     const intervalId = window.setInterval(flush, 500);
     return () => {
       window.clearInterval(intervalId);
       flush();
     };
-  }, [placedDefenses, onTowerStatsUpdate]);
+  }, [placedDefenses]);
 
   useEffect(() => {
     const restoredSnapshot = matchingOnlineSnapshot ?? matchingTftSnapshot;
