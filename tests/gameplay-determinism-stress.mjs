@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { getTftPersistenceFixtures, createTftRunSnapshot, normalizeTftRunSnapshot } from '../src/game/tft/tftPersistence.js';
 import { getOfflineRunEngineFixtures } from '../src/game/run/offlineRunEngine.js';
+import { getTowerRunStatsFixtures } from '../src/game/stats/towerRunStats.js';
 
 const persistence = getTftPersistenceFixtures();
 assert.equal(persistence.maxProgressPersists, true, '14/14 tower progress must survive resume');
@@ -39,6 +40,12 @@ assert.equal(normalizedStress.spawnQueue.length, 50, 'stress snapshot must prese
 assert.equal(normalizedStress.waveSpeed, 2, 'stress snapshot must preserve x2');
 assert.equal(normalizedStress.waveTimelineStartedAt, 1000, 'stress snapshot must preserve wave origin');
 assert.equal(normalizedStress.towerAttackChargeById['field:b'], 456, 'stress snapshot must preserve tower cooldown charge');
+
+const towerStats = getTowerRunStatsFixtures();
+assert.equal(towerStats.damageExpected, towerStats.damageActual, 'tower stats must accumulate damage');
+assert.equal(towerStats.killsExpected, towerStats.killsActual, 'tower stats must accumulate kills');
+assert.equal(towerStats.damagePerGoldExpected, towerStats.damagePerGoldActual, 'tower stats must calculate damage efficiency');
+assert.equal(towerStats.supportExpected, towerStats.supportActual, 'tower stats must preserve support contribution');
 
 const engine = getOfflineRunEngineFixtures();
 assert.equal(engine.x2AdvancesDoubleVirtualTime, true, 'x2 must advance the full simulation clock exactly twice as fast');
