@@ -520,7 +520,9 @@ function activeStep(snapshot, dtMs, engine) {
     snapshot.activeEnemies = snapshot.activeEnemies.filter((enemy) => Number(enemy.hp ?? 0) > 0);
   }
 
-  const escaped = snapshot.activeEnemies.filter((enemy) => Number(enemy.progress ?? 0) >= 1);
+  const escaped = snapshot.activeEnemies.filter(
+    (enemy) => Number(enemy?.hp ?? 0) > 0 && Number(enemy.progress ?? 0) >= 1
+  );
   if (escaped.length > 0) {
     const rawDamage = escaped.reduce((sum, enemy) => {
       const baseDamage = Number(enemy?.bastionDamage ?? ctx.scaling.bastionDamage ?? 1);
