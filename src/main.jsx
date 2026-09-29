@@ -73,6 +73,7 @@ import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/ru
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
 import { getEndlessMilestone } from './game/run/endlessMilestones.js';
 import { ACCOUNT_PROGRESSION, getAccountProgress } from './game/profile/accountProgression.js';
+import { getTowerRunAwards, getTowerRunStatSummary, getTowerRunStatsFixtures, normalizeTowerRunStats, recordTowerStat } from './game/stats/towerRunStats.js';
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
 import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
 import { ENEMY_ROSTER, createRosterEnemyState, getEnemyRosterFixtures } from './game/enemies/enemyRoster.js';
@@ -1035,7 +1036,7 @@ function TowerAttackEffect({ shot, speed = 1 }) {
   );
 }
 
-function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled, onEnemyKilledDetail, onTowerMilestone }) {
+function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamageBastion, onPhaseChange, onTimerTick, onSpendGold, onGainGold, onEnemyKilled, onEnemyKilledDetail, onTowerMilestone, onTowerStatsUpdate }) {
   const [cleanEnemyArt, setCleanEnemyArt] = useState({});
   useEffect(() => {
     let active = true;
@@ -1111,6 +1112,20 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const [waveSpeed, setWaveSpeed] = useState(() =>
     (matchingOnlineSnapshot?.waveSpeed ?? matchingTftSnapshot?.waveSpeed) === 2 ? 2 : 1
   );
+  const initialTowerRunStats = normalizeTowerRunStats(
+    matchingOnlineSnapshot?.towerRunStats ??
+    matchingTftSnapshot?.towerRunStats ??
+    run?.towerRunStats ??
+    {}
+  );
+  const towerRunStatsRef = useRef(initialTowerRunStats);
+  const [towerRunStatsView, setTowerRunStatsView] = useState(initialTowerRunStats);
+  const towerStatsDirtyRef = useRef(false);
+  const recordTowerTelemetry = (tower, delta = {}, nowMs = getWaveNow()) => {
+    if (!tower?.id) return;
+    towerRunStatsRef.current = recordTowerStat(towerRunStatsRef.current, tower, delta, nowMs);
+    towerStatsDirtyRef.current = true;
+  };
   const waveClockRef = useRef({
     real: performance.now(),
     virtual: performance.now(),
