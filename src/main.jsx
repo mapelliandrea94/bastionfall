@@ -4329,6 +4329,10 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
 
   const isLastBastion = snapshot.mode === MODES.LAST_BASTION;
   const lastBastionWon = isLastBastion && snapshot.won === true;
+  const towerAwards = getTowerRunAwards(snapshot.towerRunStats ?? {}, snapshot.towerLoadout ?? []);
+  const awardName = (entry) => entry
+    ? (NORMAL_MODE_TOWERS_BY_ID[entry.tower?.defenseId]?.name ?? entry.tower?.defenseId ?? 'Tower')
+    : '—';
 
   return (
     <Shell
@@ -4370,6 +4374,18 @@ function ResultsScreen({ snapshot, personalBestResult, onRetry, onBack }) {
         <div className="stat-card"><span>{t('bastion')}</span><strong>{snapshot.coreHp} / {snapshot.coreMaxHp}</strong><small>{t('finalCoreState')}</small></div>
         <div className="stat-card"><span>{t('mode')}</span><strong>{snapshot.mode === MODES.SINGLE_GATE ? 'SINGLE GATE' : snapshot.mode}</strong><small>{t('runFormat')}</small></div>
       </div>
+
+      {(towerAwards.mostDamage || towerAwards.bestSupport) && (
+        <section className="tower-awards" aria-label="Tower performance awards">
+          <div className="tower-awards__title">BUILD MVP</div>
+          <div className="tower-awards__grid">
+            <div><span>Most Damage</span><strong>{awardName(towerAwards.mostDamage)}</strong><small>{Math.round(towerAwards.mostDamage?.stat?.damage ?? 0).toLocaleString()} DMG</small></div>
+            <div><span>Most Efficient</span><strong>{awardName(towerAwards.mostEfficient)}</strong><small>{towerAwards.mostEfficient?.stat?.damagePerGold ?? 0} DMG/G</small></div>
+            <div><span>Boss Killer</span><strong>{awardName(towerAwards.bossKiller)}</strong><small>{Math.round(towerAwards.bossKiller?.stat?.bossDamage ?? 0).toLocaleString()} boss DMG</small></div>
+            <div><span>Best Support</span><strong>{awardName(towerAwards.bestSupport)}</strong><small>+{Math.round(towerAwards.bestSupport?.stat?.supportDamage ?? 0).toLocaleString()} generated DMG</small></div>
+          </div>
+        </section>
+      )}
 
       {snapshot.reason === RUN_END_REASONS.BASTION_DESTROYED && (
         <section className="death-recap" aria-label="Death recap">
