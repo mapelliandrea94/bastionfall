@@ -36,9 +36,19 @@ export function normalizeTowerRunStats(input = {}) {
 
 export function recordTowerStat(stats, tower, delta = {}, nowMs = 0) {
   if (!tower?.id) return stats;
-  const next = normalizeTowerRunStats(stats);
+  const next = { ...(stats ?? {}) };
   const id = String(tower.id);
-  const current = next[id] ?? createTowerRunStat(tower, nowMs);
+  const raw = next[id] ?? createTowerRunStat(tower, nowMs);
+  const current = {
+    ...createTowerRunStat(tower, nowMs),
+    ...raw,
+    damage: Math.max(0, Number(raw?.damage ?? 0)),
+    kills: Math.max(0, Math.floor(Number(raw?.kills ?? 0))),
+    bossDamage: Math.max(0, Number(raw?.bossDamage ?? 0)),
+    supportDamage: Math.max(0, Number(raw?.supportDamage ?? 0)),
+    slowAppliedMs: Math.max(0, Number(raw?.slowAppliedMs ?? 0)),
+    attacks: Math.max(0, Math.floor(Number(raw?.attacks ?? 0)))
+  };
   next[id] = {
     ...current,
     towerId: id,
