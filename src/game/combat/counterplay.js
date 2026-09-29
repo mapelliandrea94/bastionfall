@@ -41,13 +41,9 @@ export function getDamageProfile(damageType) {
 }
 
 export function canDefenseTargetEnemy(defense, enemy) {
-  if (!enemy?.airborne) return true;
-
-  if (defense?.counterType) {
-    return defense.counterType === 'air';
-  }
-
-  return COUNTERPLAY_MATRIX.antiAirByDefenseId[defense?.id] ?? false;
+  // All towers may acquire any enemy that is physically in range.
+  // Anti-air identity is expressed by counter multipliers, not hard target locks.
+  return Boolean(defense && enemy);
 }
 
 export function resolveDamagePacket(enemy, amount, damageType = DAMAGE_TYPES.PHYSICAL) {
@@ -91,9 +87,9 @@ export function getCounterplayFixtures() {
     archerVsFlying: canDefenseTargetEnemy({ id: 'archer' }, flying),
     cannonVsFlying: canDefenseTargetEnemy({ id: 'cannon' }, flying),
     barracksVsFlying: canDefenseTargetEnemy({ id: 'barracks' }, flying),
-    airborneRestrictionsPreserved:
+    allDefensesCanAcquireAirborne:
       canDefenseTargetEnemy({ id: 'archer' }, flying) === true &&
-      canDefenseTargetEnemy({ id: 'cannon' }, flying) === false &&
-      canDefenseTargetEnemy({ id: 'barracks' }, flying) === false
+      canDefenseTargetEnemy({ id: 'cannon' }, flying) === true &&
+      canDefenseTargetEnemy({ id: 'barracks' }, flying) === true
   });
 }
