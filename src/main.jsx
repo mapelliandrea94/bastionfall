@@ -45,7 +45,7 @@ import { getTargetingFixtures, getTargetingValue, resolveTarget } from './game/c
 import { ATTACK_FEEDBACK, getAttackFeedbackFixtures, getAttackInstrumentation } from './game/combat/attackFeedback.js';
 import { COUNTERPLAY_MATRIX, getCounterplayFixtures } from './game/combat/counterplay.js';
 import { FACTION_COUNTER_ENGINE, getFactionCounterFixtures } from './game/combat/factionCounters.js';
-import { getBaseTowerCombatFixtures, getEffectiveTowerAttackInterval, getTowerHitDamage, getTowerTargets, isTowerInsideBuffAura } from './game/combat/baseTowerCombat.js';
+import { getBaseTowerCombatFixtures, getEffectiveTowerAttackInterval, getTowerBuffMultiplier, getTowerHitDamage, getTowerTargets, isTowerInsideBuffAura } from './game/combat/baseTowerCombat.js';
 import { SUPPORT_STACKING, applyStrongestArmorShred, applyStrongestTimedEffect, getSupportStackingFixtures } from './game/combat/supportStacking.js';
 import { WAVE_THREAT_MODEL, composeWaveByThreatBudget, getThreatModelFixtures } from './game/balance/waveThreat.js';
 import { DIFFICULTY_BANDS, getBandWaveScaling, getDifficultyBandFixtures } from './game/balance/difficultyBands.js';
@@ -1239,6 +1239,14 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       const enemyId = String(enemy?.id || '');
       if (enemyId && !defeatedEnemyIdsRef.current.has(enemyId)) {
         defeatedEnemyIdsRef.current.add(enemyId);
+        const sourceTowerId = enemy?.lastDamageSourceTowerId ?? enemy?.statusEffects?.poisonSourceTowerId ?? null;
+        if (sourceTowerId) {
+          const sourceTower = placedDefenses.find((tower) => tower.id === sourceTowerId) ?? {
+            id: sourceTowerId,
+            defenseId: towerRunStatsRef.current?.[sourceTowerId]?.defenseId ?? ''
+          };
+          recordTowerTelemetry(sourceTower, { kills: 1 });
+        }
         onEnemyKilled?.(enemyId);
         onEnemyKilledDetail?.(enemy);
       }
