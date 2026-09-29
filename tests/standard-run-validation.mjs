@@ -83,3 +83,10 @@ console.log('Standard run validation foundation QA PASS', {
   waveCheckpoints: true,
   completionValidation: true
 });
+
+
+const serverSource = fs.readFileSync(new URL('../server.mjs', import.meta.url), 'utf8');
+assert(
+  serverSource.includes("['single-gate', 'tri-gate', 'tft-shop'].includes(mode)"),
+  'Leaderboard endpoint must support TFT Shop'
+);
