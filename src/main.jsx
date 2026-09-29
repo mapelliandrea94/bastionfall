@@ -3390,13 +3390,15 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             data-gold-mine-income={GOLD_MINE.incomePerWave}
             data-gold-mine-break-even={getGoldMineBreakEvenWave()}
             data-gold-mine-opportunity-count={GOLD_MINE_OPPORTUNITY.affordableAlternatives.length}
-            data-gold-mine-pass={GOLD_MINE_FIXTURE.breakEvenWaveExpected === GOLD_MINE_FIXTURE.breakEvenWaveActual && GOLD_MINE_FIXTURE.beforeBreakEvenNegative === true && GOLD_MINE_FIXTURE.atBreakEvenNonNegative === true && GOLD_MINE_FIXTURE.includesArcherAlternative === true && GOLD_MINE_FIXTURE.includesFrostAlternative === true && GOLD_MINE_FIXTURE.excludesCannonAlternative === true}
+            data-gold-mine-foundation-pass={GOLD_MINE_FIXTURE.breakEvenWaveExpected === GOLD_MINE_FIXTURE.breakEvenWaveActual && GOLD_MINE_FIXTURE.beforeBreakEvenNegative === true && GOLD_MINE_FIXTURE.atBreakEvenNonNegative === true && GOLD_MINE_FIXTURE.includesArcherAlternative === true && GOLD_MINE_FIXTURE.includesFrostAlternative === true && GOLD_MINE_FIXTURE.excludesCannonAlternative === true}
+             data-gold-mine-live="false"
             data-war-forge-cost={WAR_FORGE.cost}
             data-war-forge-radius={WAR_FORGE.auraRadius}
             data-war-forge-damage-multiplier={WAR_FORGE.damageMultiplier}
             data-war-forge-speed-multiplier={WAR_FORGE.attackSpeedMultiplier}
             data-war-forge-archer-dps={WAR_FORGE_ARCHER_PREVIEW.modifiedDps}
-            data-war-forge-pass={WAR_FORGE_FIXTURE.activeExpected === WAR_FORGE_FIXTURE.activeActual && WAR_FORGE_FIXTURE.inactiveExpected === WAR_FORGE_FIXTURE.inactiveActual && WAR_FORGE_FIXTURE.damageBoosted === true && WAR_FORGE_FIXTURE.intervalReduced === true}
+            data-war-forge-foundation-pass={WAR_FORGE_FIXTURE.activeExpected === WAR_FORGE_FIXTURE.activeActual && WAR_FORGE_FIXTURE.inactiveExpected === WAR_FORGE_FIXTURE.inactiveActual && WAR_FORGE_FIXTURE.damageBoosted === true && WAR_FORGE_FIXTURE.intervalReduced === true}
+             data-war-forge-live="false"
             data-guardian-shrine-cost={GUARDIAN_SHRINE.cost}
             data-guardian-shrine-radius={GUARDIAN_SHRINE.auraRadius}
             data-guardian-shrine-damage-reduction={GUARDIAN_SHRINE.bastionDamageReduction}
