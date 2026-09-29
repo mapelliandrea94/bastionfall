@@ -1436,6 +1436,27 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
   const selectedEvolutionChoices = selectedPlacedDefense ? getEvolutionChoices(selectedPlacedDefense.defenseId) : [];
   const selectedTargetingValue = getTargetingValue(inspectedDefense);
   const selectedAttackInstrumentation = getAttackInstrumentation(inspectedDefense);
+  const towerStatsRows = Object.values(towerRunStatsView)
+    .map((stat) => {
+      const tower = placedDefenses.find((entry) => entry.id === stat.towerId) ?? {
+        id: stat.towerId,
+        defenseId: stat.defenseId,
+        investedGold: stat.investedGold ?? 0
+      };
+      return {
+        tower,
+        name: defenseDefinitions[tower.defenseId]?.name ?? tower.defenseId ?? 'Tower',
+        summary: getTowerRunStatSummary(stat, tower)
+      };
+    })
+    .sort((a, b) => b.summary.damage - a.summary.damage);
+  const totalTrackedDamage = towerStatsRows.reduce((sum, entry) => sum + Number(entry.summary.damage ?? 0), 0);
+  const selectedTowerSummary = selectedPlacedDefense
+    ? getTowerRunStatSummary(towerRunStatsView[selectedPlacedDefense.id] ?? {}, selectedPlacedDefense)
+    : null;
+  const selectedTowerDamageShare = selectedTowerSummary && totalTrackedDamage > 0
+    ? (selectedTowerSummary.damage / totalTrackedDamage) * 100
+    : 0;
   const lastBastionParticipants = run?.mode === MODES.LAST_BASTION
     ? run?.lastBastionParticipants ?? []
     : [];
@@ -3988,7 +4009,52 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
                 {selectedAttackInstrumentation.attacksPerSecond}/s · {selectedAttackInstrumentation.projectileTravelMs}ms travel @ {selectedAttackInstrumentation.sampleDistance} range
               </small>
             </div>
+            {selectedPlacedDefense && selectedTowerSummary && (
+              <div className="tower-run-stats">
+                <div className="tower-run-stats__title">QUESTA PARTITA</div>
+                <div className="tower-run-stats__grid">
+                  <div><span>Damage</span><strong>{Math.round(selectedTowerSummary.damage).toLocaleString()}</strong></div>
+                  <div><span>Kills</span><strong>{selectedTowerSummary.kills}</strong></div>
+                  <div><span>DPS medio</span><strong>{selectedTowerSummary.dps}</strong></div>
+                  <div><span>Boss DMG</span><strong>{Math.round(selectedTowerSummary.bossDamage).toLocaleString()}</strong></div>
+                  <div><span>DMG / Gold</span><strong>{selectedTowerSummary.damagePerGold}</strong></div>
+                  <div><span>Share build</span><strong>{selectedTowerDamageShare.toFixed(1)}%</strong></div>
+                  {selectedTowerSummary.supportDamage > 0 && (
+                    <div><span>Support DMG</span><strong>+{Math.round(selectedTowerSummary.supportDamage).toLocaleString()}</strong></div>
+                  )}
+                  {selectedTowerSummary.slowAppliedMs > 0 && (
+                    <div><span>Slow applicato</span><strong>{(selectedTowerSummary.slowAppliedMs / 1000).toFixed(1)}s</strong></div>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
+
+          <button
+            type="button"
+            className={`tower-stats-toggle ${towerStatsOpen ? 'is-active' : ''}`}
+            onClick={() => setTowerStatsOpen((current) => !current)}
+          >
+            STATISTICHE
+          </button>
+          {towerStatsOpen && (
+            <section className="tower-stats-board" aria-label="Tower performance statistics">
+              <div className="tower-stats-board__head">
+                <span>TORRI</span><span>DMG</span><span>KILL</span><span>BOSS</span><span>DMG/G</span>
+              </div>
+              {towerStatsRows.length === 0 ? (
+                <div className="tower-stats-board__empty">Nessun danno registrato ancora.</div>
+              ) : towerStatsRows.map((entry) => (
+                <div className="tower-stats-board__row" key={entry.tower.id}>
+                  <span>{entry.name}</span>
+                  <strong>{Math.round(entry.summary.damage).toLocaleString()}</strong>
+                  <strong>{entry.summary.kills}</strong>
+                  <strong>{Math.round(entry.summary.bossDamage).toLocaleString()}</strong>
+                  <strong>{entry.summary.damagePerGold}</strong>
+                </div>
+              ))}
+            </section>
+          )}
 
           {(run?.blessings ?? []).some((blessingId) => ['human-doctrine', 'brood-frenzy', 'alien-overmind', 'neutral-covenant'].includes(blessingId)) && (
             <div className="identity-blessing-panel" aria-label="Identity blessings">
