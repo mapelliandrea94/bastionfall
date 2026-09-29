@@ -4457,6 +4457,12 @@ function Leaderboard({ session, onBack }) {
         >
           TRI-GATE
         </button>
+        <button
+          className={mode === MODES.TFT_SHOP ? 'leaderboard-tab leaderboard-tab--active' : 'leaderboard-tab'}
+          onClick={() => setMode(MODES.TFT_SHOP)}
+        >
+          TFT
+        </button>
       </div>
 
       {leaderboardStatus === 'ready' && leaderboardView.podium.length > 0 && (
