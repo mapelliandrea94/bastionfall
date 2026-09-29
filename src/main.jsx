@@ -2403,7 +2403,9 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
     if (!confirmed) return false;
 
     reportTowerMilestones(targetTower.id, targetProgress, mergedProgress);
-    const combinedInvestedGold = Number(targetTower.investedGold ?? 0) + Number(sourceTower.investedGold ?? 0);
+    const rawCombinedInvestedGold = Number(targetTower.investedGold ?? 0) + Number(sourceTower.investedGold ?? 0);
+    const burnedInvestment = Math.max(0, Number(mergeOutcome.consumedCopies ?? 0)) * TFT_SHOP.copyCost;
+    const combinedInvestedGold = Math.max(0, rawCombinedInvestedGold - burnedInvestment);
     const survivingCopies = mergedProgress + residualProgress;
     const targetGoldShare = survivingCopies > 0
       ? Math.round((combinedInvestedGold * mergedProgress) / survivingCopies)
