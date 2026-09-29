@@ -1,5 +1,6 @@
 import { getCombinedCounterMultiplier } from './factionCounters.js';
 import { canDefenseTargetEnemy } from './counterplay.js';
+import { getRuntimeTowerDefinition } from '../towers/evolutions.js';
 
 function distance(a, b) {
   return Math.hypot(Number(a?.x ?? 0) - Number(b?.x ?? 0), Number(a?.y ?? 0) - Number(b?.y ?? 0));
@@ -16,16 +17,27 @@ export function isTowerInsideBuffAura(attacker, buffTower, buffDefinition) {
 export function getTowerBuffMultiplier(attacker, placedDefenses = [], definitions = {}) {
   let damageMultiplier = 1;
   let attackSpeedMultiplier = 1;
+  let damageSourceTowerId = null;
+  let attackSpeedSourceTowerId = null;
 
   for (const placed of placedDefenses) {
-    const buff = definitions[placed.defenseId];
-    if (!buff || buff.id !== 'buff' || placed.id === attacker.id) continue;
+    const baseBuff = definitions[placed.defenseId];
+    if (!baseBuff || baseBuff.id !== 'buff' || placed.id === attacker.id) continue;
+    const buff = getRuntimeTowerDefinition(baseBuff, placed);
     if (!isTowerInsideBuffAura(attacker, placed, buff)) continue;
-    damageMultiplier = Math.max(damageMultiplier, Number(buff.buffDamageMultiplier ?? 1));
-    attackSpeedMultiplier = Math.max(attackSpeedMultiplier, Number(buff.buffAttackSpeedMultiplier ?? 1));
+    const nextDamage = Number(buff.buffDamageMultiplier ?? 1);
+    const nextSpeed = Number(buff.buffAttackSpeedMultiplier ?? 1);
+    if (nextDamage > damageMultiplier) {
+      damageMultiplier = nextDamage;
+      damageSourceTowerId = placed.id;
+    }
+    if (nextSpeed > attackSpeedMultiplier) {
+      attackSpeedMultiplier = nextSpeed;
+      attackSpeedSourceTowerId = placed.id;
+    }
   }
 
-  return Object.freeze({ damageMultiplier, attackSpeedMultiplier });
+  return Object.freeze({ damageMultiplier, attackSpeedMultiplier, damageSourceTowerId, attackSpeedSourceTowerId });
 }
 
 export function getEffectiveTowerAttackInterval(definition, attacker, placedDefenses = [], definitions = {}) {
