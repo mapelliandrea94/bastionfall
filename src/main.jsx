@@ -2015,35 +2015,86 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
             const comboMultiplier = getTowerComboDamageMultiplier(placed.defenseId, target);
             const damage = getTowerHitDamage(definition, placed, target, combatPlacedDefenses, defenseDefinitions) * damageScale * comboMultiplier;
+            const beforePool = Math.max(0, Number(target.hp ?? 0)) + Math.max(0, Number(target.shield ?? 0));
             let damaged = applyEnemyDamage(target, damage, definition.damageType);
+            const afterPool = Math.max(0, Number(damaged.hp ?? 0)) + Math.max(0, Number(damaged.shield ?? 0));
+            const actualDamage = Math.max(0, beforePool - afterPool);
+
+            recordTowerTelemetry(placed, {
+              damage: actualDamage,
+              bossDamage: target.isBoss ? actualDamage : 0
+            }, attackNow);
+
+            const buff = getTowerBuffMultiplier(placed, combatPlacedDefenses, defenseDefinitions);
+            if (buff.damageSourceTowerId && Number(buff.damageMultiplier ?? 1) > 1) {
+              const baselineRaw = damage / Number(buff.damageMultiplier);
+              const baselineTarget = applyEnemyDamage(target, baselineRaw, definition.damageType);
+              const baselinePool = Math.max(0, Number(baselineTarget.hp ?? 0)) + Math.max(0, Number(baselineTarget.shield ?? 0));
+              const generated = Math.max(0, actualDamage - Math.max(0, beforePool - baselinePool));
+              if (generated > 0) {
+                const buffTower = combatPlacedDefenses.find((tower) => tower.id === buff.damageSourceTowerId) ?? { id: buff.damageSourceTowerId, defenseId: 'buff' };
+                recordTowerTelemetry(buffTower, { supportDamage: generated }, attackNow);
+              }
+            }
+
+            const vulnerabilityPercent = Math.max(0, Number(target.statusEffects?.vulnerabilityPercent ?? 0));
+            const vulnerabilitySourceTowerId = target.statusEffects?.vulnerabilitySourceTowerId ?? null;
+            if (vulnerabilitySourceTowerId && vulnerabilityPercent > 0) {
+              const baselineRaw = damage / (1 + vulnerabilityPercent / 100);
+              const baselineTarget = applyEnemyDamage(target, baselineRaw, definition.damageType);
+              const baselinePool = Math.max(0, Number(baselineTarget.hp ?? 0)) + Math.max(0, Number(baselineTarget.shield ?? 0));
+              const generated = Math.max(0, actualDamage - Math.max(0, beforePool - baselinePool));
+              if (generated > 0) {
+                const debuffTower = combatPlacedDefenses.find((tower) => tower.id === vulnerabilitySourceTowerId) ?? { id: vulnerabilitySourceTowerId, defenseId: 'debuff' };
+                recordTowerTelemetry(debuffTower, { supportDamage: generated }, attackNow);
+              }
+            }
 
             let statusEffects = { ...(damaged.statusEffects ?? {}) };
             if (definition.slowPercent) {
+              const oldSlow = Math.max(0, Number(statusEffects.slowPercent ?? 0));
+              const oldUntil = Math.max(attackNow, Number(statusEffects.slowUntilMs ?? 0));
               statusEffects = applyStrongestTimedEffect(statusEffects, {
                 valueKey: 'slowPercent',
                 untilKey: 'slowUntilMs',
                 incomingValue: definition.slowPercent,
                 incomingUntilMs: attackNow + Number(definition.slowDurationMs ?? 0)
               });
+              if (Number(definition.slowPercent) >= oldSlow) {
+                const extension = Math.max(0, Number(statusEffects.slowUntilMs ?? 0) - oldUntil);
+                if (extension > 0) recordTowerTelemetry(placed, { slowAppliedMs: extension }, attackNow);
+              }
             }
             if (definition.vulnerabilityPercent) {
+              const previousVulnerability = Math.max(0, Number(statusEffects.vulnerabilityPercent ?? 0));
               statusEffects = applyStrongestTimedEffect(statusEffects, {
                 valueKey: 'vulnerabilityPercent',
                 untilKey: 'vulnerabilityUntilMs',
                 incomingValue: definition.vulnerabilityPercent,
                 incomingUntilMs: attackNow + Number(definition.vulnerabilityDurationMs ?? 0)
               });
+              if (Number(definition.vulnerabilityPercent) >= previousVulnerability) {
+                statusEffects.vulnerabilitySourceTowerId = placed.id;
+              }
             }
             if (definition.poisonDamagePerSecond) {
+              const previousPoison = Math.max(0, Number(statusEffects.poisonDamagePerSecond ?? 0));
               statusEffects = applyStrongestTimedEffect(statusEffects, {
                 valueKey: 'poisonDamagePerSecond',
                 untilKey: 'poisonUntilMs',
                 incomingValue: definition.poisonDamagePerSecond,
                 incomingUntilMs: attackNow + Number(definition.poisonDurationMs ?? 0)
               });
+              if (Number(definition.poisonDamagePerSecond) >= previousPoison) {
+                statusEffects.poisonSourceTowerId = placed.id;
+              }
             }
 
-            working[enemyIndex] = { ...damaged, statusEffects };
+            working[enemyIndex] = {
+              ...damaged,
+              lastDamageSourceTowerId: actualDamage > 0 ? placed.id : damaged.lastDamageSourceTowerId,
+              statusEffects
+            };
           };
 
           let attacksExecuted = 0;
