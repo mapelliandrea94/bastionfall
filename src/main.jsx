@@ -2112,6 +2112,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
 
             attacksExecuted += 1;
             const attackNow = now - Math.max(0, attacksDue - recoveredIndex - 1) * attackInterval;
+            recordTowerTelemetry(placed, { attacks: 1 }, attackNow);
 
             if (recoveredIndex === attacksDue - 1) {
               const slot = buildSlots.find((entry) => entry.id === placed.slotId);
@@ -2220,16 +2221,32 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
           let next = enemy;
 
           if (Number(status.poisonUntilMs ?? 0) > now && Number(status.poisonDamagePerSecond ?? 0) > 0) {
+            const beforePool = Math.max(0, Number(next.hp ?? 0)) + Math.max(0, Number(next.shield ?? 0));
             next = applyEnemyDamage(
               next,
               Number(status.poisonDamagePerSecond) * (simulatedDeltaMs / 1000),
               'physical'
             );
+            const afterPool = Math.max(0, Number(next.hp ?? 0)) + Math.max(0, Number(next.shield ?? 0));
+            const poisonDamage = Math.max(0, beforePool - afterPool);
+            const poisonSourceTowerId = status.poisonSourceTowerId ?? null;
+            if (poisonDamage > 0 && poisonSourceTowerId) {
+              const sourceTower = placedDefenses.find((tower) => tower.id === poisonSourceTowerId) ?? {
+                id: poisonSourceTowerId,
+                defenseId: towerRunStatsRef.current?.[poisonSourceTowerId]?.defenseId ?? ''
+              };
+              recordTowerTelemetry(sourceTower, {
+                damage: poisonDamage,
+                bossDamage: enemy.isBoss ? poisonDamage : 0
+              }, now);
+              next = { ...next, lastDamageSourceTowerId: poisonSourceTowerId };
+            }
           }
 
           if (Number(status.vulnerabilityUntilMs ?? 0) <= now) {
             status.vulnerabilityPercent = 0;
             status.vulnerabilityUntilMs = 0;
+            status.vulnerabilitySourceTowerId = null;
           }
           if (Number(status.armorShredUntilMs ?? 0) <= now && Number(status.armorShred ?? 0) > 0) {
             next = { ...next, armor: Number(next.armor ?? 0) + Number(status.armorShred) };
@@ -2239,6 +2256,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
           if (Number(status.poisonUntilMs ?? 0) <= now) {
             status.poisonDamagePerSecond = 0;
             status.poisonUntilMs = 0;
+            status.poisonSourceTowerId = null;
           }
 
           return { ...next, statusEffects: status };
