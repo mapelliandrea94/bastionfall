@@ -3348,6 +3348,7 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
             data-mage-power={COMBAT_BALANCE_BY_ID.mage?.powerIndex}
             data-ballista-power={COMBAT_BALANCE_BY_ID.ballista?.powerIndex}
             data-barracks-power={COMBAT_BALANCE_BY_ID.barracks?.powerIndex}
+             data-barracks-live="false"
             data-placement-validations={PLACEMENT_VALIDATION_SNAPSHOT.length}
             data-placement-validation-pass={PLACEMENT_VALIDATION_SNAPSHOT.every((entry) => entry.expected === entry.actual)}
             data-targeting-validations={TARGETING_VALIDATION_SNAPSHOT.length}
@@ -5283,7 +5284,8 @@ function App() {
           });
         }}
         onExit={() => {
-          if (isShopMode(runState?.mode)) clearTftRunSnapshot();
+          // Leaving the screen must never destroy a resumable run.
+          // SoloRun cleanup flushes the latest local snapshot; online state keeps its server snapshot.
           setRunState(null);
           setScreen(SCREENS.MODE_PREP);
         }}
