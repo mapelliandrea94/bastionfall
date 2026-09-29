@@ -96,6 +96,7 @@ import { GAME_FEEDBACK_EVENTS, emitGameFeedback, getGameFeedbackFixtures } from 
 import { getAudioSettings, initAudioEngine, playTowerAttackSound, setAudioMuted, setAudioSetting } from './game/audio/audioEngine.js';
 import { SUPPORTED_LANGUAGES, gameText, getLanguage, setLanguage, t } from './i18n/localization.js';
 import './menu.css';
+import './tower-stats.css';
 
 const SCREENS = Object.freeze({
   MENU: 'menu',
