@@ -73,7 +73,7 @@ import { RUN_SCORE, calculateRunScore, getRunScoreFixtures } from './game/run/ru
 import { RUN_END_REASONS, createRunEndSnapshot, getRunEndFixtures } from './game/run/runEndSnapshot.js';
 import { getEndlessMilestone } from './game/run/endlessMilestones.js';
 import { ACCOUNT_PROGRESSION, getAccountProgress } from './game/profile/accountProgression.js';
-import { getTowerRunAwards, getTowerRunStatSummary, getTowerRunStatsFixtures, normalizeTowerRunStats, recordTowerStat } from './game/stats/towerRunStats.js';
+import { getTowerRunAwards, getTowerStatSummary, getTowerRunStatsFixtures, normalizeTowerRunStats, recordTowerStat } from './game/stats/towerRunStats.js';
 import { PERSONAL_BEST, comparePersonalBest, getPersonalBestFixtures } from './game/run/personalBest.js';
 import { ENEMY_BASE_MODEL, applyEnemyDamage, getEnemyBaseFixtures, getEnemyEffectiveSpeed } from './game/enemies/enemyBase.js';
 import { ENEMY_ROSTER, createRosterEnemyState, getEnemyRosterFixtures } from './game/enemies/enemyRoster.js';
@@ -1449,13 +1449,13 @@ function SoloRun({ run, onlineSnapshot, onPersistOnlineSnapshot, onExit, onDamag
       return {
         tower,
         name: defenseDefinitions[tower.defenseId]?.name ?? tower.defenseId ?? 'Tower',
-        summary: getTowerRunStatSummary(stat, tower)
+        summary: getTowerStatSummary(stat, tower)
       };
     })
     .sort((a, b) => b.summary.damage - a.summary.damage);
   const totalTrackedDamage = towerStatsRows.reduce((sum, entry) => sum + Number(entry.summary.damage ?? 0), 0);
   const selectedTowerSummary = selectedPlacedDefense
-    ? getTowerRunStatSummary(towerRunStatsView[selectedPlacedDefense.id] ?? {}, selectedPlacedDefense)
+    ? getTowerStatSummary(towerRunStatsView[selectedPlacedDefense.id] ?? {}, selectedPlacedDefense)
     : null;
   const selectedTowerDamageShare = selectedTowerSummary && totalTrackedDamage > 0
     ? (selectedTowerSummary.damage / totalTrackedDamage) * 100
