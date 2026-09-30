@@ -84,6 +84,12 @@ export function getWaveQuantityMultiplier(waveNumber) {
   return Number((1.18 ** completedFiveWaveBlocks).toFixed(6));
 }
 
+export function getWaveHpMultiplier(waveNumber) {
+  const wave = normalizeWaveNumber(waveNumber);
+  const completedFiveWaveBlocks = Math.floor(wave / 5);
+  return Number((1.18 ** completedFiveWaveBlocks).toFixed(6));
+}
+
 function getCandidateWeight(enemy, wave, eliteMilestone) {
   let weight = 1;
 
@@ -116,7 +122,9 @@ function weightedPick(random, candidates, wave, eliteMilestone) {
   return candidates[candidates.length - 1];
 }
 
-function serializeEnemy(definition, index) {
+function serializeEnemy(definition, index, wave) {
+  const hpMultiplier = getWaveHpMultiplier(wave);
+  const scaledMaxHp = Number((Number(definition.maxHp) * hpMultiplier).toFixed(4));
   return Object.freeze({
     rosterId: definition.id,
     archetype: definition.archetype,
@@ -128,7 +136,11 @@ function serializeEnemy(definition, index) {
     airborne: definition.airborne,
     threatValue: definition.spawnCost,
     spawnCost: definition.spawnCost,
-    rosterIndex: index
+    rosterIndex: index,
+    waveNumber: wave,
+    hpMultiplier,
+    maxHp: scaledMaxHp,
+    hp: scaledMaxHp
   });
 }
 
@@ -201,7 +213,7 @@ export function generateWavePlan({
     const eliteCandidates = candidates.filter((enemy) => enemy.tier === ENEMY_TIERS.ELITE && enemy.spawnCost <= budget);
     const elite = weightedPick(random, eliteCandidates, wave, true);
     if (elite) {
-      composition.push(serializeEnemy(elite, composition.length));
+      composition.push(serializeEnemy(elite, composition.length, wave));
       spentThreat += elite.spawnCost;
     }
   }
@@ -218,14 +230,14 @@ export function generateWavePlan({
     const selected = weightedPick(random, affordable, wave, eliteMilestone);
     if (!selected) break;
 
-    composition.push(serializeEnemy(selected, composition.length));
+    composition.push(serializeEnemy(selected, composition.length, wave));
     spentThreat += selected.spawnCost;
   }
 
   if (composition.length === 0) {
     const fallback = [...candidates].sort((a, b) => a.spawnCost - b.spawnCost)[0] ??
       ENEMY_ROSTER_24.find((enemy) => enemy.id === 'footman');
-    composition.push(serializeEnemy(fallback, 0));
+    composition.push(serializeEnemy(fallback, 0, wave));
     spentThreat = Math.min(budget, fallback.spawnCost);
   }
 
@@ -237,6 +249,7 @@ export function generateWavePlan({
     mode: normalizedMode,
     baseBudget,
     quantityMultiplier,
+    hpMultiplier: getWaveHpMultiplier(wave),
     budget,
     spentThreat: Number(spentThreat.toFixed(2)),
     unusedThreat: Number(Math.max(0, budget - spentThreat).toFixed(2)),
@@ -302,6 +315,9 @@ export function getWaveDirectorFixtures() {
     quantityWave5: getWaveQuantityMultiplier(5) === 1.18,
     quantityWave10: getWaveQuantityMultiplier(10) === 1.3924,
     quantityWave20: getWaveQuantityMultiplier(20) === 1.938778,
+    hpWave4: getWaveHpMultiplier(4) === 1,
+    hpWave5: getWaveHpMultiplier(5) === 1.18,
+    hpWave10: getWaveHpMultiplier(10) === 1.3924,
     budgetRespected: [sameA, early, airIntro, mixed, late, triA].every((plan) => plan.spentThreat <= plan.budget + 0.001),
     triGateDeterministic: fingerprint(triA) === fingerprint(triB),
     triGateHasThreeLanes: triA.laneDistribution?.lanes?.length === 3,
